@@ -39,6 +39,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
+  <key>LSUIElement</key>
+  <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSPrincipalClass</key>
@@ -71,8 +73,11 @@ case "$MODE" in
     sleep 1
     pgrep -x "$APP_NAME" >/dev/null
     ;;
+  --preview|preview)
+    /usr/bin/open -n "$APP_BUNDLE" --args --expanded-preview
+    ;;
   *)
-    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify|--preview]" >&2
     exit 2
     ;;
 esac
