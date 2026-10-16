@@ -1,14 +1,14 @@
 import Combine
 import Foundation
 
-/// Outline of the camera mirror. Atoll: "Rectangular" (default) or "Circular".
+/// Outline of the camera mirror: "Rectangular" (default) or "Circular".
 enum MirrorShape: String, CaseIterable, Identifiable, Sendable {
     case rectangle
     case circle
 
     var id: String { rawValue }
 
-    /// Label in Settings; Atoll calls the rectangle "Square".
+    /// Label in Settings; the rectangle is called "Square".
     var displayName: String {
         switch self {
         case .rectangle: "Square"
@@ -16,7 +16,7 @@ enum MirrorShape: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Corner radius of the live preview. Atoll uses the opened album-art radius (13) for the
+    /// Corner radius of the live preview. Uses the opened album-art radius (13) for the
     /// square, and a radius larger than half the side for the circle.
     var previewCornerRadius: CGFloat {
         switch self {
@@ -25,7 +25,7 @@ enum MirrorShape: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Corner radius of the "Mirror" placeholder tile; Atoll draws it 1 pt tighter (12).
+    /// Corner radius of the "Mirror" placeholder tile; drawn 1 pt tighter (12).
     var placeholderCornerRadius: CGFloat {
         switch self {
         case .rectangle: 12
@@ -34,7 +34,7 @@ enum MirrorShape: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Camera mirror preferences, stored under `mirror.*` in UserDefaults with Atoll's defaults:
+/// Camera mirror preferences, stored under `mirror.*` in UserDefaults with these defaults:
 /// off, square, and the automatic camera choice.
 @MainActor
 final class MirrorSettings: ObservableObject {
@@ -48,7 +48,7 @@ final class MirrorSettings: ObservableObject {
 
     private let defaults: UserDefaults
 
-    /// Atoll's `showMirror`: shows the mirror in Home and the camera button in the header.
+    /// Shows the mirror in Home and the camera button in the header.
     @Published var isEnabled: Bool {
         didSet { defaults.set(isEnabled, forKey: Key.isEnabled) }
     }

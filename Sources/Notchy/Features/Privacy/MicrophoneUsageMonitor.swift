@@ -3,9 +3,9 @@ import Foundation
 
 /// Reports whether any process is capturing audio input.
 ///
-/// The primary signal is Atoll's: `kAudioDevicePropertyDeviceIsRunningSomewhere` on input
-/// devices. Atoll watches only the default input device captured at launch; this watches every
-/// device that has input streams and re-subscribes when devices or the default input change.
+/// The primary signal is `kAudioDevicePropertyDeviceIsRunningSomewhere` on input
+/// devices. This watches every device that has input streams and re-subscribes when
+/// devices or the default input change.
 ///
 /// A device with both input and output streams (AirPods, USB headsets, virtual meeting
 /// devices) also "runs" when it is only playing sound, which would light the microphone glyph

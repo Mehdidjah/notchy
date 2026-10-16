@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Bluetooth audio rows for the Settings window, laid out like the Bluetooth part of Atoll's
+/// Bluetooth audio rows for the Settings window, grouped as the Bluetooth part of a
 /// Devices pane. Returns `Section`s, so embed it inside a `Form`.
 struct BluetoothSettingsSection: View {
     @ObservedObject private var settings: BluetoothSettings
@@ -18,14 +18,14 @@ struct BluetoothSettingsSection: View {
     }
 
     var body: some View {
-        // Atoll's rows are independent switches: none is greyed out by the master switch.
+        // The rows are independent switches: none is greyed out by the master switch.
         Section {
             Toggle("Show Bluetooth device connections", isOn: $settings.showDeviceConnections)
             Toggle("Use circular battery indicator", isOn: $settings.useCircularBatteryIndicator)
             Toggle("Show battery percentage text in HUD", isOn: $settings.showBatteryPercentageText)
             Toggle("Scroll device name in HUD", isOn: $settings.showDeviceNameMarquee)
-            // Not in Atoll's pane (Atoll follows its global inline-HUD switch and reads the
-            // battery through private sources); kept here because this app has neither.
+            // Kept here because this app has no global inline-HUD switch and does not read the
+            // battery through private sources.
             Toggle("Show beside the notch", isOn: $settings.useInlineHUD)
             Toggle("Read headphone battery levels", isOn: $settings.readBatteryLevels)
             Button {
@@ -50,7 +50,7 @@ struct BluetoothSettingsSection: View {
 
         Section {
             Toggle("Color-coded battery display", isOn: $settings.useColorCodedBatteryDisplay)
-            // Atoll keeps this switch in Controls and shows it only while colour coding is on.
+            // Shown only while colour coding is on.
             if settings.useColorCodedBatteryDisplay {
                 Toggle("Smooth color gradient", isOn: $settings.useSmoothColorGradient)
             }

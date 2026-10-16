@@ -2,8 +2,8 @@ import Combine
 import Foundation
 
 /// Keeps the system's hot keys in step with the stored shortcuts, the master switch, the
-/// handlers the coordinator binds and each feature's on/off state, the way Atoll pairs
-/// `KeyboardShortcuts.onKeyDown` with `updateFeatureShortcutAvailability()`.
+/// handlers the coordinator binds and each feature's on/off state, pairing
+/// `KeyboardShortcuts.onKeyDown`-style handlers with per-feature availability.
 ///
 /// An action's keystroke is claimed only while shortcuts are enabled, a handler is bound,
 /// its feature is available and it has a shortcut; otherwise the key is left to other apps.
@@ -95,7 +95,7 @@ final class ShortcutsManager: ObservableObject {
         sync()
     }
 
-    /// Marks an action's feature on or off, like Atoll's per-feature `KeyboardShortcuts.enable`.
+    /// Marks an action's feature on or off, like a per-feature `KeyboardShortcuts.enable`.
     func setAvailable(_ available: Bool, for action: ShortcutAction) {
         let changed = available
             ? unavailableActions.remove(action) != nil
@@ -132,7 +132,7 @@ final class ShortcutsManager: ObservableObject {
 
     // MARK: - Editing shortcuts
 
-    /// Every reason `shortcut` cannot be saved for `action`, in the order Atoll's recorder
+    /// Every reason `shortcut` cannot be saved for `action`, in the order the recorder
     /// checks them: a missing modifier (beep), a clash with one of the app's menu items, the
     /// Option-only rule, a system-wide shortcut; Notchy's own in-app clash comes last.
     func issues(for shortcut: Shortcut, assigningTo action: ShortcutAction) -> [ShortcutIssue] {

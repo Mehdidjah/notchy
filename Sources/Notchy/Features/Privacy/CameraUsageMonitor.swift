@@ -7,7 +7,7 @@ import Foundation
 /// Every CoreMediaIO device with input streams gets a listener on
 /// `kCMIODevicePropertyDeviceIsRunningSomewhere`; the device list itself is watched so cameras
 /// plugged in later are covered too. Each change re-reads the property on every device and ORs
-/// the result with `AVCaptureDevice.isInUseByAnotherApplication`, the way Atoll combines both.
+/// the result with `AVCaptureDevice.isInUseByAnotherApplication`.
 /// Everything runs on a private serial queue; results are handed to `onChange`, deduplicated.
 final class CameraUsageMonitor: @unchecked Sendable {
     typealias ChangeHandler = @Sendable (Bool) -> Void
@@ -162,7 +162,7 @@ final class CameraUsageMonitor: @unchecked Sendable {
         return status == OSStatus(kCMIOHardwareNoError) && size > 0
     }
 
-    /// Read with Atoll's wildcard address first; a driver that rejects wildcards is asked again
+    /// Read with the wildcard address first; a driver that rejects wildcards is asked again
     /// on the global scope.
     private static func isRunningSomewhere(_ device: CMIOObjectID) -> Bool {
         let fallback = CMIOObjectPropertyAddress(

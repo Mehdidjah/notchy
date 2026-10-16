@@ -111,7 +111,7 @@ struct NotchRootView: View {
         reduceMotion ? .easeInOut(duration: 0.12) : .smooth
     }
 
-    /// Activities swap in with Atoll's spring (response 0.34, damping 0.88).
+    /// Activities swap in with a spring (response 0.34, damping 0.88).
     private var liveActivityAnimation: Animation {
         reduceMotion ? .easeInOut(duration: 0.12) : .spring(response: 0.34, dampingFraction: 0.88)
     }
@@ -183,7 +183,7 @@ private struct ClosedIslandContent: View {
     }
 }
 
-/// Atoll's standard sneak-peek row: an icon and a single line of grey text, or an icon and
+/// Standard sneak-peek row: an icon and a single line of grey text, or an icon and
 /// a level bar for volume and brightness.
 private struct SneakPeekRow: View {
     let peek: SneakPeek

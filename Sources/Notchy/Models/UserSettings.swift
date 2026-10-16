@@ -127,7 +127,7 @@ final class UserSettings: ObservableObject {
     }
     @Published var showHomeTab: Bool { didSet { defaults.set(showHomeTab, forKey: Key.showHomeTab) } }
     @Published var showNotesTab: Bool { didSet { defaults.set(showNotesTab, forKey: Key.showNotesTab) } }
-    /// Reopen on the last tab instead of Home (Atoll: openLastTabByDefault, default off).
+    /// Reopen on the last tab instead of Home (default off).
     @Published var openLastTab: Bool { didSet { defaults.set(openLastTab, forKey: Key.openLastTab) } }
     @Published var showShelfTab: Bool { didSet { defaults.set(showShelfTab, forKey: Key.showShelfTab) } }
     @Published var showTimerTab: Bool { didSet { defaults.set(showTimerTab, forKey: Key.showTimerTab) } }

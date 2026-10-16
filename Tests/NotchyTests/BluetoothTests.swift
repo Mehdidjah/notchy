@@ -29,7 +29,7 @@ struct BluetoothTests {
     // MARK: Device classification
 
     @Test
-    func detectsKindsFromNamesLikeAtoll() {
+    func detectsKindsFromNames() {
         #expect(BluetoothAudioDeviceKind.detect(name: "Mehdi's AirPods Pro", classOfDevice: 0) == .airpodsPro)
         #expect(BluetoothAudioDeviceKind.detect(name: "AirPods Pro 3", classOfDevice: 0) == .airpodsPro3)
         #expect(BluetoothAudioDeviceKind.detect(name: "AirPods Max", classOfDevice: 0) == .airpodsMax)
@@ -104,7 +104,7 @@ struct BluetoothTests {
     // MARK: Wing sizes
 
     @Test
-    func wingWidthsMatchAtollsInlineHUD() {
+    func wingWidthsMatchInlineHUDDesign() {
         #expect(BluetoothHUDMetrics.infoWidth(showsName: false, gestureProgress: 0) == 64)
         #expect(BluetoothHUDMetrics.infoWidth(showsName: true, gestureProgress: 10) == 137)
         let trailing = { (battery: Bool, circular: Bool, percent: Bool, name: Bool) in
@@ -121,7 +121,7 @@ struct BluetoothTests {
     }
 
     @Test
-    func islandIsExactlyAsWideAsAtolls() {
+    func islandIsExactlyAsWideAsDesign() {
         let settings = BluetoothSettings(defaults: makeDefaults())
         let controller = BluetoothHUDController(
             settings: settings,
@@ -136,24 +136,24 @@ struct BluetoothTests {
         for hovering in [false, true] {
             let context = context(hovering: hovering)
             let hostWidth = activity.leftWingWidth(in: context) + context.centerWidth + activity.rightWingWidth(in: context)
-            // Atoll: info + 8 + (notch - 20) + 8 + trailing, and the centre does not swell.
-            let atollWidth: CGFloat = 64 + 8 + (185 - 20) + 8 + 76
-            #expect(hostWidth == atollWidth, "hovering: \(hovering)")
-            // The black centre starts where Atoll's does: after the info column and its gap.
-            let atollCentreStart: CGFloat = 64 + 8
-            #expect(activity.leftWingWidth(in: context) == atollCentreStart, "hovering: \(hovering)")
+            // Design: info + 8 + (notch - 20) + 8 + trailing, and the centre does not swell.
+            let expectedWidth: CGFloat = 64 + 8 + (185 - 20) + 8 + 76
+            #expect(hostWidth == expectedWidth, "hovering: \(hovering)")
+            // The black centre starts after the info column and its gap.
+            let expectedCentreStart: CGFloat = 64 + 8
+            #expect(activity.leftWingWidth(in: context) == expectedCentreStart, "hovering: \(hovering)")
         }
 
         // Same on a narrow synthetic notch, where the host's centre is held at 96 pt.
         let narrow = context(notchWidth: 80)
         let narrowWidth = activity.leftWingWidth(in: narrow) + narrow.centerWidth + activity.rightWingWidth(in: narrow)
-        let atollNarrowWidth: CGFloat = 64 + 8 + (80 - 20) + 8 + 76
-        #expect(narrowWidth == atollNarrowWidth)
+        let expectedNarrowWidth: CGFloat = 64 + 8 + (80 - 20) + 8 + 76
+        #expect(narrowWidth == expectedNarrowWidth)
         controller.stop()
     }
 
     @Test
-    func scrollingNameUsesAtollsInfoColumn() {
+    func scrollingNameUsesDesignInfoColumn() {
         let settings = BluetoothSettings(defaults: makeDefaults())
         settings.showDeviceNameMarquee = true
         let controller = BluetoothHUDController(
@@ -166,10 +166,10 @@ struct BluetoothTests {
         let context = context()
         #expect(activity.infoWidth(in: context) == 132)
         #expect(activity.leftWingWidth(in: context) == 140)
-        // No battery with the name: Atoll's trailing column is 110 pt.
+        // No battery with the name: the trailing column is 110 pt.
         let hostWidth = activity.leftWingWidth(in: context) + context.centerWidth + activity.rightWingWidth(in: context)
-        let atollWidth: CGFloat = 132 + 8 + (185 - 20) + 8 + 110
-        #expect(hostWidth == atollWidth)
+        let expectedWidth: CGFloat = 132 + 8 + (185 - 20) + 8 + 110
+        #expect(hostWidth == expectedWidth)
         controller.stop()
     }
 
@@ -200,7 +200,7 @@ struct BluetoothTests {
         #expect(peeks.first?.level == 0.55)
         #expect(peeks.first?.duration == .milliseconds(2_500))
 
-        // Atoll's standard indicator always draws the battery bar; unknown reads as empty.
+        // The standard indicator always draws the battery bar; unknown reads as empty.
         controller.present(sampleDevice, batteryLevel: nil)
         #expect(peeks.count == 2)
         #expect(peeks.last?.level == 0)
@@ -229,7 +229,7 @@ struct BluetoothTests {
     }
 
     @Test
-    func settingsUseAtollDefaults() {
+    func settingsUseDesignDefaults() {
         let defaults = makeDefaults()
         let settings = BluetoothSettings(defaults: defaults)
         #expect(settings.showDeviceConnections)

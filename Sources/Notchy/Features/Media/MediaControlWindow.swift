@@ -2,9 +2,9 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Atoll's floating media controls ("Show floating media controls", off by default): a small
+/// Floating media controls ("Show floating media controls", off by default): a small
 /// black bar with previous, play/pause and next that sits beside the closed notch while music
-/// plays, and for 5 s after a pause. Atoll floats it with the private SkyLight window API;
+/// plays, and for 5 s after a pause. It is not floated with the private SkyLight window API;
 /// this is a plain borderless, non-activating panel at the island's own window level, so it
 /// does not show above the lock screen.
 @MainActor
@@ -65,7 +65,7 @@ final class MediaControlWindowController {
     }
 
     /// Whether the bar may show at all: the setting, the music live activity and the
-    /// standard controls are on (Atoll's `shouldShowMusicControlWindow`).
+    /// standard controls are on.
     var isAllowed: Bool {
         settings.controlWindowEnabled && settings.liveActivityEnabled && settings.showStandardMediaControls
     }
@@ -163,7 +163,7 @@ final class MediaControlWindowController {
         }
     }
 
-    /// Atoll's flyout arithmetic: right of the notch's right wing by `spacing`, flush with
+    /// Flyout arithmetic: right of the notch's right wing by `spacing`, flush with
     /// the top of the screen, kept 8 pt inside its right edge.
     static func frame(for size: CGSize, screenFrame: NSRect, centerWidth: CGFloat, wingWidth: CGFloat) -> NSRect {
         let rawX = screenFrame.midX + centerWidth * 0.5 + wingWidth + spacing
@@ -298,7 +298,7 @@ struct MediaControlOverlayView: View {
     }
 }
 
-/// A rounded-square transport button with a white 18 % hover fill and Atoll's press springs.
+/// A rounded-square transport button with a white 18 % hover fill and press springs.
 private struct MediaFloatingButton: View {
     let icon: String
     let side: CGFloat

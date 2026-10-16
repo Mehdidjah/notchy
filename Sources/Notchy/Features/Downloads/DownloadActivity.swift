@@ -3,16 +3,16 @@ import SwiftUI
 
 /// Sizes of the download activity's wings in the host's three-column layout.
 ///
-/// Atoll's columns are: left `h - 12`, black centre `notch + 40 (+ 58 with the rate)`, right
+/// The columns are: left `h - 12`, black centre `notch + 40 (+ 58 with the rate)`, right
 /// `max(60, h) (+ 58 with the rate)`, all centred on the notch. Worked through for a 32-pt
 /// notch, the centre's right edge lands exactly on the notch's right edge and the 40 (+ 58) pt
 /// widening sits entirely to the notch's left, balancing the narrow left column against the
 /// wide right one. The host's centre is exactly the notch, so that widening belongs to the
 /// left wing: left `h - 12 + 40 (+ 58)`, right `max(60, h) (+ 58)`. The island's total width
 /// and centring are unchanged, so the arrow tile (leading) and the indicator (trailing) land
-/// where Atoll draws them for any notch height.
+/// in the same place for any notch height.
 ///
-/// Atoll's download view keeps its own hover and swipe state, which never changes, so these
+/// The download view keeps its own hover and swipe state, which never changes, so these
 /// widths ignore both.
 enum DownloadWingMetrics {
     static let downloadingCenterExtra: CGFloat = 40
@@ -62,7 +62,7 @@ final class DownloadWingModel: ObservableObject {
     @Published fileprivate(set) var display = Display()
 }
 
-/// A browser download on the closed notch (Atoll's DownloadLiveActivity): an accent-tinted
+/// A browser download on the closed notch: an accent-tinted
 /// arrow tile on the left, an indicator on the right (linear bar or spinning ring, determinate
 /// when the browser publishes progress), optionally preceded by the rate, and a green
 /// checkmark for two seconds once the download lands.
@@ -159,7 +159,7 @@ final class DownloadActivity: ClosedLiveActivity {
         let widthChanged = hadSpeed != showsSpeed
         guard visibilityChanged || widthChanged else { return }
         if !visibilityChanged, isActivityVisible {
-            // The rate appearing or leaving re-balances the wings over 0.25 s, as in Atoll.
+            // The rate appearing or leaving re-balances the wings over 0.25 s.
             withAnimation(.smooth(duration: 0.25)) { center?.reevaluate() }
         }
         changes.send()

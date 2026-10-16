@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// "Choose a Music Source": radio cards for the music apps (Atoll's
-/// MusicControllerSelectionView). The selected card also shows the app's live Automation
+/// "Choose a Music Source": radio cards for the music apps. The selected card also shows the app's live Automation
 /// status and a button that asks macOS for permission to control it.
 struct OnboardingMusicSourcePage: View {
     @ObservedObject var flow: OnboardingFlowModel
@@ -59,7 +58,7 @@ struct OnboardingMusicSourcePage: View {
 }
 
 struct OnboardingMusicSourceCard: View {
-    /// Atoll's radio-button spring.
+    /// Radio-button spring.
     static let selectionSpring = Animation.spring(response: 0.3, dampingFraction: 0.6)
 
     let source: OnboardingMusicSource

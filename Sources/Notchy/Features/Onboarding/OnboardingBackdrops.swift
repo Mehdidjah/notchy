@@ -24,7 +24,7 @@ struct OnboardingVisualEffect: NSViewRepresentable {
 }
 
 extension View {
-    /// The standard onboarding page backdrop (Atoll: under-window background, behind window).
+    /// The standard onboarding page backdrop (under-window background, behind window).
     func onboardingPageBackground() -> some View {
         background(
             OnboardingVisualEffect(material: .underWindowBackground)
@@ -35,10 +35,10 @@ extension View {
 
 /// A field of slowly drifting sparkles drawn with a Core Animation emitter.
 ///
-/// Matches Atoll's welcome-page emitter: a rectangular surface emitter, 20 particles a second
+/// The welcome-page emitter: a rectangular surface emitter, 20 particles a second
 /// (the initial 50 is overridden once the view has a size), 5-s lifetime, velocity 10 ± 5 in
 /// every direction, scale 0.2 ± 0.1, fading at 0.5 a second with a y acceleration of 10 pt/s².
-/// Like Atoll's emitter view this one is not flipped, so that acceleration lifts the sparkles.
+/// The emitter view is not flipped, so that acceleration lifts the sparkles.
 struct OnboardingSparkleField: NSViewRepresentable {
     func makeNSView(context: Context) -> OnboardingSparkleNSView {
         OnboardingSparkleNSView(frame: .zero)
@@ -98,7 +98,7 @@ final class OnboardingSparkleNSView: NSView {
         CATransaction.commit()
     }
 
-    /// Point size of the particle artwork (Atoll's "sparkle" is a 26-pt square).
+    /// Point size of the particle artwork (the "sparkle" is a 26-pt square).
     static let sparkleSide: CGFloat = 26
     /// The artwork is drawn at 2x and the cell is told so, keeping it 26 pt on screen.
     static let sparkleImageScale: CGFloat = 2

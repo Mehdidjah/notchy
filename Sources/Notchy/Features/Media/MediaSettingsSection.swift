@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Media preferences as Form sections, mirroring Atoll's Media settings tab.
+/// Media preferences as Form sections.
 struct MediaSettingsSection: View {
     @ObservedObject var settings: MediaSettings = .shared
     @ObservedObject private var layout = HomeLayoutState.shared

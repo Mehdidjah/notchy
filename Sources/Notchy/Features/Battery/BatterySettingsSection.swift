@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Battery rows for the Settings window, laid out like Atoll's Battery pane. Returns
+/// Battery rows for the Settings window, laid out as a Battery pane. Returns
 /// `Section`s, so embed it inside a `Form`.
 struct BatterySettingsSection: View {
     @ObservedObject private var settings: BatterySettings
@@ -49,8 +49,7 @@ struct BatterySettingsSection: View {
         Section {
             Toggle("Show battery percentage", isOn: $settings.showBatteryPercentage)
             Toggle("Show power status icons", isOn: $settings.showPowerStatusIcons)
-            // Atoll keeps this one under General > UI Mode, greyed out without a battery
-            // indicator; this app has no UI-mode pane, so it sits with the other battery rows.
+            // This app has no UI-mode pane, so this one sits with the other battery rows.
             Toggle("Show battery percentage inside icon", isOn: $settings.showBatteryPercentInside)
                 .disabled(!settings.showBatteryIndicator)
         } header: {
@@ -141,7 +140,7 @@ struct BatterySettingsSection: View {
         settings.showPowerStatusNotifications && settings.isHUDEnabled(kind)
     }
 
-    /// Atoll's segmented row: the title, a flexible gap of at least 8 pt, then the control.
+    /// Segmented row: the title, a flexible gap of at least 8 pt, then the control.
     private func stylePicker(_ title: String, selection: Binding<BatteryHUDStyle>) -> some View {
         HStack(spacing: 12) {
             Text(title)

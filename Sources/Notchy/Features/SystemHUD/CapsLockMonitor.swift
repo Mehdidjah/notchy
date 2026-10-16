@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Watches the Caps Lock state.
 ///
-/// Atoll's `CapsLockManager` listens to `flagsChanged` events. A local monitor sees them while
+/// Listens to `flagsChanged` events. A local monitor sees them while
 /// the app is active and a global one sees them everywhere once Accessibility is granted; both
 /// re-read the flag at once, so the indicator toggles with the key press. Without
 /// Accessibility the global monitor stays silent, so the combined session's modifier flags
@@ -15,7 +15,7 @@ final class CapsLockMonitor: ObservableObject {
     static let shared = CapsLockMonitor(observesKeyEvents: true)
 
     static let pollInterval: Duration = .milliseconds(150)
-    /// Atoll's `CapsLockManager` toggles with this spring.
+    /// The indicator toggles with this spring.
     static let toggleAnimation = Animation.spring(response: 0.32, dampingFraction: 0.85)
 
     @Published private(set) var isCapsLockOn = false

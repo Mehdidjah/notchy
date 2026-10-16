@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// The system HUD rows for the Settings window, in the order of Atoll's "Controls" pane:
+/// The system HUD rows for the Settings window, in the order of the "Controls" pane:
 /// an Accessibility callout while the permission is missing, Controls, Audio feedback,
 /// Dynamic Island Progress Bars, Appearance and Step size. Returns several `Section`s, so
-/// embed it inside a grouped `Form`. Atoll keeps the Caps Lock rows in its Live Activities
-/// pane; pass `includesCapsLock: false` and show `CapsLockSettingsSection` there to match.
+/// embed it inside a grouped `Form`. The Caps Lock rows belong in the Live Activities pane;
+/// pass `includesCapsLock: false` and show `CapsLockSettingsSection` there.
 struct SystemHUDSettingsSection: View {
     @ObservedObject private var settings: SystemHUDSettings
     @ObservedObject private var interceptor: SystemHUDMediaKeyInterceptor
@@ -113,7 +113,7 @@ struct SystemHUDSettingsSection: View {
         .onAppear { interceptor.refreshAccessibility() }
     }
 
-    /// Atoll resets the glow and bar style inside `withAnimation` when Inline is chosen.
+    /// Resets the glow and bar style inside `withAnimation` when Inline is chosen.
     private var styleBinding: Binding<SystemHUDStyle> {
         Binding(
             get: { settings.style },
@@ -171,7 +171,7 @@ struct SystemHUDSettingsSection: View {
     }
 }
 
-/// Atoll's "Caps Lock Indicator" section (Live Activities pane).
+/// The "Caps Lock Indicator" section (Live Activities pane).
 struct CapsLockSettingsSection: View {
     @ObservedObject private var settings: SystemHUDSettings
 

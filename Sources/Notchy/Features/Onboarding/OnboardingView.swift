@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The onboarding window's content: one page at a time, cross-fading between pages over
-/// 0.6 s with an ease-in-out curve, in a fixed 400 x 600 frame (Atoll's OnboardingView).
+/// 0.6 s with an ease-in-out curve, in a fixed 400 x 600 frame.
 /// When it first appears it asks, once, how Focus should be detected.
 struct OnboardingView: View {
     @ObservedObject var flow: OnboardingFlowModel

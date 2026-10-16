@@ -9,7 +9,6 @@ import Foundation
 @MainActor
 final class ShortcutsSettings: ObservableObject {
     enum Key {
-        /// Atoll's `enableShortcuts`.
         static let isEnabled = "shortcuts.enabled"
         static let bindingPrefix = "shortcuts.binding."
 

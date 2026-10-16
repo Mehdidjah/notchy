@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// Atoll swaps the open player's transport row for a level slider while the volume or
+/// The open player's transport row is swapped for a level slider while the volume or
 /// brightness HUD is up with the island open (`shouldShowControlHUDRow`). This follows the
 /// HUD feature's events, both the standard sneak peek and the inline HUD, and stays up 1.5 s
 /// after the last one, or while the slider is held.
@@ -14,7 +14,7 @@ final class MediaOpenHUDState: ObservableObject {
         case brightness
     }
 
-    /// Atoll's sneak-peek duration for HUD events.
+    /// Sneak-peek duration for HUD events.
     static let displayDuration: Duration = .milliseconds(1_500)
 
     @Published private(set) var isActive = false

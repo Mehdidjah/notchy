@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// Left column of the inline volume / brightness / microphone HUD: glyph and label (Atoll
-/// `InlineHUD`).
+/// Left column of the inline volume / brightness / microphone HUD: glyph and label.
 struct InlineHUDLeadingWing: View {
     @ObservedObject var presenter: SystemHUDPresenter
-    /// Atoll's column width; the content keeps it even when the host's wing is a little
+    /// Design column width; the content keeps it even when the host's wing is a little
     /// narrower (see `InlineHUDMetrics`).
     let columnWidth: CGFloat
     let wingWidth: CGFloat

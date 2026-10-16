@@ -7,7 +7,7 @@ enum NotesPasteboardContent: Equatable, Sendable {
     case text(String)
 }
 
-/// Reads the general pasteboard the way Atoll's notes do: an image file first (the original
+/// Reads the general pasteboard for notes: an image file first (the original
 /// beats a Finder icon), then TIFF or PNG data, then plain text.
 @MainActor
 enum NotesPasteboardReader {

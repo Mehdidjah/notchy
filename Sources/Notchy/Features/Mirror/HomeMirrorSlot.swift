@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home-tab camera mirror, as in Atoll: a square (or circle) tile as tall as the Home row that
+/// Home-tab camera mirror: a square (or circle) tile as tall as the Home row that
 /// shows the front camera, flipped like a mirror. Until the camera is turned on it shows a dark
 /// "Mirror" tile with a camera glyph 1/3.5 of its width ("Access Denied" with a warning glyph
 /// when permission was refused). A click turns the camera on or off; the camera stops whenever
@@ -39,7 +39,7 @@ struct HomeMirrorSlot: View {
                     MirrorPlaceholderTile(
                         side: side,
                         cornerRadius: settings.shape.placeholderCornerRadius,
-                        // Atoll switches the caption on `.denied` only.
+                        // The caption switches on `.denied` only.
                         isAccessDenied: controller.authorization == .denied
                     )
                 }

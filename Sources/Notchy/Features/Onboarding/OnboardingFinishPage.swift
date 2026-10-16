@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Last page: sparkles, "You're All Set!", and the way out: Customize in Settings, or Finish
-/// (the default button). Atoll's OnboardingFinishView.
+/// (the default button).
 struct OnboardingFinishPage: View {
     let onFinish: () -> Void
     let onOpenSettings: () -> Void

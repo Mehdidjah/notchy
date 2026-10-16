@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Geometry handed to closed-notch live activities so they can size and draw their wings.
 ///
-/// Mirrors Atoll's closed layout: a left wing, a black centre that covers the hardware notch,
+/// Closed layout: a left wing, a black centre that covers the hardware notch,
 /// and a right wing, all `contentHeight` tall inside an island `outerHeight` tall.
 struct ClosedActivityContext: Equatable, Sendable {
     /// Height of the closed notch: the display's safe-area inset, or the menu-bar height.
@@ -37,7 +37,7 @@ struct ClosedActivityLayout: Equatable, Sendable {
     var contentWidth: CGFloat { leftWidth + centerWidth + rightWidth }
 }
 
-/// Ordering of closed-notch activities; lower values win. Mirrors Atoll's closed-notch chain:
+/// Ordering of closed-notch activities; lower values win. Closed-notch chain:
 /// battery HUD, inline HUD, caps lock, music, timer, reminder, recording, download, focus,
 /// privacy, shelf.
 enum ClosedActivityPriority {
@@ -83,7 +83,7 @@ extension ClosedLiveActivity {
 }
 
 /// A short message that drops under the closed notch and folds away by itself
-/// (Atoll's "sneak peek", standard style).
+/// (the "sneak peek", standard style).
 struct SneakPeek: Equatable, Identifiable {
     enum Kind: String, Sendable {
         case clipboard, music, timer, reminder, volume, brightness, battery, bluetooth

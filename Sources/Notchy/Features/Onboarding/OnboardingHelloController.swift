@@ -3,15 +3,15 @@ import Foundation
 
 /// Runs the first-launch hello: one second after launch the island opens and shows the
 /// glowing "hello" in place of its tabs; 3.5 s after the hello appears the island closes and
-/// the hello is marked as shown. While it is up the island is held open (Atoll blocks
-/// auto-close during first launch).
+/// the hello is marked as shown. While it is up the island is held open (auto-close is
+/// blocked during first launch).
 @MainActor
 final class OnboardingHelloController: ObservableObject {
     static let shared = OnboardingHelloController()
 
-    /// Delay between launch and the island opening (Atoll: `runAfter(1)`).
+    /// Delay between launch and the island opening (`runAfter(1)`).
     static let openDelay: Duration = .seconds(1)
-    /// How long the hello stays after it appears (Atoll: `closeHello` after 3.5 s).
+    /// How long the hello stays after it appears (`closeHello` after 3.5 s).
     static let holdDuration: Duration = .milliseconds(3_500)
     /// Delay used when the hello is replayed from Settings.
     static let replayDelay: Duration = .milliseconds(250)

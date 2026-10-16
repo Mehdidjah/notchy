@@ -23,7 +23,7 @@ enum MirrorCameraAuthorization: Sendable, Equatable {
     var isBlocked: Bool { self == .denied || self == .restricted }
 }
 
-/// Where a camera toggle came from. Atoll explains a refused permission differently for a
+/// Where a camera toggle came from. A refused permission is explained differently for a
 /// click on the mirror tile (Open Settings / Cancel) and for the header button (OK only).
 enum MirrorToggleSource: Sendable, Equatable {
     case mirror
@@ -81,7 +81,7 @@ final class AVFoundationMirrorBackend: MirrorCameraBackend {
 /// the live preview (a click on the mirror or the header button), a mirror is on screen in the
 /// open island, access is granted, a camera is connected and the feature is on. When the last
 /// mirror leaves the screen the session stops and the request is forgotten, so the next open
-/// shows the "Mirror" placeholder again, as in Atoll.
+/// shows the "Mirror" placeholder again.
 @MainActor
 final class WebcamController: ObservableObject {
     static let shared = WebcamController()
@@ -96,7 +96,7 @@ final class WebcamController: ObservableObject {
 
     let settings: MirrorSettings
     let backend: any MirrorCameraBackend
-    /// Explains a refused permission; the default shows Atoll's alert for the source of the
+    /// Explains a refused permission; the default shows the alert for the source of the
     /// click. Tests replace it.
     var presentAccessDenied: @MainActor (MirrorToggleSource) -> Void = WebcamController.presentAccessAlert
 
@@ -194,7 +194,7 @@ final class WebcamController: ObservableObject {
     // MARK: User actions
 
     /// A click on the mirror or the header button: asks for access the first time, explains a
-    /// denial, and otherwise turns the live preview on or off. As in Atoll, granting access
+    /// denial, and otherwise turns the live preview on or off. Granting access
     /// does not start the camera by itself; the next click does.
     func togglePreview(from source: MirrorToggleSource = .mirror) {
         guard !isRequestingAuthorization else { return }
@@ -236,7 +236,7 @@ final class WebcamController: ObservableObject {
             visibleSlots.remove(id)
         }
         if wasOnScreen, !isMirrorOnScreen {
-            // Atoll stops the camera when the mirror leaves the screen; the next open starts
+            // The camera stops when the mirror leaves the screen; the next open starts
             // from the placeholder.
             isPreviewRequested = false
         }
@@ -270,7 +270,7 @@ final class WebcamController: ObservableObject {
         reconcile()
     }
 
-    /// Atoll stops a running preview whenever a camera is unplugged, then re-lists cameras;
+    /// A running preview stops whenever a camera is unplugged, then re-lists cameras;
     /// the placeholder comes back and a click starts the camera again.
     func cameraWasDisconnected() {
         if isPreviewRequested {
@@ -320,7 +320,7 @@ final class WebcamController: ObservableObject {
         }
     }
 
-    /// Atoll's two alerts: the mirror tile offers Open Settings / Cancel, the header button
+    /// Two alerts: the mirror tile offers Open Settings / Cancel, the header button
     /// only an OK. Focus goes back to the app the user was in afterwards.
     static func presentAccessAlert(for source: MirrorToggleSource) {
         // Let the click finish before the modal alert takes over the main thread.

@@ -101,7 +101,7 @@ struct NotchHeaderView: View {
 
             HStack(spacing: 8) {
                 if isOpen {
-                    // Atoll's order: mirror, clipboard, colour picker, timer, volume, caffeinate,
+                    // Order: mirror, clipboard, colour picker, timer, volume, caffeinate,
                     // settings, then indicators and the battery.
                     headerButton("list.clipboard", help: "Clipboard") { model.toggleClipboardTab() }
                     ColorPickerHeaderButton()

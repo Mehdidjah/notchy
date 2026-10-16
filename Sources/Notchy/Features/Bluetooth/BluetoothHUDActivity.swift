@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// Wing sizes of Atoll's inline Bluetooth HUD.
+/// Wing sizes of the inline Bluetooth HUD.
 enum BluetoothHUDMetrics {
     /// Left wing (icon, plus the scrolling name when enabled): 64 pt, or 132 with the name;
     /// a swipe widens it by half its progress; never under 60 / 112.
@@ -42,27 +42,27 @@ enum BluetoothHUDMetrics {
         return max(base + gestureProgress / 2, minimum)
     }
 
-    /// Atoll's default HStack gap between the info column, the black centre and the trailing
+    /// Default HStack gap between the info column, the black centre and the trailing
     /// column.
-    static let atollGap: CGFloat = 8
+    static let designGap: CGFloat = 8
 
-    /// Atoll's black centre: the closed notch minus 20 pt. It does not swell on hover.
-    static func atollCentreWidth(notchWidth: CGFloat) -> CGFloat {
+    /// Design black centre: the closed notch minus 20 pt. It does not swell on hover.
+    static func designCentreWidth(notchWidth: CGFloat) -> CGFloat {
         max(notchWidth - 20, 0)
     }
 
-    /// Host left wing: Atoll's info column plus the gap after it, so the host's black centre
-    /// starts exactly where Atoll's does and covers the scrolling name at the same point.
+    /// Host left wing: the design info column plus the gap after it, so the host's black centre
+    /// starts exactly where the design's does and covers the scrolling name at the same point.
     static func hostLeftWidth(infoWidth: CGFloat) -> CGFloat {
-        infoWidth + atollGap
+        infoWidth + designGap
     }
 
-    /// Host right wing: whatever is left of Atoll's total width (info + gap + centre + gap +
+    /// Host right wing: whatever is left of the design total width (info + gap + centre + gap +
     /// trailing) once the host's centre (the whole notch, plus the hover swell) is placed.
-    /// The trailing content is right-aligned, so it sits exactly where Atoll draws it.
+    /// The trailing content is right-aligned, so it sits exactly where the design places it.
     static func hostRightWidth(trailingWidth: CGFloat, in context: ClosedActivityContext) -> CGFloat {
-        let atollRemainder = atollCentreWidth(notchWidth: context.notchWidth) + atollGap + trailingWidth
-        return max(0, atollRemainder - context.centerWidth)
+        let designRemainder = designCentreWidth(notchWidth: context.notchWidth) + designGap + trailingWidth
+        return max(0, designRemainder - context.centerWidth)
     }
 }
 
@@ -96,7 +96,7 @@ final class BluetoothHUDActivity: ClosedLiveActivity {
         .eraseToAnyPublisher()
     }
 
-    /// Atoll's info column width for the current settings and swipe.
+    /// Info column width for the current settings and swipe.
     func infoWidth(in context: ClosedActivityContext) -> CGFloat {
         BluetoothHUDMetrics.infoWidth(
             showsName: settings.showDeviceNameMarquee,

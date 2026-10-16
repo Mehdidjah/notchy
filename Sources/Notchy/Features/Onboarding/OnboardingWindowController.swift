@@ -4,7 +4,7 @@ import SwiftUI
 /// Presents the onboarding window: 400 x 600, titled with a transparent title bar and full-size
 /// content, no title text, centred, not restorable. While it is up the app becomes a regular
 /// app (Dock icon, menu bar) so the window can take focus; finishing returns it to an
-/// accessory app (Atoll's showOnboardingWindow).
+/// accessory app.
 @MainActor
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     static let shared = OnboardingWindowController()
@@ -55,7 +55,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         let flow = OnboardingFlowModel(
             selectedProfiles: settings.selectedProfiles,
             musicSource: OnboardingFeature.currentMusicSource?() ?? settings.musicSource,
-            baseChoices: OnboardingFeature.currentFeatureChoices?() ?? .atollDefaults
+            baseChoices: OnboardingFeature.currentFeatureChoices?() ?? .recommendedDefaults
         )
         self.flow = flow
 
@@ -66,7 +66,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             onFeaturesChosen: { [weak self] profiles, choices in self?.saveFeatures(profiles: profiles, choices: choices) },
             onFinish: { [weak self] in self?.complete(openingSettings: false) },
             onOpenSettings: { [weak self] in self?.complete(openingSettings: true) },
-            // Atoll asks only during the first-run onboarding, not when it is shown again.
+            // Asked only during the first-run onboarding, not when it is shown again.
             onFocusDetectionModeChosen: settings.completed ? nil : OnboardingFeature.applyFocusDetectionMode
         )
 

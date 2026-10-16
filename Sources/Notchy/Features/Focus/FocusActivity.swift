@@ -66,7 +66,7 @@ enum FocusTextMetrics {
     }
 }
 
-/// Wing sizes for the Focus activity, after Atoll's DoNotDisturbLiveActivity.
+/// Wing sizes for the Focus activity.
 struct FocusWingLayout: Equatable {
     var iconWidth: CGFloat
     var labelWidth: CGFloat
@@ -118,11 +118,11 @@ struct FocusWingLayout: Equatable {
     }
 }
 
-/// The active Focus on the closed notch (Atoll's DoNotDisturbLiveActivity): the mode's glyph
+/// The active Focus on the closed notch: the mode's glyph
 /// on the left, its name on the right, both in the mode's accent colour.
 ///
-/// Persistent mode stays while Focus is on and folds away as soon as it ends: shipped Atoll
-/// mounts this view only while Focus is on or an "Off" toast is playing, so its persistent-mode
+/// Persistent mode stays while Focus is on and folds away as soon as it ends: the view is
+/// mounted only while Focus is on or an "Off" toast is playing, so its persistent-mode
 /// pop animation never reaches the screen. Toast mode shows "On" for 1.8 s, and "Off" with a
 /// white glyph and label for 1.5 s, then folds away; switching modes while on replays the toast.
 @MainActor
@@ -139,7 +139,7 @@ final class FocusActivity: ClosedLiveActivity {
     private(set) var isExpanded = false
     private(set) var showsInactiveIcon = false
     /// True for the frame in which the wings sit shut before springing open again; the
-    /// activity stays on the island meanwhile, as Atoll's view stays mounted.
+    /// activity stays on the island meanwhile, as the view stays mounted.
     private var holdsBaseline = false
     /// The current presentation; only changed through `commit`.
     private(set) var display = FocusWingDisplay()
@@ -158,7 +158,7 @@ final class FocusActivity: ClosedLiveActivity {
     private let changes = PassthroughSubject<Void, Never>()
     private var cancellables: Set<AnyCancellable> = []
 
-    /// Toast linger times, from Atoll.
+    /// Toast linger times.
     static let toastOnDuration: Duration = .milliseconds(1_800)
     static let toastOffDuration: Duration = .milliseconds(1_500)
     /// How long the wings stay shut before a replayed "on" springs them open: one frame, so
@@ -240,15 +240,15 @@ final class FocusActivity: ClosedLiveActivity {
             // First look, or the indicator was just switched on while Focus is on.
             expand(toast: now.toastMode)
         }
-        // Name, mode or label-setting changes resize the wings with Atoll's 0.3 s smooth.
+        // Name, mode or label-setting changes resize the wings with a 0.3 s smooth.
         transition(.smooth(duration: 0.3)) {}
     }
 
-    /// Opens the wings with Atoll's spring and, in toast mode, schedules the 1.8 s collapse.
+    /// Opens the wings with a spring and, in toast mode, schedules the 1.8 s collapse.
     ///
     /// With `fromShutBaseline`, wings that are already open (an "Off" toast, or an "On" toast
     /// when the mode switches) first snap shut without animation and spring open a frame
-    /// later, so the toast visibly plays again, as in Atoll.
+    /// later, so the toast visibly plays again.
     private func expand(toast: Bool, fromShutBaseline: Bool = false) {
         if fromShutBaseline, isExpanded || showsInactiveIcon {
             transition(nil) {
@@ -436,7 +436,7 @@ private struct FocusLabelWing: View {
 
 /// A single line that, when wider than its frame, waits 0.1 s, then repeatedly pauses 0.4 s
 /// and scrolls left at 30 pt/s with a 20-pt gap before the repeat, snapping back each time.
-/// The row is 13 pt tall (the 10-pt caption size times 1.3), as in Atoll's marquee.
+/// The row is 13 pt tall (the 10-pt caption size times 1.3).
 struct FocusMarqueeText: View {
     static let font = Font.system(size: 12, weight: .semibold, design: .rounded)
     static let gap: CGFloat = 20

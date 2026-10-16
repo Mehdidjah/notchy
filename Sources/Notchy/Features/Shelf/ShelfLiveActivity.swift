@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// Atoll's closed-notch shelf indicator: a tray glyph on the left wing and the item count on
+/// Closed-notch shelf indicator: a tray glyph on the left wing and the item count on
 /// the right, shown whenever the shelf holds something and nothing more urgent is showing.
 @MainActor
 final class ShelfLiveActivity: ClosedLiveActivity {

@@ -155,7 +155,7 @@ struct CalendarEmptyEventsView: View {
 // MARK: - Access prompt
 
 /// Shown in the event area until EventKit access is granted, styled like the empty state so
-/// the panel keeps Atoll's look. The compact panel drops the explanatory line to fit 120 pt.
+/// the panel keeps its look. The compact panel drops the explanatory line to fit 120 pt.
 struct CalendarAccessPromptView: View {
     @ObservedObject var store: CalendarStore
     var compact = false
@@ -204,7 +204,7 @@ struct CalendarAccessPromptView: View {
 
 // MARK: - Auto-scroll
 
-/// Atoll's event-list auto-scroll: on appear and on a day change, centre the running or next
+/// Event-list auto-scroll: on appear and on a day change, centre the running or next
 /// event; when events first arrive after the list appeared, do it once more.
 struct CalendarAutoScrollModifier: ViewModifier {
     let proxy: ScrollViewProxy
@@ -236,8 +236,7 @@ struct CalendarAutoScrollModifier: ViewModifier {
         guard let target = CalendarEventFilter.scrollTarget(in: timed, at: reference) else { return }
         let id = target.id
         let proxy = proxy
-        // On the next main-loop turn, after the list has measured its rows; no animation,
-        // as in Atoll.
+        // On the next main-loop turn, after the list has measured its rows; no animation.
         DispatchQueue.main.async {
             var transaction = Transaction(animation: nil)
             transaction.disablesAnimations = true

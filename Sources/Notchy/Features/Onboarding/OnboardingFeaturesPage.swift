@@ -30,7 +30,7 @@ struct OnboardingFeaturesPage: View {
     let onContinue: () -> Void
 
     var body: some View {
-        // Same header and Continue button as the profile page (Atoll's constants).
+        // Same header and Continue button as the profile page.
         VStack(spacing: 24) {
             VStack(spacing: 8) {
                 Image(systemName: "switch.2")

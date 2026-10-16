@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The Focus glyph in the open island's header (Atoll's FocusIndicator): a 30-pt black capsule
+/// The Focus glyph in the open island's header: a 30-pt black capsule
 /// with the active mode's glyph, 12-pt semibold in a 24-pt frame, in the mode's colour.
-/// Informational, like Atoll's; renders nothing unless a Focus is on and the indicator is enabled.
+/// Informational only; renders nothing unless a Focus is on and the indicator is enabled.
 struct FocusHeaderButton: View {
     @ObservedObject private var monitor: FocusMonitor
     @ObservedObject private var settings: FocusSettings

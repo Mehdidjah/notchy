@@ -3,8 +3,8 @@ import Foundation
 
 /// Onboarding preferences, stored under "onboarding." keys in UserDefaults.
 ///
-/// Atoll keeps a single `firstLaunch` flag (default true) that both shows the onboarding
-/// window and plays the notch "hello"; the hello clears it 3.5 s after it appears. Notchy
+/// A single `firstLaunch` flag (default true) could both show the onboarding window and
+/// play the notch "hello", with the hello clearing it 3.5 s after it appears. Notchy
 /// splits it in two so the window keeps coming back until the user reaches the last page,
 /// while the hello still plays exactly once.
 @MainActor
@@ -35,7 +35,7 @@ final class OnboardingSettings: ObservableObject {
         didSet { defaults.set(helloShown, forKey: Key.helloShown) }
     }
 
-    /// Plays the welcome chime together with the first-launch hello (Atoll always plays it).
+    /// Plays the welcome chime together with the first-launch hello.
     @Published var playsWelcomeSound: Bool {
         didSet { defaults.set(playsWelcomeSound, forKey: Key.playsWelcomeSound) }
     }

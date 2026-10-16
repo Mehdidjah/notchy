@@ -30,7 +30,7 @@ enum PrivacyIndicatorKind: String, CaseIterable, Sendable {
 
 /// What the privacy activity shows, after the user's detection switches are applied.
 ///
-/// Atoll distinguishes eight combinations of camera, microphone and screen recording. They
+/// There are eight combinations of camera, microphone and screen recording. They
 /// reduce to two questions: what sits in the left wing, and which glyphs sit in the right one.
 struct PrivacyIndicatorState: Equatable, Sendable {
     var camera: Bool
@@ -77,11 +77,11 @@ struct PrivacyIndicatorState: Equatable, Sendable {
         PrivacyIndicatorState.wingWidth(closedHeight: context.closedHeight)
     }
 
-    /// Extra width Atoll gives each privacy wing beyond the square content height.
+    /// Extra width given to each privacy wing beyond the square content height.
     static let wingExtra: CGFloat = 20
 
     /// One non-empty privacy wing: the resting content height (notch height less 12) plus
-    /// 20 pt. Atoll's privacy view keeps its own hover and swipe state, which never changes,
+    /// 20 pt. The privacy view keeps its own hover and swipe state, which never changes,
     /// so its wings do not swell when the pointer is on the island or during a swipe.
     static func wingWidth(closedHeight: CGFloat) -> CGFloat {
         max(0, closedHeight - 12) + wingExtra

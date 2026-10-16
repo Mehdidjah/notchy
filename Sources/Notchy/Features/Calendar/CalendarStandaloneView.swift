@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Atoll's standalone calendar, shown on Home when no media player is: a month picker on
+/// Standalone calendar, shown on Home when no media player is: a month picker on
 /// the left and the selected day's events as cards on the right, two equal panes 12 pt apart.
 struct CalendarStandalonePanel: View {
     @ObservedObject var store: CalendarStore
@@ -45,7 +45,7 @@ struct CalendarStandalonePanel: View {
         }
     }
 
-    /// Atoll, on appear and whenever the notch opens: today's month, centred on today. The
+    /// On appear and whenever the notch opens: today's month, centred on today. The
     /// slot resets the store's selection to today at the same moment.
     private func centreOnToday() {
         let today = Calendar.current.startOfDay(for: Date())

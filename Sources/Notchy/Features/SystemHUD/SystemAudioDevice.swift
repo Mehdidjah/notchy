@@ -8,10 +8,10 @@ struct SystemAudioSnapshot: Equatable, Sendable {
     /// 0...1, or nil when the device publishes no readable level and none was ever read.
     var volume: Float?
     var isMuted: Bool
-    /// True for Bluetooth and Bluetooth LE outputs (Atoll swaps the speaker for headphones).
+    /// True for Bluetooth and Bluetooth LE outputs (the HUD swaps the speaker for headphones).
     var isBluetooth: Bool
 
-    /// The level a HUD shows: zero while muted, as in Atoll.
+    /// The level a HUD shows: zero while muted.
     var displayLevel: Float { isMuted ? 0 : (volume ?? 0) }
 }
 
@@ -51,12 +51,12 @@ final class SystemAudioDevice: @unchecked Sendable {
     private var deviceListeners: [(address: AudioObjectPropertyAddress, block: AudioObjectPropertyListenerBlock)] = []
     private var lastPublished: SystemAudioSnapshot?
     /// Last level each device answered with, so a failed read holds the level instead of
-    /// reporting silence (Atoll's per-device volume memory).
+    /// reporting silence (per-device volume memory).
     private var knownVolumes: [AudioObjectID: Float] = [:]
     /// A listener can fire once per channel for one change; these are coalesced.
     private var pendingExternalRead = false
 
-    /// Below this a level counts as silence and the device is muted (Atoll: 0.001).
+    /// Below this a level counts as silence and the device is muted (0.001).
     static let silenceThreshold: Float = 0.001
     /// Smaller differences are treated as the same level when deduplicating listener calls.
     static let changeTolerance: Float = 0.0005
@@ -90,7 +90,7 @@ final class SystemAudioDevice: @unchecked Sendable {
 
     // MARK: Commands
 
-    /// Moves the level by `delta`, unmuting first, the way Atoll's volume keys do.
+    /// Moves the level by `delta`, unmuting first, the way the volume keys do.
     func adjustVolume(by delta: Float) {
         queue.async { [self] in
             let device = deviceID
@@ -252,7 +252,7 @@ final class SystemAudioDevice: @unchecked Sendable {
         return status == noErr ? device : AudioObjectID(kAudioObjectUnknown)
     }
 
-    /// Main element first, then the first two channels, as Atoll probes them.
+    /// Main element first, then the first two channels, in that probe order.
     private static let candidateElements: [AudioObjectPropertyElement] = [kAudioObjectPropertyElementMain, 1, 2]
 
     private func volumeElements(on device: AudioObjectID) -> [AudioObjectPropertyElement] {
@@ -293,7 +293,7 @@ final class SystemAudioDevice: @unchecked Sendable {
     }
 
     private func writeVolume(_ value: Float, on device: AudioObjectID) {
-        // Atoll mutes at silence and unmutes above it.
+        // Mutes at silence and unmutes above it.
         let muted = readMute(on: device) ?? false
         if value <= Self.silenceThreshold {
             if !muted { writeMute(true, on: device) }

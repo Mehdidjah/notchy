@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Download detection rows for the Settings window. Returns a `Section`; embed it in a `Form`.
 ///
-/// Laid out like Atoll's Downloads pane: the detection switch, the indicator style as two
+/// Layout: the detection switch, the indicator style as two
 /// preview cards (a live bar and a live ring), then the speed switch with its explanation.
 struct DownloadsSettingsSection: View {
     @ObservedObject private var settings: DownloadsSettings

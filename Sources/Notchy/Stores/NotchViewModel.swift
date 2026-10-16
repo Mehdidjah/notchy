@@ -44,8 +44,8 @@ final class NotchViewModel: ObservableObject {
     var onOpenQuickPaste: (() -> Void)?
     /// Answers whether the island should currently be retracted for a fullscreen app.
     var fullscreenProvider: (() -> Bool)?
-    /// Answers which tab a live activity wants the island to open on, if any (Atoll opens on
-    /// the Timer tab while a timer runs, even with hover-to-open off).
+    /// Answers which tab a live activity wants the island to open on, if any (the island opens
+    /// on the Timer tab while a timer runs, even with hover-to-open off).
     var liveActivityTabProvider: (() -> NotchTab?)?
     /// Reasons something outside the island's rect (a header popover, a share sheet, Quick
     /// Look, a drag out) needs the island to stay open. The pointer leaving the island does
@@ -128,7 +128,7 @@ final class NotchViewModel: ObservableObject {
     var acceptsOpenGesture: Bool { state.isCollapsed }
     var acceptsCloseGesture: Bool { state == .expanded }
 
-    /// Tabs offered in the open island, in Atoll's order. Clipboard is always present.
+    /// Tabs offered in the open island, in display order. Clipboard is always present.
     var availableTabs: [NotchTab] {
         var tabs: [NotchTab] = []
         if settings.showHomeTab { tabs.append(.home) }
@@ -181,7 +181,7 @@ final class NotchViewModel: ObservableObject {
         }
     }
 
-    /// Atoll's header clipboard button in tab mode: show the clipboard, or go back to Home.
+    /// Header clipboard button in tab mode: show the clipboard, or go back to Home.
     func toggleClipboardTab() {
         selectTab(selectedTab == .clipboard ? (availableTabs.first ?? .clipboard) : .clipboard)
     }
@@ -273,8 +273,8 @@ final class NotchViewModel: ObservableObject {
         )
     }
 
-    /// Shows a sneak peek under the closed notch, the way Atoll surfaces track changes and
-    /// system events, then folds it away. Skipped while the island is open or hovered; a newer
+    /// Shows a sneak peek under the closed notch, for track changes and system
+    /// events, then folds it away. Skipped while the island is open or hovered; a newer
     /// peek replaces one that is already showing.
     func presentSneakPeek(_ peek: SneakPeek, clipID: Clip.ID? = nil) {
         guard !pointerIsInside, state == .idle || state == .peeking else { return }

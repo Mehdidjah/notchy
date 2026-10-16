@@ -112,7 +112,7 @@ struct ShortcutsTests {
     // MARK: Actions
 
     @Test
-    func defaultsMatchAtoll() {
+    func defaultsMatchDesign() {
         let expected: [ShortcutAction: Shortcut] = [
             .toggleNotchOpen: Shortcut(kVK_ANSI_I, [.command, .shift]),
             .clipboardHistoryPanel: Shortcut(kVK_ANSI_V, [.command, .shift]),
@@ -135,7 +135,7 @@ struct ShortcutsTests {
     }
 
     @Test
-    func groupsFollowAtollSectionOrder() {
+    func groupsFollowDesignSectionOrder() {
         #expect(ShortcutGroup.allCases.map(\.header) == [
             "Media", "Keep Awake", "Navigation", "Timer", "Clipboard", "AI Assistant", "Terminal", "Color Picker",
         ])
@@ -202,7 +202,7 @@ struct ShortcutsTests {
     // MARK: Persistence
 
     @Test
-    func settingsStartFromAtollDefaults() {
+    func settingsStartFromDesignDefaults() {
         let settings = ShortcutsSettings(defaults: makeDefaults())
         #expect(settings.isEnabled)
         #expect(settings.allDefaults)
@@ -473,7 +473,7 @@ struct ShortcutsTests {
 @MainActor
 struct ShortcutsRecorderParityTests {
     @Test
-    func recorderIsACentredSearchFieldLikeAtolls() {
+    func recorderIsACentredSearchField() {
         let (manager, _, _) = makeManager()
         let field = ShortcutRecorderField(action: .quickPaste, manager: manager)
         #expect(field.placeholderString == "Record Shortcut")
@@ -493,7 +493,7 @@ struct ShortcutsRecorderParityTests {
     }
 
     @Test
-    func rowsAreBuiltLikeAtollsSections() {
+    func rowsAreBuiltLikeDesignSections() {
         #expect(ShortcutGroup.media.rowLayout == .bare)
         #expect(ShortcutGroup.navigation.rowLayout == .bare)
         #expect(ShortcutGroup.keepAwake.rowLayout == .stacked)

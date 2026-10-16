@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The welcome page's stage light, drawn with shapes in place of Atoll's "spotlight" artwork.
+/// The welcome page's stage light, drawn with shapes in place of bitmap artwork.
 ///
-/// Same proportions and tones as Atoll's: a 689 x 1005 canvas (so, fitted to the 400-pt window,
+/// Proportions and tones: a 689 x 1005 canvas (so, fitted to the 400-pt window,
 /// it runs the full height and the welcome stack sits in the middle of the beam); a beam that
 /// starts 38 % wide at the top edge and widens to the full width at 92 % of the height, its foot
 /// cut by the top half of the stage ellipse; grey shading that darkens downwards with a soft
@@ -100,7 +100,7 @@ struct OnboardingSpotlightBeam: Shape {
 /// Notchy's mark: a dark squircle "display" whose top edge carries the black island,
 /// over a wallpaper in the hello gradient's colours.
 ///
-/// Drawn on the macOS app-icon grid like Atoll's "logo2" (a 1024-px app icon): in a frame of
+/// Drawn on the macOS app-icon grid (a 1024-px app icon): in a frame of
 /// `size` the squircle is 80.5 % wide (824 of 1024) with a 22.5 % continuous corner radius and
 /// the usual soft icon shadow, so it occupies the same space on the welcome page.
 struct OnboardingAppGlyph: View {
@@ -166,7 +166,7 @@ struct OnboardingAppGlyph: View {
 }
 
 /// The wordmark standing on the stage at the bottom of the welcome page: white condensed
-/// heavy capitals 22 pt tall, about 112 pt wide, like Atoll's "ebullioscopic" image. The page
+/// heavy capitals 22 pt tall, about 112 pt wide. The page
 /// lays it out with an overlay blend.
 struct OnboardingWordmark: View {
     static let height: CGFloat = 22

@@ -125,7 +125,7 @@ struct DownloadsTests {
         let context = ClosedActivityContext(
             closedHeight: 32, notchWidth: 185, isHovering: false, gestureProgress: 0, hasHardwareNotch: true
         )
-        // Atoll: left 20, centre +40, right max(60, 32) = 60. Atoll's widened centre ends on the
+        // Left 20, centre +40, right max(60, 32) = 60. The widened centre ends on the
         // notch's right edge, so its +40 lies left of the notch: the host's left wing carries it.
         #expect(DownloadWingMetrics.leftWidth(in: context, showsSpeed: false) == 60)
         #expect(DownloadWingMetrics.rightWidth(in: context, showsSpeed: false) == 60)
@@ -134,10 +134,10 @@ struct DownloadsTests {
         #expect(DownloadWingMetrics.rightWidth(in: context, showsSpeed: true) == 118)
         let total = DownloadWingMetrics.leftWidth(in: context, showsSpeed: true)
             + DownloadWingMetrics.rightWidth(in: context, showsSpeed: true)
-        let atollTotal: CGFloat = 20 + 60 + 40 + 58 + 58
-        #expect(total == atollTotal)
+        let expectedTotal: CGFloat = 20 + 60 + 40 + 58 + 58
+        #expect(total == expectedTotal)
 
-        // Atoll's download view never sees hover or swipe.
+        // The download view never sees hover or swipe.
         let hovered = ClosedActivityContext(
             closedHeight: 32, notchWidth: 185, isHovering: true, gestureProgress: 12, hasHardwareNotch: true
         )
@@ -154,7 +154,7 @@ struct DownloadsTests {
     // MARK: Settings, watcher and activity
 
     @Test
-    func settingsDefaultToAtollsChoices() {
+    func settingsDefaultToDesignChoices() {
         let defaults = makeDefaults()
         let settings = DownloadsSettings(defaults: defaults)
         #expect(settings.enableDownloadDetection)

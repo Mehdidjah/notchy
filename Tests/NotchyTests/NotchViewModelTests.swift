@@ -301,9 +301,9 @@ struct NotchViewModelTests {
     }
 
     @Test
-    func idleNotchMatchesAtollAndDoesNotSwell() {
+    func idleNotchMatchesDesignAndDoesNotSwell() {
         let geometry = Self.macBookGeometry
-        // Atoll: (hardware + 4) - 20 content box plus 14 pt on each side.
+        // (hardware + 4) - 20 content box plus 14 pt on each side.
         let idle = NotchGeometryResolver.metrics(state: .idle, geometry: geometry, preferredExpandedWidth: 640)
         #expect(idle.renderedSize == CGSize(width: 197, height: 32))
         #expect(idle.activationSize == CGSize(width: 221, height: 38))
@@ -313,7 +313,7 @@ struct NotchViewModelTests {
     }
 
     @Test
-    func activityWingsFollowAtollsArithmetic() {
+    func activityWingsFollowDesignArithmetic() {
         let center = IslandActivityCenter()
         let activity = FakeActivity(id: "music", priority: ClosedActivityPriority.music)
         center.register(activity)

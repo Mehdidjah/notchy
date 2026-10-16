@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Battery preferences, stored under `battery.*` in UserDefaults with Atoll's defaults.
+/// Battery preferences, stored under `battery.*` in UserDefaults with the design defaults.
 @MainActor
 final class BatterySettings: ObservableObject {
     enum Key {
@@ -23,7 +23,7 @@ final class BatterySettings: ObservableObject {
         static let fullBatteryHUDStyle = "battery.fullBatteryHUDStyle"
     }
 
-    /// Slider ranges from Atoll's Battery pane.
+    /// Slider ranges of the Battery pane.
     static let durationRange = 1...10
     static let lowThresholdRange = 5...30
     static let fullThresholdRange = 80...100
@@ -130,7 +130,7 @@ final class BatterySettings: ObservableObject {
         }
     }
 
-    /// Seconds the alert stays up; never less than one, as in Atoll.
+    /// Seconds the alert stays up; never less than one.
     func duration(for kind: BatteryHUDKind) -> Int {
         let seconds = switch kind {
         case .charging: chargingHUDDuration

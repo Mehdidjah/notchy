@@ -1,8 +1,8 @@
 import ServiceManagement
 import SwiftUI
 
-/// Settings panes in Atoll's order and grouping. Each pane has a gradient tile tint and the
-/// SF Symbol Atoll uses for the same pane.
+/// Settings panes in sidebar order and grouping. Each pane has a gradient tile tint and an
+/// SF Symbol.
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general, appearance
     case media, liveActivities, devices
@@ -102,7 +102,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Atoll's sidebar group headings; nil means no heading.
+    /// Sidebar group headings; nil means no heading.
     var group: String? {
         switch self {
         case .general, .appearance: nil
@@ -377,7 +377,7 @@ struct SettingsView: View {
                 }
             }
             Section("Acknowledgements") {
-                Text("The island's behaviour, layout and animations are modelled on Atoll by Ebullioscopic (GPL-3.0), studied from its public source and shipped app; Notchy's code is original.")
+                Text("Notchy brings music, calendar, timers, files and your clipboard to the notch.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -433,7 +433,7 @@ struct SettingsView: View {
     }
 }
 
-/// Atoll's sidebar tile: a rounded square with a diagonal gradient of the pane tint, a hairline
+/// Sidebar tile: a rounded square with a diagonal gradient of the pane tint, a hairline
 /// light border and a soft tinted shadow, holding a white symbol.
 struct SettingsTile: View {
     let symbol: String

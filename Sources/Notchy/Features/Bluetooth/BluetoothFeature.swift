@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 enum BluetoothFeature {
     /// Called with 1.5 s each time the connection HUD shows, so the host can keep the volume
-    /// HUD quiet while the output switches to the headphones (Atoll's HUD suppression).
+    /// HUD quiet while the output switches to the headphones (HUD suppression).
     static var onSuppressVolumeHUD: ((TimeInterval) -> Void)?
 
     private static var activity: BluetoothHUDActivity?

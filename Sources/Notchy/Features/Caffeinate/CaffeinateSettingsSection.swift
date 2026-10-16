@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Keep Awake rows for the Settings window, as in Atoll's General tab. Returns a `Section`, so
+/// Keep Awake rows for the Settings window's General tab. Returns a `Section`, so
 /// embed it inside a `Form`.
 struct CaffeinateSettingsSection: View {
     @ObservedObject private var settings: CaffeinateSettings

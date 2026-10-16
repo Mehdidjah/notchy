@@ -23,10 +23,10 @@ final class MediaInteractionState: ObservableObject {
 
     /// True while the pointer rests on the closed spectrum with its play/pause glyph showing
     /// ("open on hover" off). A click there toggles playback and must not open the island
-    /// (Atoll's `handleClosedMusicWaveformTapIfNeeded` runs before the open handler).
+    /// (the closed-waveform tap is handled before the open handler).
     @Published private(set) var claimsClosedClick = false
     /// True while the pointer is over the side lyrics panel, so scrolling the lyrics never
-    /// reads as a swipe to close the island (Atoll's `setScrollGestureSuppression`).
+    /// reads as a swipe to close the island.
     @Published private(set) var suppressesCloseGesture = false
     /// The closed music wings while they are on screen; nil when the island is open or
     /// another activity owns the closed notch.
@@ -56,7 +56,7 @@ private struct MediaArtworkNamespaceKey: EnvironmentKey {
 extension EnvironmentValues {
     /// The island's matched-geometry namespace. When the host sets it on the view that holds
     /// both the closed row and the open shell, the album art morphs from the closed wing into
-    /// the open player and back, as Atoll's "albumArt" geometry group does.
+    /// the open player and back ("albumArt" geometry group).
     var mediaArtworkNamespace: Namespace.ID? {
         get { self[MediaArtworkNamespaceKey.self] }
         set { self[MediaArtworkNamespaceKey.self] = newValue }

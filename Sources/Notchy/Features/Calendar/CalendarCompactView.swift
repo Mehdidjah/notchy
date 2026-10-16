@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Atoll's compact calendar beside the media player: month and year beside a scrubbable
+/// Compact calendar beside the media player: month and year beside a scrubbable
 /// date strip, above the day's events, 120 pt tall. The strip stays visible so the dates
-/// show even on a day without events (Atoll unfolds it only on hover). Days with events are
+/// show even on a day without events. Days with events are
 /// tinted in their calendar's colour; a day without any shows just the dates.
 struct CalendarCompactPanel: View {
     @ObservedObject var store: CalendarStore

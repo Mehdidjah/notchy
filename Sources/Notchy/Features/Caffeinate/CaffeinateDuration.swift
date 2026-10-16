@@ -1,7 +1,7 @@
 import Foundation
 
-/// How long a Keep Awake session lasts. The raw values match Atoll's stored values so a
-/// preference copied across reads the same.
+/// How long a Keep Awake session lasts. The raw values are the stored
+/// preference values.
 enum CaffeinateDuration: String, CaseIterable, Identifiable, Sendable {
     case indefinite
     case fifteenMinutes

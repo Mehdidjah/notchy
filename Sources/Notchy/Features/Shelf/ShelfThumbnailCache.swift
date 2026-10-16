@@ -12,7 +12,7 @@ struct ShelfImageBox: @unchecked Sendable {
 @MainActor
 final class ShelfThumbnailCache {
     static let shared = ShelfThumbnailCache()
-    /// Atoll draws file tiles at 56 x 56 points.
+    /// File tiles are drawn at 56 x 56 points.
     static let tileSize = CGSize(width: 56, height: 56)
 
     private var cache: [String: NSImage] = [:]

@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// A permission page: a large accent glyph, title, explanation, privacy note and the buttons
-/// (Atoll's PermissionRequestView). Once the permission has an answer, a status pill above
+/// Once the permission has an answer, a status pill above
 /// the buttons reports it.
 ///
-/// - Not asked yet: "Not Now" and "Allow Access", which shows the system prompt; exactly
-///   Atoll's page, with no status pill.
+/// - Not asked yet: "Not Now" and "Allow Access", which shows the system prompt; no
+///   status pill.
 /// - Denied or restricted: "Not Now" and "Open System Settings", since macOS will not ask again.
 /// - Allowed: "Continue".
 struct OnboardingPermissionPage: View {
@@ -14,7 +14,7 @@ struct OnboardingPermissionPage: View {
     let title: String
     let description: String
     let privacyNote: String?
-    /// Camera and Calendar move on as soon as the system prompt is answered, like Atoll.
+    /// Camera and Calendar move on as soon as the system prompt is answered.
     /// Accessibility stays so the user can come back from System Settings.
     let advancesAfterPrompt: Bool
     @ObservedObject var permissions: OnboardingPermissionCenter

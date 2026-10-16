@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 /// Watches ~/Downloads for browsers' partial files and publishes the state the download live
-/// activity draws (Atoll's DownloadManager).
+/// activity draws.
 ///
 /// A download appearing after launch raises `isDownloading`. When nothing is being written any
 /// more, a download whose destination received data shows the green checkmark for 2 s before

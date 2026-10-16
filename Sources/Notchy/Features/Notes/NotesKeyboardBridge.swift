@@ -68,8 +68,8 @@ final class NotesKeyboardBridgeView: NSView {
             return isEditingText && NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: self)
         }
 
-        // The island's app has no Edit menu, so the key equivalents Atoll gets from SwiftUI's
-        // standard menu bar are sent to the focused text view here.
+        // The island's app has no Edit menu, so the key equivalents SwiftUI's standard menu
+        // bar would provide are sent to the focused text view here.
         guard isEditingText,
               let action = Self.editingAction(forKey: key, shift: modifiers.contains(.shift)) else { return false }
         return NSApp.sendAction(action, to: nil, from: self)

@@ -3,7 +3,7 @@ import Foundation
 
 /// The pages of the onboarding window, in order.
 ///
-/// Atoll's six pages are welcome, camera, calendar, music source, profile and finished.
+/// The core pages are welcome, camera, calendar, music source, profile and finished.
 /// Notchy adds a page that teaches the notch gestures, an Accessibility page (pasting
 /// and media keys need it), Automation inside the music page, and a feature-toggle page after
 /// the profiles.
@@ -50,7 +50,7 @@ final class OnboardingFlowModel: ObservableObject {
         step: OnboardingStep = .welcome,
         selectedProfiles: Set<OnboardingProfile> = [],
         musicSource: OnboardingMusicSource = .defaultSource,
-        baseChoices: OnboardingFeatureChoices = .atollDefaults
+        baseChoices: OnboardingFeatureChoices = .recommendedDefaults
     ) {
         self.step = step
         self.selectedProfiles = selectedProfiles

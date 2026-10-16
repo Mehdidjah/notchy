@@ -10,7 +10,7 @@ enum FocusMonitoringMode: String, CaseIterable, Identifiable, Sendable {
 
     var id: Self { self }
 
-    /// Atoll's labels for the same choice.
+    /// Settings labels for the same choice.
     var label: String {
         switch self {
         case .standard: "Use without DevTools"
@@ -19,7 +19,7 @@ enum FocusMonitoringMode: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Focus preferences, stored under `focus.*` keys. Defaults follow Atoll: detection, the
+/// Focus preferences, stored under `focus.*` keys. Defaults: detection, the
 /// indicator and its label on; persistent (not toast) presentation; standard monitoring.
 @MainActor
 final class FocusSettings: ObservableObject {

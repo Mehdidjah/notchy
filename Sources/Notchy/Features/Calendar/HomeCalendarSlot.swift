@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Home-tab calendar slot: Atoll's compact 120-pt panel beside a media player, or the
-/// standalone month view when no player is shown. Like Atoll, the date header / month grid is
+/// Home-tab calendar slot: the compact 120-pt panel beside a media player, or the
+/// standalone month view when no player is shown. The date header / month grid is
 /// always drawn; until EventKit access is granted the event area asks for it instead of
 /// showing the day's events. Opening the island always lands on today.
 struct HomeCalendarSlot: View {
@@ -10,8 +10,7 @@ struct HomeCalendarSlot: View {
     @ObservedObject private var store: CalendarStore
     @ObservedObject private var settings: CalendarSettings
     @ObservedObject private var homeLayout: HomeLayoutState
-    /// Bumped each time the island opens, so the standalone grid re-centres on today
-    /// (Atoll's `requestDatePickerCenterOnCurrentDate` on `notchState == .open`).
+    /// Bumped each time the island opens, so the standalone grid re-centres on today.
     @State private var openGeneration = 0
 
     init(model: NotchViewModel, compact: Bool) {
@@ -32,7 +31,7 @@ struct HomeCalendarSlot: View {
             }
             .onDisappear { store.isHoveringCalendar = false }
             .onChange(of: model.state.showsShelfContent) { _, isOpen in
-                // Atoll: the compact view resets on every open/close, the standalone view
+                // The compact view resets on every open/close, the standalone view
                 // also re-centres its grid when the notch opens.
                 store.resetToToday()
                 if isOpen {
@@ -56,7 +55,7 @@ struct HomeCalendarSlot: View {
         }
     }
 
-    /// Atoll: the open notch height less the header and 36 pt, never under 130.
+    /// The open notch height less the header and 36 pt, never under 130.
     private var standaloneHeight: CGFloat {
         CalendarLayout.standaloneHeight(
             openHeight: NotchTab.home.openHeight + homeLayout.extraHeight,

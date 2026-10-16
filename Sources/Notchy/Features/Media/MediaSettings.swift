@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Media preferences, stored under "media." keys with Atoll's defaults.
+/// Media preferences, stored under "media." keys with their design defaults.
 @MainActor
 final class MediaSettings: ObservableObject {
     static let shared = MediaSettings()
@@ -67,7 +67,7 @@ final class MediaSettings: ObservableObject {
     @Published var autoHideInactivePlayer: Bool {
         didSet { defaults.set(autoHideInactivePlayer, forKey: Key.autoHideInactivePlayer) }
     }
-    /// "Enable customizable controls" (Atoll's showShuffleAndRepeat).
+    /// "Enable customizable controls".
     @Published var customizableControls: Bool {
         didSet { defaults.set(customizableControls, forKey: Key.customizableControls) }
     }
@@ -208,7 +208,7 @@ final class MediaSettings: ObservableObject {
         controlWindowEnabled = defaults.object(forKey: Key.controlWindowEnabled) as? Bool ?? false
     }
 
-    /// The slots the open player draws, following Atoll's rules: the configured layout when
+    /// The slots the open player draws: the configured layout when
     /// customizable controls are on (falling back to the default when every slot is empty),
     /// otherwise the minimal or ±10 s layout.
     func displayedSlots(canFavorite: Bool, isAppleMusicActive: Bool = true) -> [MediaControlSlot] {

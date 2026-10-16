@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// The temporary charging / low / full battery alert in the closed notch: Atoll's
+/// The temporary charging / low / full battery alert in the closed notch: the
 /// highest-priority closed surface.
 ///
 /// The compact alert is a pair of 90-pt wings (title on the left, percentage and pill on the
@@ -108,7 +108,7 @@ final class BatteryHUDActivity: ClosedLiveActivity {
         )
     }
 
-    /// Atoll rounds the island's bottom corners to 40 pt (low) or 36 pt (full) for the
+    /// Rounds the island's bottom corners to 40 pt (low) or 36 pt (full) for the
     /// standard cards; nil keeps the closed radius.
     func closedBottomCornerRadius(in context: ClosedActivityContext) -> CGFloat? {
         hostDrawsBottomBand ? metrics?.bottomCornerRadius : nil

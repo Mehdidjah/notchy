@@ -48,7 +48,7 @@ extension BatterySnapshot {
     }
 
     /// Picks the internal battery among the power sources (a UPS can be listed too), falling
-    /// back to the first source the way Atoll does.
+    /// back to the first source.
     static func snapshot(fromSources sources: [[String: Any]], lowPowerMode: Bool) -> BatterySnapshot {
         let battery = sources.first { ($0[kIOPSTypeKey] as? String) == kIOPSInternalBatteryType }
             ?? sources.first
@@ -109,7 +109,7 @@ extension BatterySnapshot {
     }
 }
 
-/// A single change between two battery readings. Atoll delivers these one at a time, a
+/// A single change between two battery readings. They are delivered one at a time, a
 /// second apart, so a plug-in and the charging flip that follows never collide.
 enum BatteryEvent: Equatable, Sendable {
     case availabilityChanged(Bool)
@@ -128,14 +128,14 @@ struct BatteryDelivery: Equatable, Sendable {
     let after: BatterySnapshot
 }
 
-/// The three temporary battery alerts Atoll draws in the closed notch.
+/// The three temporary battery alerts drawn in the closed notch.
 enum BatteryHUDKind: String, CaseIterable, Sendable {
     case charging
     case lowBattery
     case fullBattery
 }
 
-/// Atoll's two looks for the low and full alerts; charging is always compact.
+/// Two looks for the low and full alerts; charging is always compact.
 enum BatteryHUDStyle: String, CaseIterable, Identifiable, Sendable {
     /// The taller card with a description and an animated battery illustration.
     case standard
@@ -155,14 +155,14 @@ enum BatteryHUDStyle: String, CaseIterable, Identifiable, Sendable {
 /// What a delivered event should raise.
 struct BatteryHUDTrigger: Equatable, Sendable {
     let kind: BatteryHUDKind
-    /// True only for a falling level crossing the low threshold (Atoll's low-battery chime).
+    /// True only for a falling level crossing the low threshold (the low-battery chime).
     let playsAlertSound: Bool
 }
 
 enum BatteryEventRules {
-    /// The changes from `old` to `new`, in Atoll's order: power source, level, charging,
-    /// Low Power Mode, time to full, max capacity. Time to empty is not queued (Atoll does not
-    /// track it, and its minute-by-minute estimate would hold up real alerts).
+    /// The changes from `old` to `new`, in this order: power source, level, charging,
+    /// Low Power Mode, time to full, max capacity. Time to empty is not queued (it is not
+    /// tracked, and its minute-by-minute estimate would hold up real alerts).
     static func events(from old: BatterySnapshot, to new: BatterySnapshot) -> [BatteryEvent] {
         var events: [BatteryEvent] = []
         if old.hasBattery != new.hasBattery { events.append(.availabilityChanged(new.hasBattery)) }
@@ -175,7 +175,7 @@ enum BatteryEventRules {
         return events
     }
 
-    /// Atoll's triggers: plugging in raises the charging alert; switching Low Power Mode on
+    /// Triggers: plugging in raises the charging alert; switching Low Power Mode on
     /// raises the low alert; a falling level that crosses the low threshold on battery raises
     /// the low alert with its chime; a rising level that reaches the full threshold raises
     /// the full alert.
@@ -210,7 +210,7 @@ enum BatteryEventRules {
     }
 }
 
-/// Sizes of a battery alert in the closed notch. Atoll draws the alert `closedWidth + extra`
+/// Sizes of a battery alert in the closed notch. The alert is drawn `closedWidth + extra`
 /// wide; with the notch-covering centre between the wings, each wing is half the extra.
 struct BatteryHUDMetrics: Equatable, Sendable {
     /// Width of each wing beside the notch.

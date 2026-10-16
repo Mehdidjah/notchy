@@ -119,7 +119,7 @@ struct MediaTests {
     // MARK: Settings
 
     @Test
-    func settingsUseAtollDefaults() {
+    func settingsUseDesignDefaults() {
         let settings = MediaSettings(defaults: Self.makeDefaults())
         #expect(settings.sourcePreference == .automatic)
         #expect(settings.waitInterval == 3)
@@ -163,7 +163,7 @@ struct MediaTests {
     }
 
     @Test
-    func displayedSlotsFollowAtollLayouts() {
+    func displayedSlotsFollowDesignLayouts() {
         let settings = MediaSettings(defaults: Self.makeDefaults())
         settings.setSlot(.likeTrack, at: 0)
         #expect(settings.displayedSlots(canFavorite: false).first == MediaControlSlot.none)
@@ -359,7 +359,7 @@ struct MediaTests {
     // MARK: Parity additions
 
     @Test
-    func newSettingsUseAtollDefaultsAndPersist() {
+    func newSettingsUseDesignDefaultsAndPersist() {
         let defaults = Self.makeDefaults()
         let settings = MediaSettings(defaults: defaults)
         #expect(settings.showMediaOutputControl)
@@ -382,7 +382,7 @@ struct MediaTests {
     }
 
     @Test
-    func outputAndAirPlaySlotsFollowAtollNormalisation() {
+    func outputAndAirPlaySlotsFollowNormalisation() {
         let slots: [MediaControlSlot] = [.mediaOutput, .trackBackward, .playPause, .airPlay, .likeTrack]
         #expect(slots.normalizedSlots(canFavorite: true, allowsMediaOutput: true, isAppleMusicActive: true) == slots)
         #expect(slots.normalizedSlots(canFavorite: true, allowsMediaOutput: false, isAppleMusicActive: true).first == MediaControlSlot.none)
@@ -399,7 +399,7 @@ struct MediaTests {
     }
 
     @Test
-    func outputDeviceGlyphsAndOrderMatchAtoll() {
+    func outputDeviceGlyphsAndOrderMatchDesign() {
         #expect(MediaAudioOutputDevice.iconName(name: "Mehdi's AirPods Pro", transportType: 0) == "airpodspro")
         #expect(MediaAudioOutputDevice.iconName(name: "MacBook Pro Speakers", transportType: 0) == "laptopcomputer")
         #expect(MediaAudioOutputDevice.iconName(name: "Living Room", transportType: kAudioDeviceTransportTypeAirPlay) == "airplayaudio")
@@ -462,7 +462,7 @@ struct MediaTests {
     }
 
     @Test
-    func sideLyricsBudgetMatchesAtoll() {
+    func sideLyricsBudgetMatchesDesign() {
         let width = MediaFeature.sideLyricsRequiredOpenWidth(
             showsPlayer: true, lyricsEnabled: true, showsCalendar: false, showsMirror: false, panelWidth: 280, panelOffset: -20)
         let expected: CGFloat = 744 // 380 player + 280 panel + 20 gap + 20 offset + 44 insets

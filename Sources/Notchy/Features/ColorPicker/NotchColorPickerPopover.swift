@@ -349,7 +349,7 @@ private struct PointingHandCursorModifier: ViewModifier {
 }
 
 extension View {
-    /// Shows the hand cursor over a control, the way Atoll's Pick Color button does.
+    /// Shows the hand cursor over a control, as the Pick Color button does.
     fileprivate func pointingHandCursor() -> some View {
         modifier(PointingHandCursorModifier())
     }

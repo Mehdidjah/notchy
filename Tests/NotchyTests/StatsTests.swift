@@ -297,7 +297,7 @@ struct StatsFormattingTests {
 
 struct StatsLayoutTests {
     @Test
-    func rowsSplitThreeFourAndFiveCardsLikeAtoll() {
+    func rowsSplitThreeFourAndFiveCards() {
         #expect(StatsLayout.rows(for: [1, 2, 3]) == [[1, 2, 3]])
         #expect(StatsLayout.rows(for: [1, 2, 3, 4]) == [[1, 2], [3, 4]])
         #expect(StatsLayout.rows(for: [1, 2, 3, 4, 5]) == [[1, 2, 3], [4, 5]])
@@ -363,7 +363,7 @@ struct StatsGraphGeometryTests {
 @MainActor
 struct StatsSettingsTests {
     @Test
-    func defaultsMatchAtoll() {
+    func defaultsMatchDesign() {
         let (settings, _) = makeSettings()
         #expect(settings.showCpuGraph)
         #expect(settings.showMemoryGraph)

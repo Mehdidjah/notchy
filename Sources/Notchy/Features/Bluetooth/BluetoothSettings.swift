@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 
-/// Bluetooth audio HUD preferences, stored under `bluetooth.*` in UserDefaults with Atoll's
-/// defaults.
+/// Bluetooth audio HUD preferences, stored under `bluetooth.*` in UserDefaults with the
+/// design defaults.
 @MainActor
 final class BluetoothSettings: ObservableObject {
     enum Key {
@@ -24,7 +24,7 @@ final class BluetoothSettings: ObservableObject {
     @Published var showDeviceConnections: Bool {
         didSet { defaults.set(showDeviceConnections, forKey: Key.showDeviceConnections) }
     }
-    /// Atoll's inline HUD (beside the notch) instead of a sneak-peek row under it.
+    /// The inline HUD (beside the notch) instead of a sneak-peek row under it.
     @Published var useInlineHUD: Bool {
         didSet { defaults.set(useInlineHUD, forKey: Key.useInlineHUD) }
     }

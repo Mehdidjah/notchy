@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Notes tab content: the notes list or the note editor, sliding over each other with Atoll's
-/// spring, optionally beside the clipboard grid (Atoll's split layout).
+/// Notes tab content: the notes list or the note editor, sliding over each other with a
+/// spring, optionally beside the clipboard grid (split layout).
 struct NotchNotesTabView: View {
     @ObservedObject var model: NotchViewModel
     @StateObject private var controller = NotesTabController()
@@ -9,7 +9,7 @@ struct NotchNotesTabView: View {
     @ObservedObject private var store = NotesStore.shared
     @ObservedObject private var sync = AppleNotesSyncManager.shared
 
-    /// List and editor swap with this spring (Atoll: response 0.35, damping 0.8).
+    /// List and editor swap with this spring (response 0.35, damping 0.8).
     private static let paneAnimation = Animation.spring(response: 0.35, dampingFraction: 0.8)
 
     var body: some View {

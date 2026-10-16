@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home-tab media player slot (Atoll's MusicPlayerView). Keep this type name and its
+/// Home-tab media player slot. Keep this type name and its
 /// initialiser: the Home tab creates it.
 ///
 /// Beside the calendar the player shows the current lyric line under the artist; with the
@@ -50,9 +50,9 @@ struct MediaPlayerView: View {
     }
 }
 
-/// Player plus the side lyrics panel, as Atoll's `sideLyricsContent`: the player keeps at
+/// Player plus the side lyrics panel: the player keeps at
 /// least 380 pt, the panel is `lyricsPanelWidth` wide and shifted by `lyricsPanelOffset`.
-/// Atoll widens the island to fit; until the host does (`MediaFeature.requiredHomeExtraWidth`)
+/// The island should widen to fit; until the host does (`MediaFeature.requiredHomeExtraWidth`)
 /// the panel takes what is left, and below 140 pt the inline lyric line is used instead.
 private struct MediaSideLyricsLayout: View {
     @ObservedObject var settings: MediaSettings
@@ -92,7 +92,7 @@ struct MediaAlbumArtView: View {
     @ObservedObject var manager: MusicManager
     @ObservedObject var settings: MediaSettings
 
-    /// Atoll inserts the source-app badge once the island is open, popping it in 0.3 s later.
+    /// The source-app badge is inserted once the island is open, popping it in 0.3 s later.
     @State private var showsBadge = false
 
     private var cornerRadius: CGFloat {

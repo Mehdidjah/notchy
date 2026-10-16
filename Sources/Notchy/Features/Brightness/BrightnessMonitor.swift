@@ -3,7 +3,7 @@ import Foundation
 import IOKit
 import os
 
-/// Watches the built-in display's brightness so the island can show Atoll's brightness HUD.
+/// Watches the built-in display's brightness so the island can show its brightness HUD.
 /// There is no public API for the brightness slider, so the level is read from the I/O
 /// Registry (a public read that needs no permission) and converted back to the slider's
 /// scale with `BrightnessCurve`.

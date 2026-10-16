@@ -1,9 +1,8 @@
 import Carbon.HIToolbox
 import Foundation
 
-/// Every action a global shortcut can trigger. Raw values keep Atoll's shortcut names
-/// (`toggleNotchOpen`, `clipboardHistoryPanel`, …) so stored bindings line up with its
-/// vocabulary; Notchy's own Quick Paste and Library actions follow the same style.
+/// Every action a global shortcut can trigger. Raw values are the shortcut names
+/// (`toggleNotchOpen`, `clipboardHistoryPanel`, …) that stored bindings use; Notchy's own Quick Paste and Library actions follow the same style.
 ///
 /// Case order is the order rows appear in Settings.
 enum ShortcutAction: String, CaseIterable, Identifiable, Sendable {
@@ -20,7 +19,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// Atoll's defaults, plus ⌃⌘V and ⌃⌘L for Notchy's Quick Paste and Library.
+    /// The defaults, plus ⌃⌘V and ⌃⌘L for Notchy's Quick Paste and Library.
     var defaultShortcut: Shortcut? {
         switch self {
         case .toggleSneakPeek: Shortcut(kVK_ANSI_H, [.command, .shift])
@@ -52,7 +51,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// The recorder row's label, with the trailing colon Atoll uses.
+    /// The recorder row's label, with a trailing colon.
     var recorderTitle: String { title + ":" }
 
     /// Shown under the row while the owning feature is switched off.
@@ -95,7 +94,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Sendable {
     var hotKeyID: String { "shortcuts." + rawValue }
 }
 
-/// The Settings sections, in Atoll's order: Media, Keep Awake, Navigation, Timer, Clipboard,
+/// The Settings sections, in order: Media, Keep Awake, Navigation, Timer, Clipboard,
 /// AI Assistant, Terminal, Color Picker.
 enum ShortcutGroup: String, CaseIterable, Identifiable, Sendable {
     case media
@@ -126,7 +125,7 @@ enum ShortcutGroup: String, CaseIterable, Identifiable, Sendable {
         ShortcutAction.allCases.filter { $0.group == self }
     }
 
-    /// How Atoll's Shortcuts tab builds this section's rows.
+    /// How the Shortcuts tab builds this section's rows.
     enum RowLayout: Sendable {
         /// The recorder alone (Media, Navigation).
         case bare

@@ -33,8 +33,8 @@ enum FocusModeKind: String, CaseIterable, Sendable {
         }
     }
 
-    /// Public SF Symbols, best first. Atoll draws Work, Mindfulness and Gaming with private
-    /// system glyphs (person.lanyardcard.fill, apple.mindfulness, rocket.fill) through a
+    /// Public SF Symbols, best first. Work, Mindfulness and Gaming are drawn by the system
+    /// with private glyphs (person.lanyardcard.fill, apple.mindfulness, rocket.fill) through a
     /// private SwiftUI initialiser; these are the closest public symbols.
     var symbolCandidates: [String] {
         switch self {
@@ -141,7 +141,7 @@ enum FocusModeKind: String, CaseIterable, Sendable {
         return .doNotDisturb
     }
 
-    /// Normalizes a raw name from a notification or the log into the label Atoll shows.
+    /// Normalizes a raw name from a notification or the log into the label shown.
     static func normalizedName(_ raw: String) -> String {
         switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "work": "Work"

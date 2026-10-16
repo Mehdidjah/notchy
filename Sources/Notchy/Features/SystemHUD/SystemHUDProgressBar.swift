@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Atoll's colour-coded palette: green while comfortable, yellow from 60 %, red from 85 %.
+/// Colour-coded palette: green while comfortable, yellow from 60 %, red from 85 %.
 enum SystemHUDPalette {
     typealias Components = (red: Double, green: Double, blue: Double)
 
@@ -52,7 +52,7 @@ enum SystemHUDPalette {
     }
 
     /// Rescales a colour's sRGB channels so its luminance (Rec. 709 weights) reaches
-    /// `target`, clamping each channel at 1; what Atoll's `ensureMinimumBrightness` does.
+    /// `target`, clamping each channel at 1 (a minimum-brightness guarantee).
     static func scaled(_ color: Color, toLuminance target: Double) -> Color {
         guard let rgb = NSColor(color).usingColorSpace(.sRGB) else { return color }
         let red = Double(rgb.redComponent)
@@ -80,11 +80,11 @@ enum SystemHUDPalette {
     }
 }
 
-/// Atoll's `DraggableProgressBar`: a tertiary capsule track with a white, gradient,
+/// Draggable progress bar: a tertiary capsule track with a white, gradient,
 /// accent or colour-coded fill, or 16 segments; thickens while dragged.
 struct SystemHUDProgressBar: View {
     let value: CGFloat
-    /// Colour-codes the fill like Atoll's volume bar when the setting allows it.
+    /// Colour-codes the fill like the volume bar when the setting allows it.
     var isVolume: Bool = true
     /// Inline bars are 5 pt (8 while dragged); standard rows 6 pt (9).
     var isInline: Bool = true
@@ -129,7 +129,7 @@ struct SystemHUDProgressBar: View {
     private func dragGesture(width: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { gesture in
-                // Atoll thickens the bar and moves the level in one smooth(0.3) transaction.
+                // Thickens the bar and moves the level in one smooth(0.3) transaction.
                 withAnimation(.smooth(duration: 0.3)) {
                     isDragging = true
                     if width > 0 {
@@ -180,7 +180,7 @@ struct SystemHUDProgressBar: View {
     }
 }
 
-/// Atoll's segmented bar: 16 rounded bars 1.5 pt apart; a glow runs along the bars that
+/// Segmented bar: 16 rounded bars 1.5 pt apart; a glow runs along the bars that
 /// change when the level moves.
 struct SystemHUDSegmentedBar: View {
     let value: CGFloat
@@ -257,7 +257,7 @@ struct SystemHUDSegmentedBar: View {
     }
 }
 
-/// Atoll's `PercentageLabel`: caption, semibold, monospaced digits, 28 pt, right-aligned.
+/// Percentage label: caption, semibold, monospaced digits, 28 pt, right-aligned.
 struct SystemHUDPercentageLabel: View {
     let value: CGFloat
     @ObservedObject var settings: SystemHUDSettings = .shared

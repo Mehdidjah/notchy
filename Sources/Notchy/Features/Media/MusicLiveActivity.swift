@@ -16,7 +16,7 @@ enum MediaHostPreferences {
 
 /// Closed-notch wing geometry shared by the activity and the tests.
 enum MediaClosedLayout {
-    /// Atoll: the artwork is `closedHeight - 12` square, never wider than the wing.
+    /// The artwork is `closedHeight - 12` square, never wider than the wing.
     static func artworkSize(in context: ClosedActivityContext) -> CGFloat {
         min(max(0, context.closedHeight - 12), context.wingBaseWidth)
     }
@@ -26,7 +26,7 @@ enum MediaClosedLayout {
         isWide ? 4.0 / 3.0 : 4
     }
 
-    /// Atoll widens the closed centre to 380 pt while the inline sneak peek shows.
+    /// The closed centre widens to 380 pt while the inline sneak peek shows.
     static let inlinePeekCenterWidth: CGFloat = 380
 
     /// Width of each text column beside the notch during the inline peek.
@@ -34,7 +34,7 @@ enum MediaClosedLayout {
         max(0, (centerWidth - notchWidth) / 2 - 12)
     }
 
-    /// Whether the activity wants the closed notch (Atoll's pairing eligibility, minus the
+    /// Whether the activity wants the closed notch (pairing eligibility, minus the
     /// lock-screen and hide-on-closed gates the host owns).
     static func isEligible(
         liveActivityEnabled: Bool,
@@ -176,7 +176,7 @@ struct MediaClosedSpectrumWing: View {
     @ObservedObject var settings: MediaSettings
     @State private var isHovering = false
 
-    /// The host's "notch.openOnHover" preference (Atoll's openNotchOnHover).
+    /// The host's "notch.openOnHover" preference.
     private var opensOnHover: Bool {
         MediaHostPreferences.opensOnHover
     }
@@ -243,7 +243,7 @@ private struct MediaClosedTapToggle: ViewModifier {
     }
 }
 
-/// What Atoll draws over the black centre: the inline sneak peek (title marquee on the left
+/// What is drawn over the black centre: the inline sneak peek (title marquee on the left
 /// of the notch, artist on the right) or, on displays without a camera housing, an optional
 /// "Title • Artist" marquee.
 struct MediaClosedCenterOverlay: View {

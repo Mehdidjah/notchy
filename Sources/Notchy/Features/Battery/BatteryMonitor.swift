@@ -3,7 +3,7 @@ import Foundation
 import IOKit.ps
 
 /// Watches the internal battery through IOKit's power-source notifications and Low Power
-/// Mode changes, and delivers the changes one by one, a second apart, as Atoll does.
+/// Mode changes, and delivers the changes one by one, a second apart.
 ///
 /// `state` is the delivered state: the header indicator and the alerts read it, so they move
 /// together with the events that raised them.
@@ -11,7 +11,7 @@ import IOKit.ps
 final class BatteryMonitor: ObservableObject {
     static let shared = BatteryMonitor()
 
-    /// Atoll queues battery events and hands them out one per second.
+    /// Queues battery events and hands them out one per second.
     nonisolated static let defaultEventSpacing: Duration = .seconds(1)
 
     @Published private(set) var state: BatterySnapshot = .unavailable

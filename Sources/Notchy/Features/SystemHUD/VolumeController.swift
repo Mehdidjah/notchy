@@ -13,7 +13,7 @@ struct SystemAudioChange: Equatable, Sendable {
 /// Mirrors the published state of the device on the main actor; every read and write runs on
 /// `SystemAudioDevice`'s own queue. Other features (for example a music player's volume
 /// slider) can drive volume through `setVolume(_:)` and should call
-/// `SystemHUDPresenter.shared.suppressVolumeHUD(for:)` first, as Atoll's own sliders do.
+/// `SystemHUDPresenter.shared.suppressVolumeHUD(for:)` first.
 @MainActor
 final class VolumeController: ObservableObject {
     static let shared = VolumeController()
@@ -21,7 +21,7 @@ final class VolumeController: ObservableObject {
     /// 0...1, the device's level even while muted.
     @Published private(set) var volume: Float = 0
     @Published private(set) var isMuted = false
-    /// Bluetooth or Bluetooth LE output; the HUD then shows headphones like Atoll.
+    /// Bluetooth or Bluetooth LE output; the HUD then shows headphones.
     @Published private(set) var isBluetoothOutput = false
     /// False until the device has answered once.
     @Published private(set) var hasReading = false
@@ -87,7 +87,7 @@ final class VolumeController: ObservableObject {
     }
 }
 
-/// The default input device's mute flag, for Atoll's "Mic" HUD.
+/// The default input device's mute flag, for the "Mic" HUD.
 @MainActor
 final class MicrophoneMuteMonitor: ObservableObject {
     static let shared = MicrophoneMuteMonitor()

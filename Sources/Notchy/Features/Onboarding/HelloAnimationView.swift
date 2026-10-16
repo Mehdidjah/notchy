@@ -177,7 +177,7 @@ extension LinearGradient {
 
 /// The glowing first-launch "hello", written over four seconds with an ease-in-out curve.
 ///
-/// Atoll shows it 200 x 80 in the open notch. Give it any frame; it restarts whenever it
+/// Shown 200 x 80 in the open notch. Give it any frame; it restarts whenever it
 /// appears. Pass `replayToken` changes to restart it while on screen.
 struct HelloAnimationView: View {
     var duration: Double = 4

@@ -18,7 +18,7 @@ enum DownloadIndicatorStyle: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Download activity preferences, stored under `downloads.*` keys. Defaults follow Atoll:
+/// Download activity preferences, stored under `downloads.*` keys. Defaults:
 /// detection on, linear progress style, speed hidden.
 @MainActor
 final class DownloadsSettings: ObservableObject {

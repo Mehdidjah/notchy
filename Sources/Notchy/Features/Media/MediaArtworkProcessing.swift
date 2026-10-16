@@ -11,7 +11,7 @@ struct MediaRGB: Equatable, Sendable {
 
     static let white = MediaRGB(red: 1, green: 1, blue: 1)
     static let gray = MediaRGB(red: 0.5, green: 0.5, blue: 0.5)
-    /// SwiftUI's `Color.gray` (system grey), which Atoll tints the spectrum with when
+    /// SwiftUI's `Color.gray` (system grey), which tints the spectrum when
     /// "Colored spectrogram" is off.
     static let systemGray = MediaRGB(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0)
 
@@ -42,7 +42,7 @@ struct MediaRGB: Equatable, Sendable {
     /// Relative luminance with Rec. 709 weights.
     var luminance: Double { 0.2126 * red + 0.7152 * green + 0.0722 * blue }
 
-    /// Atoll's `ensureMinimumBrightness`: scales the channels so the luminance reaches
+    /// Scales the channels so the luminance reaches
     /// `factor` (clamped per channel), so dark artwork still yields a readable tint.
     func ensuringMinimumBrightness(_ factor: Double) -> MediaRGB {
         guard factor >= 0, factor <= 1 else { return self }

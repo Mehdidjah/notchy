@@ -69,7 +69,7 @@ struct OnboardingTests {
 
     @Test
     func developerTurnsOnToolsAndOffTheMirror() {
-        var base = OnboardingFeatureChoices.atollDefaults
+        var base = OnboardingFeatureChoices.recommendedDefaults
         base.mirror = true
         base.minimalisticUI = true
         let choices = OnboardingFeatureChoices.resolved(for: [.developer], base: base)
@@ -103,7 +103,7 @@ struct OnboardingTests {
 
     @Test
     func everyProfileKeepsClipboardHapticsAndMenuBarIconOnAndLyricsOff() {
-        var base = OnboardingFeatureChoices.atollDefaults
+        var base = OnboardingFeatureChoices.recommendedDefaults
         base.clipboard = false
         base.haptics = false
         base.menuBarIcon = false
@@ -116,8 +116,8 @@ struct OnboardingTests {
     }
 
     @Test
-    func atollDefaultsMatchTheReferenceApp() {
-        let defaults = OnboardingFeatureChoices.atollDefaults
+    func recommendedDefaultsMatchDesign() {
+        let defaults = OnboardingFeatureChoices.recommendedDefaults
         #expect(defaults.clipboard && defaults.shelf && defaults.calendar && defaults.timer)
         #expect(defaults.colorPicker && defaults.inlineHUD && defaults.lightingEffect)
         #expect(!defaults.mirror && !defaults.stats && !defaults.notes && !defaults.lyrics)
@@ -250,7 +250,7 @@ struct OnboardingTests {
     }
 
     @Test
-    func helloTimingMatchesAtoll() {
+    func helloTimingMatchesDesign() {
         #expect(OnboardingHelloController.openDelay == .seconds(1))
         #expect(OnboardingHelloController.holdDuration == .milliseconds(3_500))
     }
@@ -309,25 +309,25 @@ struct OnboardingTests {
     }
 
     @Test
-    func windowMatchesAtollsSize() {
+    func windowMatchesDesignSize() {
         #expect(OnboardingView.windowSize == CGSize(width: 400, height: 600))
         #expect(OnboardingWindowController.windowIdentifier.rawValue == "OnboardingWindow")
     }
 
     @Test
-    func sparkleParticleIsAtollsTwentySixPointDot() {
+    func sparkleParticleIsTwentySixPointDot() {
         let image = OnboardingSparkleNSView.sparkleImage
         #expect(image != nil)
-        // 26 pt drawn at 2x, so the emitter shows it at Atoll's size.
+        // 26 pt drawn at 2x, so the emitter shows it at 26 pt.
         #expect(image?.width == 52 && image?.height == 52)
         #expect(OnboardingSparkleNSView.sparkleSide == 26)
         #expect(OnboardingSparkleNSView.sparkleImageScale == 2)
         #expect(OnboardingSparkleNSView.settledBirthRate == 20)
-        #expect(!OnboardingSparkleNSView(frame: .zero).isFlipped, "y acceleration lifts the sparkles, as in Atoll")
+        #expect(!OnboardingSparkleNSView(frame: .zero).isFlipped, "y acceleration lifts the sparkles")
     }
 
     @Test
-    func spotlightKeepsAtollsProportions() {
+    func spotlightKeepsDesignProportions() {
         #expect(abs(OnboardingSpotlight.aspectRatio - 689.0 / 1005.0) < 0.0001)
         let rect = CGRect(x: 0, y: 0, width: 689, height: 1005)
         let bounds = OnboardingSpotlightBeam().path(in: rect).boundingRect
@@ -344,12 +344,12 @@ struct OnboardingTests {
     }
 
     @Test
-    func focusDetectionQuestionUsesAtollsAnswers() {
+    func focusDetectionQuestionUsesDesignAnswers() {
         #expect(OnboardingFocusDetectionMode.allCases.map(\.title) == ["Use DevTools", "Use without DevTools"])
     }
 
     @Test
-    func profileCardsUseAtollsCopy() {
+    func profileCardsUseDesignCopy() {
         #expect(OnboardingProfile.allCases.map(\.title) == ["Developer", "Designer", "Light Use", "Student"])
         #expect(OnboardingProfile.allCases.map(\.systemImage) == ["terminal.fill", "paintbrush.fill", "sparkles", "book.fill"])
         #expect(OnboardingProfile.designer.summary == "Create and design with color picker, mirror, and visual effects.")

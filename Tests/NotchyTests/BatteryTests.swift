@@ -102,7 +102,7 @@ struct BatteryTests {
     // MARK: Events and triggers
 
     @Test
-    func eventsFollowAtollsOrder() {
+    func eventsFollowDesignOrder() {
         let old = snapshot(level: 50, pluggedIn: false, charging: false, lowPower: false)
         var new = snapshot(level: 51, pluggedIn: true, charging: true, lowPower: true)
         new.timeToFullCharge = 30
@@ -169,7 +169,7 @@ struct BatteryTests {
     // MARK: Metrics
 
     @Test
-    func alertSizesMatchAtoll() {
+    func alertSizesMatchDesign() {
         #expect(BatteryHUDMetrics.resolve(kind: .charging, style: .standard)
             == BatteryHUDMetrics(wingWidth: 90, bandHeight: 0, bottomCornerRadius: nil))
         #expect(BatteryHUDMetrics.resolve(kind: .lowBattery, style: .compact).wingWidth == 90)
@@ -203,7 +203,7 @@ struct BatteryTests {
     // MARK: Settings
 
     @Test
-    func settingsUseAtollDefaultsAndPersist() {
+    func settingsUseDesignDefaultsAndPersist() {
         let defaults = makeDefaults()
         let settings = BatterySettings(defaults: defaults)
         #expect(settings.showBatteryIndicator)
@@ -297,7 +297,7 @@ struct BatteryTests {
     }
 
     @Test
-    func testAlertsUseAtollsPreviewLevels() {
+    func testAlertsUseDesignPreviewLevels() {
         let settings = BatterySettings(defaults: makeDefaults())
         let monitor = BatteryMonitor(eventSpacing: .zero, reader: { .unavailable })
         monitor.ingest(snapshot(level: 3))

@@ -8,8 +8,8 @@ enum SystemHUDKind: String, Sendable, Equatable {
     case microphone
 }
 
-/// Owns what the system HUD shows and for how long, the part of Atoll's
-/// `DynamicIslandViewCoordinator.sneakPeek` that volume and microphone events use.
+/// Owns what the system HUD shows and for how long, the sneak-peek
+/// coordination that volume and microphone events use.
 ///
 /// Inline style: sets `isShowingInlineHUD`, which `InlineHUDActivity` turns into wings on
 /// the closed notch, and hides it 1.5 s after the last event. Standard style: hands the
@@ -18,9 +18,9 @@ enum SystemHUDKind: String, Sendable, Equatable {
 final class SystemHUDPresenter: ObservableObject {
     static let shared = SystemHUDPresenter()
 
-    /// Atoll's default sneak-peek duration.
+    /// Default sneak-peek duration.
     static let displayDuration: Duration = .milliseconds(1_500)
-    /// Atoll writes every sneak-peek update inside this animation.
+    /// Every sneak-peek update is written inside this animation.
     static let updateAnimation = Animation.smooth(duration: 0.3)
 
     @Published private(set) var kind: SystemHUDKind = .volume
@@ -33,8 +33,7 @@ final class SystemHUDPresenter: ObservableObject {
             if oldValue != isShowingInlineHUD { inlineVisibilityDidChange.send() }
         }
     }
-    /// While locked the island cannot be seen, so the HUD stands down (Atoll
-    /// `SystemHUDPlacement.suppressesAppHUD`).
+    /// While locked the island cannot be seen, so the HUD stands down.
     @Published var isScreenLocked = false {
         didSet { if isScreenLocked { hideInlineHUD() } }
     }
@@ -95,8 +94,7 @@ final class SystemHUDPresenter: ObservableObject {
     }
 
     /// The level bar in the inline HUD was dragged: show the new level at once and keep the
-    /// HUD up while the pointer is busy (Atoll's sneak-peek `didSet` re-arms the hide on
-    /// every value write). The standard row keeps its own drag state.
+    /// HUD up while the pointer is busy (every value write re-arms the hide). The standard row keeps its own drag state.
     func userDidDrag(to value: CGFloat) {
         guard isShowingInlineHUD, kind == .volume else { return }
         level = min(max(value, 0), 1)
@@ -123,7 +121,7 @@ final class SystemHUDPresenter: ObservableObject {
     // MARK: Suppression
 
     /// Keeps the volume HUD quiet for a while, for example while another control in the
-    /// island moves the volume itself (Atoll `HUDSuppressionCoordinator`).
+    /// island moves the volume itself.
     func suppressVolumeHUD(for seconds: TimeInterval) {
         guard seconds > 0 else { return }
         let proposed = clock.now + .milliseconds(Int(seconds * 1_000))
@@ -140,7 +138,7 @@ final class SystemHUDPresenter: ObservableObject {
 
     // MARK: Symbols and text
 
-    /// Atoll's `SpeakerSymbol`: zero is the slashed speaker, then one, two or three waves.
+    /// Speaker glyph: zero is the slashed speaker, then one, two or three waves.
     static func speakerSymbolName(for level: CGFloat) -> String {
         switch level {
         case 0: "speaker.slash.fill"
@@ -156,7 +154,7 @@ final class SystemHUDPresenter: ObservableObject {
         isBluetooth ? "headphones" : speakerSymbolName(for: level)
     }
 
-    /// Atoll's brightness glyph: the small sun up to 60 %, the large one above.
+    /// Brightness glyph: the small sun up to 60 %, the large one above.
     static func brightnessSymbolName(for level: CGFloat) -> String {
         level > 0.6 ? "sun.max.fill" : "sun.min.fill"
     }
@@ -165,14 +163,14 @@ final class SystemHUDPresenter: ObservableObject {
         isMuted ? "mic.slash.fill" : "mic.fill"
     }
 
-    /// Atoll's `PercentageLabel`: the rounded percentage, right-aligned in three columns.
+    /// Percentage label: the rounded percentage, right-aligned in three columns.
     static func percentageText(for level: CGFloat) -> String {
         let percent = max(0, min(100, Int((level * 100).rounded())))
         return String(format: "%3d", percent)
     }
 
     /// The standard-style peek: a level row for volume (a "muted" line at zero), a text line
-    /// for the microphone. Atoll's standard row always draws the speaker for the level, even
+    /// for the microphone. The standard row always draws the speaker for the level, even
     /// on a Bluetooth route (only the inline HUD swaps in headphones).
     static func standardSneakPeek(kind: SystemHUDKind, level: CGFloat, isBluetooth: Bool) -> SneakPeek {
         switch kind {

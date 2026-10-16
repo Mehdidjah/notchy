@@ -4,7 +4,7 @@ import Carbon.HIToolbox
 /// Why a recorded keystroke cannot simply be saved.
 enum ShortcutIssue: Equatable, Sendable {
     /// No modifier, or Shift alone, on a key that types text. The recorder beeps and keeps
-    /// listening, as Atoll's recorder does.
+    /// listening.
     case needsModifier
     /// Option or Option-Shift alone: macOS 15 and later reject these for global hot keys.
     case optionNeedsCommandOrControl
@@ -15,7 +15,7 @@ enum ShortcutIssue: Equatable, Sendable {
     /// Already a system-wide shortcut (Spotlight, Mission Control, screenshots, …).
     case usedBySystem
 
-    /// The alert's headline, worded like the recorder Atoll ships.
+    /// The alert's headline.
     var message: String {
         switch self {
         case .needsModifier:

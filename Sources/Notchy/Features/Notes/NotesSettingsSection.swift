@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// The Notes rows for the Settings window, mirroring Atoll's Notes pane: a General section and,
+/// The Notes rows for the Settings window, as a Notes pane: a General section and,
 /// while notes are on, an Apple Notes section. Embed inside a `Form`.
 struct NotesSettingsSection: View {
     @ObservedObject private var settings: NotesSettings
     @ObservedObject private var sync: AppleNotesSyncManager
     private let showsTab: Binding<Bool>?
 
-    /// Pass the host's Notes-tab toggle as `showsTab` to show Atoll's "Enable Notes" row.
+    /// Pass the host's Notes-tab toggle as `showsTab` to show the "Enable Notes" row.
     init(
         showsTab: Binding<Bool>? = nil,
         settings: NotesSettings = .shared,

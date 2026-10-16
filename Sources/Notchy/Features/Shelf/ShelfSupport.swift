@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Sizes of a shelf tile, matched to Atoll: 105 wide, a 56-pt thumbnail, a two-line label.
+/// Sizes of a shelf tile: 105 wide, a 56-pt thumbnail, a two-line label.
 enum ShelfTileMetrics {
     static let width: CGFloat = 105
     static let iconSize: CGFloat = 56

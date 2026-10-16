@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-/// Keep Awake preferences, stored under `caffeinate.*` in UserDefaults with Atoll's defaults:
+/// Keep Awake preferences, stored under `caffeinate.*` in UserDefaults with these defaults:
 /// enabled, header icon shown, "Until turned off" and display kept awake. The ⇧⌘K shortcut
 /// belongs to the Shortcuts feature (`ShortcutAction.toggleCaffeinate`).
 @MainActor

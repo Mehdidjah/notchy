@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Atoll's colour coding for battery levels: green while comfortable, through yellow, to red
+/// Colour coding for battery levels: green while comfortable, through yellow, to red
 /// as the battery empties. Smooth mode blends between them; discrete mode snaps.
 enum BluetoothBatteryPalette {
     private static let green = (red: 0.2, green: 0.78, blue: 0.35)
@@ -44,13 +44,13 @@ enum BluetoothBatteryPalette {
 /// Left wing: the device symbol in a 20 x 15 box (hierarchical, white, filled variant) and,
 /// when enabled, the device name scrolling beside it in 13-pt medium.
 ///
-/// As in Atoll, the name's clip box is as wide as the whole info column, so it runs past the
+/// The name's clip box is as wide as the whole info column, so it runs past the
 /// column's right edge and the island's black centre (drawn after this wing) cuts it off at
-/// the same point Atoll's does.
+/// the info column's design width.
 struct BluetoothHUDLeadingWing: View {
     let device: BluetoothAudioDevice
     let showsName: Bool
-    /// Atoll's info column width (64 / 132 pt, plus half the swipe).
+    /// Info column width (64 / 132 pt, plus half the swipe).
     let infoWidth: CGFloat
 
     var body: some View {
@@ -161,15 +161,15 @@ struct BluetoothLinearBatteryIndicator: View {
     }
 }
 
-/// One line that scrolls when it does not fit (Atoll's `MarqueeText`): two copies 20 pt apart;
+/// One line that scrolls when it does not fit (a `MarqueeText`): two copies 20 pt apart;
 /// 0.1 s after appearing, and after a `minDuration` pause on each pass, the line glides left
 /// by one copy plus the gap over (text width / 30) seconds, snaps back and repeats. Text that
 /// fits stays still.
 struct BluetoothMarqueeText: View {
     static let gap: CGFloat = 20
-    /// Atoll divides the text width (not the travel) by this to get each pass's duration.
+    /// Divides the text width (not the travel) by this to get each pass's duration.
     static let speed: CGFloat = 30
-    /// Atoll waits this long after a reset before starting the loop.
+    /// Waits this long after a reset before starting the loop.
     static let startDelay: Duration = .milliseconds(100)
 
     let text: String

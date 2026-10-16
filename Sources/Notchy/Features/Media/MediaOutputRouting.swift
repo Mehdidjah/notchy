@@ -9,7 +9,7 @@ struct MediaAudioOutputDevice: Identifiable, Equatable, Sendable {
     let name: String
     let transportType: UInt32
 
-    /// Atoll's glyph choice: named products first, then the transport.
+    /// Glyph choice: named products first, then the transport.
     var iconName: String {
         Self.iconName(name: name, transportType: transportType)
     }

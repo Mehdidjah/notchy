@@ -3,9 +3,9 @@ import SwiftUI
 
 /// How a volume or microphone change is drawn on the closed notch.
 enum SystemHUDStyle: String, CaseIterable, Identifiable, Sendable {
-    /// Atoll's "Default": a row of icon, level bar and percentage that drops under the notch.
+    /// "Default": a row of icon, level bar and percentage that drops under the notch.
     case standard
-    /// Atoll's "Inline" (its default): the notch grows sideways, icon and label on the left,
+    /// "Inline" (the default): the notch grows sideways, icon and label on the left,
     /// level bar on the right.
     case inline
 
@@ -19,7 +19,7 @@ enum SystemHUDStyle: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Fill of the level bar, after Atoll's `ProgressBarStyle`.
+/// Fill of the level bar.
 enum SystemHUDProgressBarStyle: String, CaseIterable, Identifiable, Sendable {
     case hierarchical = "Hierarchical"
     case gradient = "Gradient"
@@ -29,7 +29,7 @@ enum SystemHUDProgressBarStyle: String, CaseIterable, Identifiable, Sendable {
     var displayName: String { rawValue }
 }
 
-/// Colour of the Caps Lock glyph and label, after Atoll's `CapsLockIndicatorTintMode`.
+/// Colour of the Caps Lock glyph and label.
 enum CapsLockTintMode: String, CaseIterable, Identifiable, Sendable {
     case green
     case accent
@@ -55,7 +55,6 @@ enum CapsLockTintMode: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Preferences for the system HUDs, stored under `systemHUD.*` in UserDefaults.
-/// Defaults are Atoll 2.3.3's (`Constants.swift`).
 @MainActor
 final class SystemHUDSettings: ObservableObject {
     enum Key {
@@ -79,7 +78,7 @@ final class SystemHUDSettings: ObservableObject {
         static let capsLockTint = "systemHUD.capsLockTint"
     }
 
-    /// Atoll lets each step be 1-25 % of the full range.
+    /// Each step can be 1-25 % of the full range.
     static let stepRange = 1...25
     static let defaultVolumeStepPercent = 6
     static let defaultVolumeFineStepPercent = 2
@@ -88,15 +87,15 @@ final class SystemHUDSettings: ObservableObject {
 
     private let defaults: UserDefaults
 
-    /// Master switch (Atoll `enableSystemHUD`, default on).
+    /// Master switch (default on).
     @Published var enableSystemHUD: Bool {
         didSet { defaults.set(enableSystemHUD, forKey: Key.enableSystemHUD) }
     }
-    /// Atoll `inlineHUD`, default on.
+    /// Inline HUD, default on.
     @Published var style: SystemHUDStyle {
         didSet {
             defaults.set(style.rawValue, forKey: Key.style)
-            // Atoll resets the glow and the bar style when the inline style is chosen.
+            // Resets the glow and the bar style when the inline style is chosen.
             if style == .inline, oldValue != .inline {
                 glowEffect = false
                 progressBarStyle = .hierarchical
@@ -107,7 +106,7 @@ final class SystemHUDSettings: ObservableObject {
         didSet { defaults.set(enableVolumeHUD, forKey: Key.enableVolumeHUD) }
     }
     /// Shows the "Mic muted / unmuted" HUD when the default input device's mute flag changes.
-    /// Brightness HUD for the built-in display (Atoll's default: on).
+    /// Brightness HUD for the built-in display (default: on).
     @Published var enableBrightnessHUD: Bool {
         didSet { defaults.set(enableBrightnessHUD, forKey: Key.enableBrightnessHUD) }
     }
@@ -135,18 +134,18 @@ final class SystemHUDSettings: ObservableObject {
     @Published var showPercentages: Bool {
         didSet { defaults.set(showPercentages, forKey: Key.showPercentages) }
     }
-    /// Green below 60 %, yellow to 85 %, red above (Atoll `useColorCodedVolumeDisplay`).
+    /// Green below 60 %, yellow to 85 %, red above.
     @Published var colorCodedVolume: Bool {
         didSet { defaults.set(colorCodedVolume, forKey: Key.colorCodedVolume) }
     }
     @Published var smoothColorGradient: Bool {
         didSet { defaults.set(smoothColorGradient, forKey: Key.smoothColorGradient) }
     }
-    /// Atoll `systemEventIndicatorShadow` ("Enable glowing effect").
+    /// "Enable glowing effect".
     @Published var glowEffect: Bool {
         didSet { defaults.set(glowEffect, forKey: Key.glowEffect) }
     }
-    /// Atoll `systemEventIndicatorUseAccent`.
+    /// Tints the indicator with the accent colour.
     @Published var useAccentColor: Bool {
         didSet { defaults.set(useAccentColor, forKey: Key.useAccentColor) }
     }
@@ -195,7 +194,7 @@ final class SystemHUDSettings: ObservableObject {
         Float(fine ? volumeFineStepPercent : volumeStepPercent) / 100
     }
 
-    /// Atoll's accent (`Defaults[.accentColor]`, blue by default).
+    /// Accent colour, blue by default.
     static let accentColor = Color.blue
 
     static func clampStep(_ value: Int) -> Int {

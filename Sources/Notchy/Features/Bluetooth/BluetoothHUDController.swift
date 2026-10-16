@@ -8,21 +8,21 @@ struct BluetoothHUDPresentation: Equatable, Identifiable, Sendable {
     /// 0...100, or nil when the level is unknown (the right wing then shrinks).
     let batteryLevel: Int?
 
-    /// Atoll draws the battery only for a known, non-zero level.
+    /// The battery is drawn only for a known, non-zero level.
     var showsBattery: Bool { (batteryLevel ?? 0) > 0 }
 }
 
-/// Shows the "device connected" HUD for 2.5 s: inline beside the notch (Atoll's default) or
+/// Shows the "device connected" HUD for 2.5 s: inline beside the notch (the default) or
 /// as a sneak-peek row under it.
 @MainActor
 final class BluetoothHUDController: ObservableObject {
     static let shared = BluetoothHUDController()
 
-    /// Atoll's Bluetooth sneak duration.
+    /// Bluetooth sneak duration.
     nonisolated static let displayDuration: Duration = .milliseconds(2_500)
-    /// Atoll waits up to 1.8 s for a battery reading before showing the HUD without one.
+    /// Waits up to 1.8 s for a battery reading before showing the HUD without one.
     nonisolated static let batteryWait: Duration = .milliseconds(1_800)
-    /// Atoll keeps volume HUDs quiet for 1.5 s after a Bluetooth HUD, since connecting
+    /// Keeps volume HUDs quiet for 1.5 s after a Bluetooth HUD, since connecting
     /// headphones changes the output volume.
     nonisolated static let volumeHUDSuppression: TimeInterval = 1.5
 
@@ -111,8 +111,8 @@ final class BluetoothHUDController: ObservableObject {
         }
     }
 
-    /// The standard (non-inline) style, as Atoll draws it under the notch: the device symbol
-    /// and a battery-coloured level bar. Atoll passes 0 when the level is unknown, so the bar
+    /// The standard (non-inline) style, drawn under the notch: the device symbol
+    /// and a battery-coloured level bar. An unknown level is drawn as 0, so the bar
     /// is then empty; it never shows a text line for a connection.
     func sneakPeek(for device: BluetoothAudioDevice, batteryLevel: Int?) -> SneakPeek {
         let fraction = Double(min(max(batteryLevel ?? 0, 0), 100)) / 100

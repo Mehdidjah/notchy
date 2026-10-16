@@ -1,6 +1,6 @@
 import Foundation
 
-/// The tabs the open island can show, in Atoll's order. Switching to a later tab slides the
+/// The tabs the open island can show, in display order. Switching to a later tab slides the
 /// content in from the trailing edge, switching back slides it in from the leading edge.
 enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case home

@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 /// Camera and microphone indicator preferences, stored under `privacy.*` keys in UserDefaults.
-/// Both default to on, as in Atoll.
+/// Both default to on.
 @MainActor
 final class PrivacySettings: ObservableObject {
     enum Key {

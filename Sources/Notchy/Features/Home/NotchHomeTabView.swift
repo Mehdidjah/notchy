@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Home tab, laid out as in Atoll: `HStack(alignment: .top, spacing: 20)` of the media
+/// The Home tab, laid out as an `HStack(alignment: .top, spacing: 20)` of the media
 /// player, the calendar (compact beside a player, standalone month view otherwise) and the
 /// camera mirror, inside an 8-pt outer padding. Content fades and slides from the top as the
 /// island opens.

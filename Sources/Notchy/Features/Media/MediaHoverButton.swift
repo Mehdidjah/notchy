@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Atoll's transport button: a 30-pt (or 40-pt for play/pause) hit square whose capsule
+/// Transport button: a 30-pt (or 40-pt for play/pause) hit square whose capsule
 /// turns grey on hover, with an optional press nudge/wiggle or a marching skip glyph.
 struct MediaHoverButton: View {
     enum Size {

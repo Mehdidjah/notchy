@@ -36,7 +36,7 @@ struct FocusTests {
     }
 
     @Test
-    func modesUsePublicSymbolsAndAtollsColours() {
+    func modesUsePublicSymbolsAndDesignColours() {
         #expect(FocusModeKind.doNotDisturb.symbolName == "moon.fill")
         #expect(FocusModeKind.doNotDisturb.inactiveSymbolName == "moon.circle.fill")
         #expect(FocusModeKind.sleep.symbolName == "bed.double.fill")
@@ -108,7 +108,7 @@ struct FocusTests {
     // MARK: Monitor
 
     @Test
-    func settingsDefaultToAtollsChoices() {
+    func settingsDefaultToDesignChoices() {
         let settings = FocusSettings(defaults: makeDefaults())
         #expect(settings.enableDoNotDisturbDetection)
         #expect(settings.showDoNotDisturbIndicator)
@@ -156,7 +156,7 @@ struct FocusTests {
     // MARK: Layout
 
     @Test
-    func persistentLabelWingFollowsAtollsWidths() {
+    func persistentLabelWingFollowsDesignWidths() {
         var display = FocusWingDisplay()
         display.isVisible = true
         display.isExpanded = true
@@ -305,7 +305,7 @@ struct FocusTests {
 
         monitor.apply(metadata: FocusMetadata(), isActive: false)
         activity.sync()
-        #expect(!activity.isActivityVisible, "shipped Atoll unmounts the persistent view at once")
+        #expect(!activity.isActivityVisible, "the persistent view unmounts at once")
     }
 
     @Test

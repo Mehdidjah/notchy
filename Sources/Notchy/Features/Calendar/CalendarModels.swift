@@ -39,8 +39,8 @@ struct CalendarColor: Hashable, Sendable {
     var luminance: Double { 0.2126 * red + 0.7152 * green + 0.0722 * blue }
 
     /// Rescales the channels so the luminance lands on `target`, capping each channel at 1.
-    /// Atoll tints closed-notch reminder glyphs this way (factor 0.7) so dark calendar colours
-    /// stay legible on black; like Atoll, bright colours are toned down to the same level.
+    /// Closed-notch reminder glyphs are tinted this way (factor 0.7) so dark calendar colours
+    /// stay legible on black; bright colours are toned down to the same level.
     func adjustedToLuminance(_ target: Double) -> CalendarColor {
         guard (0...1).contains(target) else { return self }
         let current = luminance
@@ -59,9 +59,9 @@ struct CalendarColor: Hashable, Sendable {
 
 /// Shared colours of the calendar UI.
 enum CalendarPalette {
-    /// Atoll's default accent colour (`Defaults[.accentColor]` = `Color.blue`).
+    /// Default accent colour (`Color.blue`).
     static let accent = Color.blue
-    /// Atoll's `effectiveAccentBackground`: the accent at 25 %.
+    /// Accent background: the accent at 25 %.
     static let accentBackground = accent.opacity(0.25)
     static let secondaryText = Color(white: 0.65)
 }
@@ -79,7 +79,7 @@ struct CalendarSource: Identifiable, Hashable, Sendable {
     let isReminderList: Bool
 }
 
-/// The current user's response to an invitation, ordered as Atoll sorts them.
+/// The current user's response to an invitation, in sort order.
 enum CalendarAttendance: Int, Comparable, Sendable {
     case accepted = 1
     case maybe = 2
@@ -185,7 +185,7 @@ struct CalendarEntry: Identifiable, Hashable, Sendable {
         return .ended
     }
 
-    /// Reminders are points in time; Atoll treats one as running for an hour after it is due.
+    /// Reminders are points in time; one counts as running for an hour after it is due.
     func isActive(at time: Date) -> Bool {
         if kind.isReminder {
             return start <= time && time < start.addingTimeInterval(3600)
@@ -221,7 +221,7 @@ struct CalendarEntry: Identifiable, Hashable, Sendable {
 
 // MARK: - Conference links
 
-/// Video-call services recognised in an event's URL, location or notes, with Atoll's colours.
+/// Video-call services recognised in an event's URL, location or notes, with their brand colours.
 enum ConferenceProvider: String, CaseIterable, Sendable {
     case zoom, teams, meet, webex, facetime, goToMeeting, blueJeans, whereby, jitsi, discord, generic
 
@@ -284,7 +284,7 @@ enum ConferenceProvider: String, CaseIterable, Sendable {
         case .facetime: "facetime"
         case .discord: "discord"
         // Zoom's web link already hands off to the app; rewriting it to zoommtg:// drops the
-        // meeting parameters, so Atoll opens it as is.
+        // meeting parameters, so it is opened as is.
         default: nil
         }
     }
@@ -442,7 +442,7 @@ enum CalendarAppLink {
 // MARK: - Filtering and auto-scroll
 
 enum CalendarEventFilter {
-    /// Atoll's list filter: completed reminders go when hidden; all-day events go when hidden.
+    /// List filter: completed reminders go when hidden; all-day events go when hidden.
     /// Reminders are judged on completion only, so an all-day reminder stays visible.
     static func visibleEntries(
         _ entries: [CalendarEntry],
@@ -576,7 +576,7 @@ enum CalendarLayout {
     static let compactSectionSpacing: CGFloat = 4
     static let compactRowSpacing: CGFloat = 3
 
-    /// Atoll's standalone height: the open height less the header and 36 pt, at least 130.
+    /// Standalone height: the open height less the header and 36 pt, at least 130.
     static func standaloneHeight(openHeight: CGFloat, closedHeight: CGFloat) -> CGFloat {
         max(130, openHeight - max(24, closedHeight) - 36)
     }

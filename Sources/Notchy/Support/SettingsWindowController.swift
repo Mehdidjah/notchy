@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Atoll-style settings window: 700 by 600, full-size content with a unified toolbar,
+/// Settings window: 700 by 600, full-size content with a unified toolbar,
 /// movable by its background. While it is open the app becomes a regular app with a Dock
-/// icon and menu bar, as Atoll does, and returns to an accessory when it closes.
+/// icon and menu bar, and returns to an accessory when it closes.
 ///
 /// The SwiftUI content exists only while the window is open: it observes the island's model,
 /// so a hidden but live settings view would re-render on every tab switch and hover.

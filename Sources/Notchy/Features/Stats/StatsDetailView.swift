@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The detail panel that replaces the card grid when a card is clicked: the numbers Atoll
-/// shows in its popovers (usage rings, breakdown rows, per-core bars, pressure and swap,
+/// The detail panel that replaces the card grid when a card is clicked: the numbers
+/// a stats popover shows (usage rings, breakdown rows, per-core bars, pressure and swap,
 /// devices, averages and peaks), laid out as compact columns inside the island so the
 /// pointer never has to leave it.
 struct StatsDetailView: View {

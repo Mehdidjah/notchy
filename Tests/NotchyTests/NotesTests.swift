@@ -212,7 +212,7 @@ struct NotesPresentationTests {
         #expect(NoteItem.color(at: 99) == .yellow)
     }
 
-    @MainActor @Test func layoutHeightsMatchAtoll() {
+    @MainActor @Test func layoutHeightsMatchDesign() {
         #expect(NotesLayoutMode.list.preferredHeight == 240)
         #expect(NotesLayoutMode.split.preferredHeight == 260)
         #expect(NotesLayoutMode.editor.preferredHeight == 320)
@@ -225,7 +225,7 @@ struct NotesPresentationTests {
         #expect(layout.extraHeight == 20)
     }
 
-    @MainActor @Test func settingsUseAtollDefaults() {
+    @MainActor @Test func settingsUseDesignDefaults() {
         let settings = NotesSettings(defaults: makeDefaults())
         #expect(settings.pinningEnabled)
         #expect(!settings.searchEnabled)

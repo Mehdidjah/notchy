@@ -17,7 +17,7 @@ enum CalendarSelection: Equatable, Sendable {
     case selected(Set<String>)
 }
 
-/// Calendar preferences, stored under "calendar." keys with Atoll's defaults.
+/// Calendar preferences, stored under "calendar." keys with their design defaults.
 @MainActor
 final class CalendarSettings: ObservableObject {
     static let shared = CalendarSettings()
@@ -143,7 +143,7 @@ final class CalendarSettings: ObservableObject {
 
     // MARK: - Selection
 
-    /// Atoll's selection rules: unticking from "all" switches to an explicit list; an empty
+    /// Selection rules: unticking from "all" switches to an explicit list; an empty
     /// list or one naming every calendar collapses back to "all".
     static func updatedSelection(
         _ current: CalendarSelection,

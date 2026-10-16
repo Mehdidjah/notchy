@@ -2,8 +2,8 @@ import Combine
 import Foundation
 
 /// Entry point for the camera mirror: starts the camera controller and keeps Home's mirror
-/// column in step with the setting and with whether a camera is connected (Atoll hides the
-/// mirror on Macs without one).
+/// column in step with the setting and with whether a camera is connected (the mirror is
+/// hidden on Macs without one).
 @MainActor
 enum MirrorFeature {
     private static var subscriptions: Set<AnyCancellable> = []

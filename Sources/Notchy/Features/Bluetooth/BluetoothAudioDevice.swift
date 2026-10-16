@@ -28,7 +28,7 @@ enum BluetoothAudioDeviceKind: String, CaseIterable, Sendable {
         case .beats, .beatsStudio, .beatsSolo: ["beats.headphones", "headphones"]
         case .headphones: ["headphones"]
         case .speaker: ["hifispeaker.fill", "hifispeaker"]
-        // Atoll names a symbol that does not exist here; its HUD then falls back to this one.
+        // No dedicated symbol exists for this kind, so the HUD falls back to this one.
         case .generic: ["dot.radiowaves.left.and.right"]
         }
     }
@@ -82,7 +82,7 @@ enum BluetoothAudioDeviceKind: String, CaseIterable, Sendable {
         0x200C: .beatsSolo
     ]
 
-    /// Classifies a device the way Atoll does: Apple product ID first, then the name, then
+    /// Classifies a device: Apple product ID first, then the name, then
     /// the Bluetooth class-of-device minor class.
     static func detect(name: String, classOfDevice: UInt32, appleProductID: UInt16? = nil) -> BluetoothAudioDeviceKind {
         if let appleProductID, let kind = appleProductIDs[appleProductID] {

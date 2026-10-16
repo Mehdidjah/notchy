@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 enum BatteryFeature {
     /// Called when the header battery's popover opens or closes, so the host can keep the
-    /// island open while it shows (Atoll's `isBatteryPopoverActive`).
+    /// island open while it shows (`isBatteryPopoverActive`).
     static var onPopoverPresentationChanged: ((Bool) -> Void)?
 
     private static var activity: BatteryHUDActivity?

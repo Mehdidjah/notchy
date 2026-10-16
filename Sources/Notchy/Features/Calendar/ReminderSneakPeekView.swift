@@ -1,13 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Atoll's reminder sneak peek (standard style): an 8 × 12 chip in the calendar colour, then
+/// Reminder sneak peek (standard style): an 8 × 12 chip in the calendar colour, then
 /// "Title • in 5 min • 10:30" in the reminder colour (red with "• now" in the final seconds),
 /// scrolling when it does not fit. The line is recomputed from the live activity's clock, so
-/// "in 5 min" ticks down while the peek is up, as it does in Atoll.
+/// "in 5 min" ticks down while the peek is up.
 ///
 /// The host draws it in place of its standard row for `SneakPeek.Kind.reminder`, with only the
-/// 10-pt bottom inset (Atoll adds no side padding to this row).
+/// 10-pt bottom inset (no side padding on this row).
 struct ReminderSneakPeekView: View {
     @ObservedObject var model: ReminderLiveActivityModel
     /// The request that opened the peek; used if the reminder has already moved on.
@@ -60,7 +60,7 @@ struct ReminderSneakPeekView: View {
 
 /// A single line that loops leftward when wider than `frameWidth`: two copies 20 pt apart,
 /// a 1-s hold, a linear run at 30 pt/s until the second copy sits where the first began, an
-/// instant snap back, and again. Text that fits stays put. Body font, like Atoll's marquee.
+/// instant snap back, and again. Text that fits stays put. Body font.
 struct ReminderMarqueeText: View {
     let text: String
     let color: Color

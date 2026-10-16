@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The four usage profiles offered on the profile page, in Atoll's order.
+/// The four usage profiles offered on the profile page, in display order.
 enum OnboardingProfile: String, CaseIterable, Identifiable, Codable, Sendable {
     case developer
     case designer
@@ -54,7 +54,7 @@ enum OnboardingProfile: String, CaseIterable, Identifiable, Codable, Sendable {
 /// Which features the island should run, as chosen during onboarding. The host maps these
 /// onto its own settings objects through `OnboardingFeature.applyFeatureChoices`.
 struct OnboardingFeatureChoices: Equatable, Sendable {
-    /// Clipboard history is always on, as in Atoll.
+    /// Clipboard history is always on.
     var clipboard = true
     var shelf = true
     var calendar = true
@@ -70,16 +70,16 @@ struct OnboardingFeatureChoices: Equatable, Sendable {
     var haptics = true
     var menuBarIcon = true
 
-    /// Atoll's defaults for every key the profiles touch.
-    static let atollDefaults = OnboardingFeatureChoices()
+    /// The defaults for every key the profiles touch.
+    static let recommendedDefaults = OnboardingFeatureChoices()
 
-    /// Applies the selected profiles on top of `base`, the same way Atoll's profile page does:
+    /// Applies the selected profiles on top of `base`:
     /// profiles are applied developer, designer, light use, student, so a later profile wins
     /// where two disagree; clipboard, haptics and the menu bar icon are always switched on and
     /// lyrics always off.
     static func resolved(
         for profiles: Set<OnboardingProfile>,
-        base: OnboardingFeatureChoices = .atollDefaults
+        base: OnboardingFeatureChoices = .recommendedDefaults
     ) -> OnboardingFeatureChoices {
         var choices = base
         choices.clipboard = true
@@ -130,8 +130,8 @@ struct OnboardingFeatureChoices: Equatable, Sendable {
 /// Music sources the island can follow with public APIs (AppleScript over Apple Events).
 /// Raw values match the media feature's `MediaSourcePreference`.
 ///
-/// Atoll's first card is the system "Now Playing" source, and it also lists apps that ride on
-/// it; those need the private MediaRemote framework. "Automatic" takes the Now Playing card's
+/// A system "Now Playing" source, and apps that ride on it, would need the private
+/// MediaRemote framework. "Automatic" takes the Now Playing card's
 /// place: it follows whichever supported app is playing.
 enum OnboardingMusicSource: String, CaseIterable, Identifiable, Sendable {
     case automatic
@@ -140,7 +140,7 @@ enum OnboardingMusicSource: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// Atoll defaults to Apple Music on macOS 15.4 and later.
+    /// Defaults to Apple Music on macOS 15.4 and later.
     static let defaultSource: OnboardingMusicSource = .appleMusic
 
     var title: String {

@@ -1,19 +1,18 @@
 import SwiftUI
 
 /// "Choose Your Profile": a two-column grid of multi-select profile cards; Continue stays
-/// disabled until at least one is picked (Atoll's ProfileSelectionView).
+/// disabled until at least one is picked.
 struct OnboardingProfilePage: View {
     @ObservedObject var flow: OnboardingFlowModel
     let onContinue: () -> Void
 
     var body: some View {
-        // Atoll's constants throughout: 50-pt glyph with 8 pt under it, 20 pt above the header,
+        // Constants throughout: 50-pt glyph with 8 pt under it, 20 pt above the header,
         // 24 pt between header and grid, a Continue button with 12-pt vertical padding and a
-        // 24-pt margin. In Atoll that stack (with 24 + spacer + 24 above Continue) is taller
-        // than the 600-pt page, so it rides up under the transparent title bar and the button
-        // is clipped at the bottom. Here the page uses the title-bar inset on purpose and the
-        // gap above Continue is flexible, so the header sits where Atoll's does and the button
-        // keeps its full 24-pt margin.
+        // 24-pt margin. That stack (with 24 + spacer + 24 above Continue) is taller than the
+        // 600-pt page, so the page uses the title-bar inset on purpose and the gap above
+        // Continue is flexible: the header rides up under the transparent title bar and the
+        // button keeps its full 24-pt margin.
         VStack(spacing: 0) {
             VStack(spacing: 8) {
                 Image(systemName: "person.3.fill")

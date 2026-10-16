@@ -8,7 +8,7 @@ final class PrivacyWingModel: ObservableObject {
     @Published fileprivate(set) var displayed: PrivacyIndicatorState = .none
 }
 
-/// Camera and microphone indicators on the closed notch (Atoll's PrivacyLiveActivity).
+/// Camera and microphone indicators on the closed notch.
 ///
 /// Right wing: the green camera and/or orange microphone glyphs, trailing. Left wing: empty
 /// and zero-wide for a single device; the microphone when both devices are live; the red
@@ -84,7 +84,7 @@ final class PrivacyActivity: ClosedLiveActivity {
         let widthChanged = hadLeftWing != (state.leftContent != .empty)
         guard visibilityChanged || widthChanged else { return }
         if !visibilityChanged {
-            // Same activity, new wing widths: let the island grow or shrink with Atoll's 0.4 s.
+            // Same activity, new wing widths: let the island grow or shrink over 0.4 s.
             withAnimation(.smooth(duration: 0.4)) { center?.reevaluate() }
         }
         changes.send()

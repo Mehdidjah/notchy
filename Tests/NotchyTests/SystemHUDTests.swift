@@ -31,33 +31,33 @@ struct SystemHUDTests {
     // MARK: Inline HUD geometry
 
     @Test
-    func atollColumnWidthsMatchInlineHUDTables() {
-        #expect(InlineHUDMetrics.atollColumns(.level, gestureProgress: 0) == .init(info: 92, trailing: 92))
-        #expect(InlineHUDMetrics.atollColumns(.level, gestureProgress: 20) == .init(info: 102, trailing: 102))
-        #expect(InlineHUDMetrics.atollColumns(.capsLock(showsLabel: false), gestureProgress: 0) == .init(info: 56, trailing: 0))
-        #expect(InlineHUDMetrics.atollColumns(.capsLock(showsLabel: true), gestureProgress: 0) == .init(info: 92, trailing: 88))
-        #expect(InlineHUDMetrics.atollColumns(.capsLock(showsLabel: false), gestureProgress: 8) == .init(info: 60, trailing: 4))
+    func designColumnWidthsMatchInlineHUDTables() {
+        #expect(InlineHUDMetrics.designColumns(.level, gestureProgress: 0) == .init(info: 92, trailing: 92))
+        #expect(InlineHUDMetrics.designColumns(.level, gestureProgress: 20) == .init(info: 102, trailing: 102))
+        #expect(InlineHUDMetrics.designColumns(.capsLock(showsLabel: false), gestureProgress: 0) == .init(info: 56, trailing: 0))
+        #expect(InlineHUDMetrics.designColumns(.capsLock(showsLabel: true), gestureProgress: 0) == .init(info: 92, trailing: 88))
+        #expect(InlineHUDMetrics.designColumns(.capsLock(showsLabel: false), gestureProgress: 8) == .init(info: 60, trailing: 4))
     }
 
     @Test(arguments: [false, true])
-    func wingWidthsReproduceAtollRowWidthWithOrWithoutHover(hovering: Bool) {
+    func wingWidthsReproduceDesignRowWidthWithOrWithoutHover(hovering: Bool) {
         let contents: [InlineHUDMetrics.Content] = [.level, .capsLock(showsLabel: false), .capsLock(showsLabel: true)]
         for content in contents {
             for progress in [CGFloat(0), 12] {
                 let ctx = context(hovering: hovering, gestureProgress: progress)
                 let wings = InlineHUDMetrics.wingWidths(content, context: ctx)
                 let hostWidth = wings.info + ctx.centerWidth + wings.trailing
-                #expect(abs(hostWidth - InlineHUDMetrics.atollRowWidth(content, context: ctx)) < 0.001)
+                #expect(abs(hostWidth - InlineHUDMetrics.designRowWidth(content, context: ctx)) < 0.001)
                 #expect(wings.info >= 0 && wings.trailing >= 0)
             }
         }
     }
 
     @Test
-    func atollGapEqualsHardwareNotchWidth() {
-        // The closed notch is the hardware gap plus 4 pt; Atoll's centre (width - 20) plus two
+    func designGapEqualsHardwareNotchWidth() {
+        // The closed notch is the hardware gap plus 4 pt; the design centre (width - 20) plus two
         // 8-pt spacings leaves exactly the hardware gap between the columns.
-        #expect(InlineHUDMetrics.atollGap(notchWidth: 189) == 185)
+        #expect(InlineHUDMetrics.designGap(notchWidth: 189) == 185)
         let wings = InlineHUDMetrics.wingWidths(.level, context: context())
         #expect(wings.info == 90 && wings.trailing == 90)
         let hovered = InlineHUDMetrics.wingWidths(.level, context: context(hovering: true))
@@ -74,7 +74,7 @@ struct SystemHUDTests {
     // MARK: Symbols and text
 
     @Test
-    func speakerSymbolFollowsAtollThresholds() {
+    func speakerSymbolFollowsDesignThresholds() {
         #expect(SystemHUDPresenter.speakerSymbolName(for: 0) == "speaker.slash.fill")
         #expect(SystemHUDPresenter.speakerSymbolName(for: 0.2) == "speaker.wave.1.fill")
         #expect(SystemHUDPresenter.speakerSymbolName(for: 0.3) == "speaker.wave.1.fill")
@@ -95,7 +95,7 @@ struct SystemHUDTests {
     }
 
     @Test
-    func paletteSnapsAndBlendsAtAtollThresholds() {
+    func paletteSnapsAndBlendsAtDesignThresholds() {
         #expect(SystemHUDPalette.discreteComponents(for: 0.59) == SystemHUDPalette.green)
         #expect(SystemHUDPalette.discreteComponents(for: 0.6) == SystemHUDPalette.yellow)
         #expect(SystemHUDPalette.discreteComponents(for: 0.85) == SystemHUDPalette.red)
@@ -181,7 +181,7 @@ struct SystemHUDTests {
     // MARK: Settings
 
     @Test
-    func settingsDefaultToAtoll() {
+    func settingsDefaultToDesign() {
         let settings = SystemHUDSettings(defaults: makeDefaults())
         #expect(settings.enableSystemHUD)
         #expect(settings.style == .inline)
@@ -278,7 +278,7 @@ struct SystemHUDTests {
 
     @Test
     func standardRowKeepsTheSpeakerOnBluetoothWhileInlineShowsHeadphones() {
-        // Atoll's SystemEventIndicatorModifier always draws SpeakerSymbol; only InlineHUD
+        // The standard row always draws the speaker symbol; only the inline HUD
         // swaps in headphones for a Bluetooth route.
         let peek = SystemHUDPresenter.standardSneakPeek(kind: .volume, level: 0.5, isBluetooth: true)
         #expect(peek.systemImage == "speaker.wave.2.fill")
@@ -304,7 +304,7 @@ struct SystemHUDTests {
     }
 
     @Test
-    func atollAnimationConstants() {
+    func animationConstants() {
         #expect(SystemHUDPresenter.displayDuration == .milliseconds(1_500))
         #expect(CapsLockMonitor.pollInterval == .milliseconds(150))
         #expect(SystemHUDManager.feedbackInterval == .milliseconds(80))

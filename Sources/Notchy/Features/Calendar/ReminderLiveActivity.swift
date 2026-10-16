@@ -88,7 +88,7 @@ enum ReminderSchedule {
     }
 }
 
-/// Sizes of the reminder wings, from Atoll's ReminderLiveActivity. Widths depend on the
+/// Sizes of the reminder wings. Widths depend on the
 /// closed notch height only, so the activity does not swell on hover.
 enum ReminderWingMetrics {
     static let wingPadding: CGFloat = 16
@@ -233,7 +233,7 @@ final class ReminderLiveActivityModel: ObservableObject, ClosedLiveActivity {
         ReminderSchedule.accentColor(entry, critical: isCritical(entry))
     }
 
-    /// Entries whose lead window is open right now (Atoll lists these in minimalistic mode).
+    /// Entries whose lead window is open right now (listed in minimalistic mode).
     var activeWindowEntries: [ReminderEntry] {
         upcomingEntries.filter { $0.triggerDate <= now && $0.event.start >= now }
     }
@@ -595,10 +595,10 @@ struct ReminderCountdownView: View {
 
 // MARK: - Music pairing
 
-/// What the media feature needs to show the reminder beside a playing track, as Atoll does
+/// What the media feature needs to show the reminder beside a playing track
 /// when music owns the closed notch: a "clock" badge on the artwork and the countdown in the
 /// right wing. Every size here is measured against the music wing's content height
-/// (`ClosedActivityContext.contentHeight`), which is what Atoll passes as `notchHeight`.
+/// (`ClosedActivityContext.contentHeight`), which is what is passed as `notchHeight`.
 enum ReminderMusicSupplement {
     static let badgeSymbol = "clock"
     static let digitalFontSize: CGFloat = 15
@@ -708,7 +708,7 @@ struct ReminderMusicSupplementView: View {
 
 /// The "clock" badge on the album art while a reminder is paired with music: a black disc
 /// with the glyph at 55 % in the reminder colour, a soft shadow, and an opacity + scale
-/// transition, as in Atoll.
+/// transition.
 struct ReminderMusicBadgeView: View {
     @ObservedObject var model: ReminderLiveActivityModel = .shared
     let size: CGFloat

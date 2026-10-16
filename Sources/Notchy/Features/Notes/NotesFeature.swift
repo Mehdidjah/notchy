@@ -17,7 +17,7 @@ enum NotesFeature {
         start(userSettings: nil)
     }
 
-    /// Pass the host's settings to show Atoll's "Enable Notes" row (the Notes-tab toggle) at
+    /// Pass the host's settings to show the "Enable Notes" row (the Notes-tab toggle) at
     /// the top of the Notes settings pane.
     static func start(userSettings: UserSettings?) {
         guard !isRunning else { return }
@@ -49,7 +49,7 @@ enum NotesFeature {
             }
             .store(in: &cancellables)
 
-        // Turning sync on runs one straight away, as Atoll does. Otherwise Atoll syncs only when
+        // Turning sync on runs one straight away. Otherwise sync runs only when
         // the Notes tab appears or from "Sync Now", so Notes.app is not launched at login.
         settings.$appleNotesSyncEnabled
             .removeDuplicates()
@@ -71,7 +71,7 @@ enum NotesFeature {
     }
 }
 
-/// The Notes settings bound to the host's Notes-tab toggle, which Atoll shows as "Enable Notes".
+/// The Notes settings bound to the host's Notes-tab toggle, shown as "Enable Notes".
 /// Observes the host settings so the rest of the pane hides and shows with that toggle.
 struct NotesSettingsPane: View {
     @ObservedObject var userSettings: UserSettings

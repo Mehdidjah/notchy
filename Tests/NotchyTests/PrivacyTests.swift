@@ -65,7 +65,7 @@ struct PrivacyTests {
         let both = PrivacyIndicatorState(camera: true, microphone: true, screenRecording: false)
         #expect(both.leftWingWidth(in: closed) == 40)
 
-        // Atoll's privacy view never sees hover or swipe: its wings stay put.
+        // The privacy view never sees hover or swipe: its wings stay put.
         let hovered = context(hovering: true, gesture: 10)
         #expect(single.rightWingWidth(in: hovered) == 40, "hover and swipe do not widen the wings")
         #expect(both.leftWingWidth(in: hovered) == 40)
@@ -91,7 +91,7 @@ struct PrivacyTests {
         #expect(!MicrophoneUsageMonitor.isCapturing(devices: headset, processesCapturing: false))
         #expect(MicrophoneUsageMonitor.isCapturing(devices: headset, processesCapturing: true))
         #expect(MicrophoneUsageMonitor.isCapturing(devices: headset, processesCapturing: nil),
-                "without process information the device signal stands, as in Atoll")
+                "without process information the device signal stands")
     }
 
     @Test
@@ -168,6 +168,6 @@ struct PrivacyTests {
         #expect(activity.isActivityVisible)
         settings.enableCameraDetection = false
         settings.enableMicrophoneDetection = false
-        #expect(!activity.isActivityVisible, "Atoll only offers the activity while a detector is on")
+        #expect(!activity.isActivityVisible, "the activity is only offered while a detector is on")
     }
 }

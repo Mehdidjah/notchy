@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Atoll's fake spectrum candles: 2 pt wide with 2 pt gaps and 14 pt tall, each scaled
+/// Fake spectrum candles: 2 pt wide with 2 pt gaps and 14 pt tall, each scaled
 /// vertically about its centre.
 struct MediaSpectrumBars: View {
     let scales: [CGFloat]
@@ -54,7 +54,7 @@ struct MediaSpectrumWing: View {
                     await animate(count: count, playing: manager.isPlaying)
                 }
         } else {
-            // Atoll plays a Lottie loop here; an animated waveform symbol stands in.
+            // An animated waveform symbol stands in for a Lottie loop here.
             Image(systemName: "waveform")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(settings.coloredSpectrogram ? manager.avgColor.color : .gray)

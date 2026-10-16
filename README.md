@@ -4,10 +4,7 @@ A macOS menu-bar app that turns the MacBook notch into a Dynamic Island. The
 island opens into a tabbed panel: Clipboard history today, with Shelf, Timer and
 Stats tabs landing feature by feature. The interaction model (hover swell,
 dwell-to-open, click, two-finger swipe, springs, radii, fullscreen retraction)
-reproduces the behaviour of the open-source app Atoll as original code; see
-[docs/atoll-behaviour-evidence.md](docs/atoll-behaviour-evidence.md) for the
-evidence ledger and [docs/atoll-specs/](docs/atoll-specs/) for the per-subsystem
-specs the replication follows.
+is built to feel native to the notch.
 
 ## Requirements
 
@@ -52,7 +49,7 @@ Accessibility grant used for pasting may need to be renewed after rebuilding.
   drag a card straight into another app. A newly captured clip peeks under the
   notch for 1.5 s.
 - **Other tabs.** Shelf (file drop tray with Quick Look and AirDrop), Timer and
-  Stats follow the Atoll specs and appear as they land. Each can be hidden in
+  Stats appear as they land. Each can be hidden in
   Settings.
 - **Windows.** Quick Paste panel, a full Clipboard Library window with grid,
   list and board views, and a Settings window (General, Capture, Notch, History,

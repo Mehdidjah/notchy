@@ -54,7 +54,7 @@ struct CaffeinateTests {
     // MARK: Durations
 
     @Test
-    func durationsMatchAtollsChoices() {
+    func durationsMatchDesignChoices() {
         #expect(CaffeinateDuration.allCases.map(\.rawValue) == [
             "indefinite", "fifteenMinutes", "thirtyMinutes", "oneHour", "twoHours", "fourHours"
         ])
@@ -83,7 +83,7 @@ struct CaffeinateTests {
     // MARK: Settings
 
     @Test
-    func settingsUseAtollDefaultsAndPersist() {
+    func settingsUseDesignDefaultsAndPersist() {
         let defaults = makeDefaults()
         let settings = CaffeinateSettings(defaults: defaults)
         #expect(settings.isEnabled)

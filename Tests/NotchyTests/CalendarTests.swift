@@ -164,7 +164,7 @@ struct ConferenceProviderTests {
         }
     }
 
-    @Test func providerColoursMatchAtoll() {
+    @Test func providerColoursMatchDesign() {
         #expect(ConferenceProvider.zoom.brandColor == CalendarColor(red: 0.16, green: 0.52, blue: 0.95))
         #expect(ConferenceProvider.meet.brandColor == CalendarColor(red: 0.0, green: 0.65, blue: 0.42))
         #expect(ConferenceProvider.discord.brandColor == CalendarColor(red: 0.35, green: 0.39, blue: 0.98))
@@ -265,7 +265,7 @@ struct CalendarDateMathTests {
         #expect(initials == ["M", "T", "W", "T", "F", "S", "S"])
     }
 
-    @Test func standaloneHeightFollowsAtoll() {
+    @Test func standaloneHeightFollowsDesign() {
         #expect(CalendarLayout.standaloneHeight(openHeight: 200, closedHeight: 32) == 132)
         #expect(CalendarLayout.standaloneHeight(openHeight: 150, closedHeight: 32) == 130)
     }
@@ -284,7 +284,7 @@ struct CalendarDateMathTests {
 
 @MainActor
 struct CalendarSettingsTests {
-    @Test func defaultsMatchAtoll() {
+    @Test func defaultsMatchDesign() {
         let settings = CalendarSettings(defaults: makeDefaults())
         #expect(settings.showCalendar)
         #expect(settings.hideCompletedReminders)
@@ -373,7 +373,7 @@ struct ReminderScheduleTests {
         #expect(ReminderSchedule.sneakPeekText(entry, now: noon.addingTimeInterval(297), window: 5) == "Standup • now")
     }
 
-    @Test func wingMetricsFollowAtoll() {
+    @Test func wingMetricsFollowDesign() {
         #expect(ReminderWingMetrics.leftWidth(closedHeight: 32) == 42)
         #expect(ReminderWingMetrics.ringDiameter(closedHeight: 32) == 20)
         #expect(ReminderWingMetrics.ringDiameter(closedHeight: 24) == 16)
@@ -383,9 +383,9 @@ struct ReminderScheduleTests {
         #expect(ReminderWingMetrics.rightWidth(style: .minutes, closedHeight: 32, entry: nil, now: noon) >= 104)
     }
 
-    /// Atoll's music-paired reminder sizes, measured against the wing content height
+    /// Music-paired reminder sizes, measured against the wing content height
     /// (closed height - 12 at rest, the full closed height while hovered).
-    @Test func musicSupplementMetricsFollowAtoll() {
+    @Test func musicSupplementMetricsFollowDesign() {
         // 32-pt notch at rest: content 20 -> ring 16 in a 26-pt frame.
         #expect(ReminderMusicSupplement.ringFrameWidth(notchHeight: 20) == 26)
         // Hovered: content 32 -> ring 20 in a 26-pt frame (20 + 4 < 26).

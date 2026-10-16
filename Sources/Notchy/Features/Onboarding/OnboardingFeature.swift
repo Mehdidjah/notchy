@@ -8,7 +8,7 @@ import AppKit
 /// - `currentFeatureChoices` / `applyFeatureChoices` read and write the feature switches;
 /// - `currentMusicSource` / `applyMusicSource` read and save the music source;
 /// - `applyFocusDetectionMode` saves the answer to the "Focus detection mode" question the
-///   window asks when it opens (Atoll's confirmation dialog). Leave it nil to skip the question.
+///   window asks when it opens (a confirmation dialog). Leave it nil to skip the question.
 @MainActor
 enum OnboardingFeature {
     static var openIsland: (() -> Void)?
@@ -37,7 +37,7 @@ enum OnboardingFeature {
             hello.present()
         }
         if settings.needsOnboarding {
-            // Next turn of the run loop, after the island window exists (Atoll: main.async).
+            // Next turn of the run loop, after the island window exists (main.async).
             Task { @MainActor in OnboardingWindowController.showIfNeeded() }
         }
         if isFirstLaunch, settings.playsWelcomeSound {
@@ -64,11 +64,11 @@ enum OnboardingFeature {
     }
 }
 
-/// The two answers to Atoll's "Focus detection mode" question.
+/// The two answers to the "Focus detection mode" question.
 enum OnboardingFocusDetectionMode: String, CaseIterable, Sendable {
-    /// Also read Focus names from the unified log (Atoll: "Use DevTools").
+    /// Also read Focus names from the unified log ("Use DevTools").
     case useDevTools
-    /// Rely on the system's Focus notifications only (Atoll: "Use without DevTools").
+    /// Rely on the system's Focus notifications only ("Use without DevTools").
     case withoutDevTools
 
     var title: String {
@@ -79,8 +79,8 @@ enum OnboardingFocusDetectionMode: String, CaseIterable, Sendable {
     }
 }
 
-/// The welcome chime played with the first-launch hello. Atoll plays a bundled clip; Notchy
-/// ships no audio assets, so it uses the system "Hero" sound.
+/// The welcome chime played with the first-launch hello. Notchy ships no audio assets, so it
+/// uses the system "Hero" sound.
 @MainActor
 enum OnboardingWelcomeSound {
     static let soundName = NSSound.Name("Hero")

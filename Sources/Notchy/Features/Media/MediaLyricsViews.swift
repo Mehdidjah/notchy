@@ -55,7 +55,7 @@ struct MediaInlineLyricLine: View {
     }
 }
 
-/// Atoll's side lyrics panel: a tinted "Lyrics" header over a scrolling list whose current
+/// Side lyrics panel: a tinted "Lyrics" header over a scrolling list whose current
 /// line is lit word by word (or with the chosen highlight style), on a 30 % black card with
 /// 4-pt corners. While the pointer is over it, scrolling the lyrics never closes the island.
 struct MediaLyricsSidePanel: View {

@@ -45,10 +45,10 @@ enum NotchSilhouette {
     /// Maximum extra width an open swipe stretches the collapsed notch before it opens.
     static let gestureStretch: CGFloat = 20
     /// Slack around the drawn collapsed notch inside which hover, a click or a swipe counts
-    /// (Atoll's closed hit area: +24 wide, +6 tall).
+    /// (closed hit area: +24 wide, +6 tall).
     static let activationHorizontalSlack: CGFloat = 24
     static let activationVerticalSlack: CGFloat = 6
-    /// Side padding of the closed island; equals the closed bottom radius (Atoll: 14).
+    /// Side padding of the closed island; equals the closed bottom radius (14).
     static let closedHorizontalPadding: CGFloat = 14
     /// The idle closed content is the notch width minus this, before the side padding.
     static let idleContentInset: CGFloat = 20
@@ -129,7 +129,7 @@ enum NotchGeometryResolver {
         )
         baseExpanded.height += max(0, extraOpenHeight)
         let padding = NotchSilhouette.closedHorizontalPadding * 2
-        // Atoll: the idle notch is a (notch - 20) box plus 14 pt each side and does not swell;
+        // The idle notch is a (notch - 20) box plus 14 pt each side and does not swell;
         // with an activity the island is its three columns plus the same padding.
         let collapsedRenderedSize: CGSize = if let activity {
             CGSize(width: min(screenWidth - 40, activity.contentWidth + padding), height: activity.outerHeight)

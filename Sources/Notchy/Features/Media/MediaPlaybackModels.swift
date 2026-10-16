@@ -1,8 +1,8 @@
 import Foundation
 import SwiftUI
 
-/// Repeat state as the players report it. Raw values follow Atoll's PlaybackState
-/// (off 1, one 2, all 3) so they can be compared with its documented behaviour.
+/// Repeat state as the players report it. Raw values are
+/// off 1, one 2, all 3.
 enum MediaRepeatMode: Int, Codable, Sendable {
     case off = 1
     case one = 2
@@ -119,7 +119,7 @@ struct MediaPlaybackSnapshot: Equatable, Sendable {
     }
 }
 
-/// Atoll's placeholder metadata: shown while nothing has played, never counted as a session.
+/// Placeholder metadata: shown while nothing has played, never counted as a session.
 enum MediaPlaceholder {
     static let title = "I'm Handsome"
     static let artist = "Me"
@@ -137,7 +137,7 @@ enum MediaPlaceholder {
         return realTitle || realArtist
     }
 
-    /// Atoll's `hasActiveSession`: playing, or paused on a real track.
+    /// `hasActiveSession`: playing, or paused on a real track.
     static func hasActiveSession(isPlaying: Bool, title: String, artist: String) -> Bool {
         isPlaying || hasRealMetadata(title: title, artist: artist)
     }
@@ -220,7 +220,7 @@ enum MediaControlSlot: String, Codable, CaseIterable, Identifiable, Sendable {
     static let minimalLayout: [MediaControlSlot] = [.none, .trackBackward, .playPause, .trackForward, .none]
     static let tenSecondLayout: [MediaControlSlot] = [.none, .seekBackward, .playPause, .seekForward, .none]
 
-    /// Options offered by the slot pickers, in Atoll's palette order, then the empty slot.
+    /// Options offered by the slot pickers, in palette order, then the empty slot.
     static let pickerOptions: [MediaControlSlot] = [
         .trackBackward, .playPause, .trackForward, .seekBackward, .seekForward,
         .shuffle, .repeatMode, .lyrics, .likeTrack, .mediaOutput, .airPlay, .none
@@ -267,7 +267,7 @@ enum MediaControlSlot: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 
 extension Array where Element == MediaControlSlot {
-    /// Exactly five slots. Like Atoll, a slot the current setup cannot serve becomes empty:
+    /// Exactly five slots. A slot the current setup cannot serve becomes empty:
     /// the output picker while "Change Media Output" is off, AirPlay unless Music is the
     /// source, and favouriting when the source cannot do it.
     func normalizedSlots(
@@ -288,7 +288,7 @@ extension Array where Element == MediaControlSlot {
     }
 }
 
-/// How the line being sung is picked out in the lyrics panel (Atoll's `lyricHighlightStyle`).
+/// How the line being sung is picked out in the lyrics panel.
 enum MediaLyricHighlightStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     case sweep
     case gradient
@@ -313,7 +313,7 @@ enum MediaLyricHighlightStyle: String, Codable, CaseIterable, Identifiable, Send
     }
 }
 
-/// How a track change is announced on the closed notch (Atoll's `sneakPeekStyles`).
+/// How a track change is announced on the closed notch.
 enum MediaSneakPeekStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     /// A grey "Title - Artist" line under the notch for 1.5 s.
     case standard
@@ -332,7 +332,7 @@ enum MediaSneakPeekStyle: String, Codable, CaseIterable, Identifiable, Sendable 
 
 /// Pure playback-position arithmetic shared by the slider, the lyrics and the tests.
 enum MediaPlaybackMath {
-    /// Atoll's anchor + rate extrapolation, clamped to the track.
+    /// Anchor + rate extrapolation, clamped to the track.
     static func estimatedPosition(
         elapsed: TimeInterval,
         anchor: Date,
@@ -367,7 +367,7 @@ enum MediaPlaybackMath {
     }
 }
 
-/// Atoll's optimistic play/pause expectation: events contradicting the expected state are
+/// Optimistic play/pause expectation: events contradicting the expected state are
 /// ignored until the player confirms it or the recovery timeout cancels the expectation.
 struct MediaOptimisticPlayback: Sendable {
     private(set) var expectedState: Bool?
@@ -391,7 +391,7 @@ struct MediaOptimisticPlayback: Sendable {
     }
 }
 
-/// Atoll's live-stream heuristic: a playing track with no known duration for three
+/// Live-stream heuristic: a playing track with no known duration for three
 /// readings, or one that keeps sitting at its end, is treated as a stream.
 struct MediaLiveStreamDetector: Sendable {
     private var unknownDurationCount = 0

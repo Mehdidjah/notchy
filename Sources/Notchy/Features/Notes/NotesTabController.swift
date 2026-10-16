@@ -11,7 +11,7 @@ final class NotesTabController: ObservableObject {
         case editor(noteID: UUID, isNew: Bool)
     }
 
-    /// Atoll saves an open note 1.5 s after the last edit.
+    /// An open note is saved 1.5 s after the last edit.
     static let defaultAutoSaveDelay: Duration = .milliseconds(1500)
     /// The editor keeps its text until the slide-out has finished.
     static let draftClearDelay: Duration = .milliseconds(300)
@@ -89,7 +89,7 @@ final class NotesTabController: ObservableObject {
         sync.requestSync()
     }
 
-    /// The tab left the screen (another tab, or the island closed): save and reset like Atoll.
+    /// The tab left the screen (another tab, or the island closed): save and reset.
     func viewDisappeared() {
         if isEditing { persist() }
         autoSaveTask?.cancel()
@@ -145,7 +145,7 @@ final class NotesTabController: ObservableObject {
         closeEditor()
     }
 
-    /// "< Notes": Atoll saves on the way back too.
+    /// "< Notes": saves on the way back too.
     func back() {
         persist()
         closeEditor()

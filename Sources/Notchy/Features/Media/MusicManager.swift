@@ -31,7 +31,7 @@ final class MusicManager: ObservableObject {
     private static let optimisticRecoveryTimeout: Duration = .seconds(2)
     private static let flipDuration: TimeInterval = 0.45
     private static let manualArtworkHandoff: TimeInterval = 0.225
-    /// Atoll's expanding view hides itself after 3 s.
+    /// The expanding view hides itself after 3 s.
     static let inlinePeekDuration: Duration = .seconds(3)
 
     // MARK: - Published state
@@ -66,7 +66,7 @@ final class MusicManager: ObservableObject {
     @Published private(set) var currentLyrics = ""
     @Published private(set) var lyricsAvailability: MediaLyricsAvailability = .unavailable
     /// The inline sneak peek is showing: the closed notch is 380 pt wide with the title on
-    /// the left and the artist on the right (Atoll's `expandingView` of type music).
+    /// the left and the artist on the right.
     @Published private(set) var isInlinePeekActive = false
 
     let settings: MediaSettings
@@ -135,7 +135,7 @@ final class MusicManager: ObservableObject {
 
     var bundleIdentifier: String? { activeSource?.bundleIdentifier }
 
-    /// Playing, or paused on a real track (Atoll's `hasActiveSession`).
+    /// Playing, or paused on a real track.
     var hasActiveSession: Bool {
         MediaPlaceholder.hasActiveSession(isPlaying: isPlaying, title: songTitle, artist: artistName)
     }
@@ -268,7 +268,7 @@ final class MusicManager: ObservableObject {
         stopLyricSync()
     }
 
-    /// Re-reads every allowed player that is running (Atoll calls this when the island opens).
+    /// Re-reads every allowed player that is running (called when the island opens).
     func forceRefresh() {
         guard isStarted else { return }
         for source in settings.sourcePreference.allowedSources {
@@ -287,7 +287,7 @@ final class MusicManager: ObservableObject {
 
     func togglePlay() {
         guard let source = activeSource else {
-            // Nothing is open: like pressing play in Atoll, start the preferred player.
+            // Nothing is open: start the preferred player.
             let source: MediaSourceKind = settings.sourcePreference == .spotify ? .spotify : .appleMusic
             Task { await MediaScripting.perform(.play, on: source, launchIfNeeded: true) }
             return
@@ -638,7 +638,7 @@ final class MusicManager: ObservableObject {
             processArtwork(data)
         } else if snapshot.artworkData == nil, appliedArtworkKey != artworkKey,
                   !artworkFetchInFlight.contains(artworkKey) {
-            // No cover for this track (yet): show the player's icon, as Atoll does.
+            // No cover for this track (yet): show the player's icon.
             appliedArtworkData = nil
             appliedArtworkKey = artworkKey
             useAppIconArtwork(for: snapshot.source)
@@ -739,7 +739,7 @@ final class MusicManager: ObservableObject {
         discardLyrics()
     }
 
-    /// Atoll's `updateSneakPeek`: the grey line under the notch (standard), or the closed
+    /// The grey line under the notch (standard), or the closed
     /// notch widened for 3 s with the title and artist either side of the camera (inline).
     private func requestTrackSneakPeek() {
         guard settings.enableSneakPeek, settings.showStandardMediaControls, isPlaying, !isAdvertisement else { return }
@@ -777,7 +777,7 @@ final class MusicManager: ObservableObject {
         withAnimation(.smooth) { isInlinePeekActive = false }
     }
 
-    /// Atoll's standard peek line: "Title - Artist".
+    /// Standard peek line: "Title - Artist".
     static func sneakPeekText(title: String, artist: String) -> String {
         "\(title) - \(artist)"
     }

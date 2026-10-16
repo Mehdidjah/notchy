@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 
 /// Combines the camera and microphone detectors (and an optional screen-recording source) into
-/// the single state the privacy live activity draws, the way Atoll's PrivacyIndicatorManager does.
+/// the single state the privacy live activity draws.
 ///
 /// Detectors only run while their setting is on; switching one off hides its glyph at once.
 @MainActor
@@ -87,7 +87,7 @@ final class PrivacyMonitor: ObservableObject {
         recompute()
     }
 
-    /// Hook for a screen-recording detector; the left wing then shows Atoll's red pulsing badge.
+    /// Hook for a screen-recording detector; the left wing then shows a red pulsing badge.
     func setScreenRecordingActive(_ active: Bool) {
         guard screenRecordingActive != active else { return }
         screenRecordingActive = active

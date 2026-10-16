@@ -3,8 +3,7 @@ import Combine
 import Foundation
 
 /// Wires the volume, brightness and microphone observers, the media-key tap and the Caps Lock monitor to
-/// the HUD, and keeps them in step with the settings (Atoll `SystemHUDManager` +
-/// `SystemChangesObserver`).
+/// the HUD, and keeps them in step with the settings.
 @MainActor
 final class SystemHUDManager {
     static let shared = SystemHUDManager()
@@ -12,10 +11,10 @@ final class SystemHUDManager {
     /// Volume updates echoed back by the device while the bar is being dragged are ignored
     /// for this long, so the bar does not jump back under the pointer.
     static let dragEchoWindow: Duration = .milliseconds(350)
-    /// Minimum gap between two feedback sounds (Atoll: 0.08 s).
+    /// Minimum gap between two feedback sounds (0.08 s).
     static let feedbackInterval: Duration = .milliseconds(80)
     /// `com.apple.screenIsLocked` / `Unlocked`: public distributed notifications posted by
-    /// loginwindow, the same signal Atoll's lock-screen manager uses.
+    /// loginwindow, the same signal the lock-screen manager uses.
     static let screenLockedNotification = Notification.Name("com.apple.screenIsLocked")
     static let screenUnlockedNotification = Notification.Name("com.apple.screenIsUnlocked")
 
@@ -35,8 +34,7 @@ final class SystemHUDManager {
     private let clock = ContinuousClock()
     private lazy var feedbackSound: NSSound? = Self.makeFeedbackSound()
 
-    /// The click macOS itself plays for "Play feedback when volume is changed"; Atoll ships
-    /// its own short clip of the same kind. Falls back to the "Pop" system sound.
+    /// The click macOS itself plays for "Play feedback when volume is changed". Falls back to the "Pop" system sound.
     static let systemVolumeFeedbackPath =
         "/System/Library/Components/CoreAudio.component/Contents/SharedSupport/SystemSounds/system/Media Keys.aif"
 
@@ -208,7 +206,7 @@ final class SystemHUDManager {
     }
 
     /// While locked the island is hidden: stand down and hand the keys back to macOS so its
-    /// own HUD answers them (Atoll `SystemHUDPlacement`).
+    /// own HUD answers them.
     private func setScreenLocked(_ locked: Bool) {
         guard presenter.isScreenLocked != locked else { return }
         presenter.isScreenLocked = locked

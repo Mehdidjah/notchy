@@ -1,7 +1,7 @@
 import Combine
 import SwiftUI
 
-/// Atoll's inline HUD on the closed notch: volume or microphone state for 1.5 s after a change.
+/// Inline HUD on the closed notch: volume or microphone state for 1.5 s after a change.
 @MainActor
 final class InlineHUDActivity: ClosedLiveActivity {
     let activityID = "systemHUD.inline"
@@ -33,7 +33,7 @@ final class InlineHUDActivity: ClosedLiveActivity {
         AnyView(
             InlineHUDLeadingWing(
                 presenter: presenter,
-                columnWidth: InlineHUDMetrics.atollColumns(.level, gestureProgress: context.gestureProgress).info,
+                columnWidth: InlineHUDMetrics.designColumns(.level, gestureProgress: context.gestureProgress).info,
                 wingWidth: leftWingWidth(in: context)
             )
         )
@@ -43,7 +43,7 @@ final class InlineHUDActivity: ClosedLiveActivity {
         AnyView(
             InlineHUDTrailingWing(
                 presenter: presenter,
-                columnWidth: InlineHUDMetrics.atollColumns(.level, gestureProgress: context.gestureProgress).trailing,
+                columnWidth: InlineHUDMetrics.designColumns(.level, gestureProgress: context.gestureProgress).trailing,
                 wingWidth: rightWingWidth(in: context),
                 onDrag: onDrag
             )
@@ -51,7 +51,7 @@ final class InlineHUDActivity: ClosedLiveActivity {
     }
 }
 
-/// Atoll's persistent Caps Lock indicator: the glyph (and optional label) stays on the closed
+/// Persistent Caps Lock indicator: the glyph (and optional label) stays on the closed
 /// notch while Caps Lock is on. Always drawn inline, whatever the HUD style.
 @MainActor
 final class CapsLockActivity: ClosedLiveActivity {
@@ -112,7 +112,7 @@ final class CapsLockActivity: ClosedLiveActivity {
         AnyView(
             CapsLockLeadingWing(
                 settings: settings,
-                columnWidth: InlineHUDMetrics.atollColumns(content, gestureProgress: context.gestureProgress).info,
+                columnWidth: InlineHUDMetrics.designColumns(content, gestureProgress: context.gestureProgress).info,
                 wingWidth: leftWingWidth(in: context)
             )
         )
@@ -122,7 +122,7 @@ final class CapsLockActivity: ClosedLiveActivity {
         AnyView(
             CapsLockTrailingWing(
                 settings: settings,
-                columnWidth: InlineHUDMetrics.atollColumns(content, gestureProgress: context.gestureProgress).trailing,
+                columnWidth: InlineHUDMetrics.designColumns(content, gestureProgress: context.gestureProgress).trailing,
                 wingWidth: rightWingWidth(in: context)
             )
         )

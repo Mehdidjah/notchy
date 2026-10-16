@@ -168,7 +168,7 @@ enum MediaLyricsEngine {
     ]
 
     /// True when the metadata could be any song (placeholder artist, "Track 3"), so any
-    /// lyrics found would belong to somebody else. Atoll's own placeholders count too.
+    /// lyrics found would belong to somebody else. The app's own placeholder metadata counts too.
     static func namesNoParticularTrack(title: String, artist: String) -> Bool {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let artist = artist.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -288,7 +288,7 @@ enum MediaLyricsEngine {
     }
 }
 
-/// Atoll's second lyrics source: NetEase Cloud Music's public search and lyric endpoints,
+/// Second lyrics source: NetEase Cloud Music's public search and lyric endpoints,
 /// asked only when LRCLIB has nothing. The player gives no song id, so the track is found
 /// again by search and trusted only when its length is within 2 s of the playing one.
 enum MediaNetEaseLyrics {
@@ -446,7 +446,7 @@ actor MediaLyricsProvider {
                in: candidates, title: foldedTitle, artist: foldedArtist, album: requestAlbum, duration: duration) {
             resolution = MediaLyricsEngine.resolution(for: best)
         }
-        // A failed or empty LRCLIB answer still leaves NetEase to ask, as in Atoll.
+        // A failed or empty LRCLIB answer still leaves NetEase to ask.
         if resolution.availability == .unavailable, !Task.isCancelled {
             resolution = await netEaseLyrics(title: requestTitle, artist: requestArtist, duration: duration)
         }

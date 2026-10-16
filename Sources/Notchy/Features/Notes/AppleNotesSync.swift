@@ -3,7 +3,7 @@ import Foundation
 
 /// Pure merge of the island's notes with the Notes app's notes.
 ///
-/// Rules (Atoll's): for linked pairs the newer modification date wins; a remote note carrying
+/// Rules: for linked pairs the newer modification date wins; a remote note carrying
 /// an island marker links to that island note; other remote notes are imported in the first
 /// colour; island notes whose remote copy disappeared are removed; island notes that are newer
 /// than their remote copy are returned for pushing.

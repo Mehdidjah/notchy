@@ -8,7 +8,7 @@ import SwiftUI
 /// - `claimsClosedClick`: a click on the closed notch toggles playback rather than opening it.
 /// - `suppressesCloseGesture`: the pointer is over the scrolling lyrics panel.
 /// - `sideLyricsRequiredOpenWidth` / `sideLyricsWidthDidChange`: the open width the Home tab
-///   needs for Atoll's side lyrics panel.
+///   needs for the side lyrics panel.
 @MainActor
 enum MediaFeature {
     private static var activity: MusicLiveActivity?
@@ -21,7 +21,7 @@ enum MediaFeature {
     /// Height of the inline lyric line under the artist (12-pt text plus its 2-pt gap).
     static let inlineLyricsExtraHeight: CGFloat = 18
 
-    /// Atoll's side-lyrics budget: the player's 380 pt, the panel, 20 pt between columns,
+    /// Side-lyrics budget: the player's 380 pt, the panel, 20 pt between columns,
     /// the panel's offset and the camera mirror's 220 pt (+20) when shown.
     static let sideLyricsMinimumPlayerWidth: CGFloat = 380
     static let sideLyricsColumnSpacing: CGFloat = 20
@@ -104,13 +104,13 @@ enum MediaFeature {
 
     // MARK: - Layout
 
-    /// Atoll: the player shows when media controls are on and either auto-hide is off or a
+    /// The player shows when media controls are on and either auto-hide is off or a
     /// session is active; the inline lyric line needs 18 pt more beside the calendar.
     static func shouldShowPlayer(settings: MediaSettings, hasActiveSession: Bool) -> Bool {
         settings.showStandardMediaControls && (!settings.autoHideInactivePlayer || hasActiveSession)
     }
 
-    /// Atoll's `sideLyricsRequiredNotchWidth`, in Notchy's insets.
+    /// Required notch width for the side lyrics, in Notchy's insets.
     static func sideLyricsRequiredOpenWidth(
         showsPlayer: Bool,
         lyricsEnabled: Bool,

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// First page: a spotlight over a sparkle field, the app mark, name and "Welcome", a
 /// "Get started" button, the privacy link, and a wordmark near the bottom, all on a dark
-/// HUD-window blur (Atoll's WelcomeView).
+/// HUD-window blur.
 struct OnboardingWelcomePage: View {
     var onGetStarted: () -> Void
 

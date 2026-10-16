@@ -6,8 +6,7 @@ import Combine
 /// `UCKeyTranslate`, and republishes when the user switches input source so every recorder
 /// and menu re-renders its shortcut text.
 ///
-/// Like Atoll (KeyboardShortcuts for the recorder text, its own helper for key
-/// equivalents), shortcut text comes from the current ASCII-capable layout, so a Russian or
+/// Shortcut text comes from the current ASCII-capable layout, so a Russian or
 /// Greek input source still reads ⇧⌘V, while in-app key equivalents follow the selected
 /// layout.
 ///

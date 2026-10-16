@@ -6,7 +6,7 @@ import Foundation
 /// publish an `NSProgress` with the file's URL. `Progress.addSubscriber(forFileURL:)` on the
 /// Downloads folder receives proxies for every item directly inside it; this keeps the live
 /// ones and sums them for the downloads currently shown. Firefox publishes nothing, so its
-/// downloads stay indeterminate, exactly as in Atoll.
+/// downloads stay indeterminate.
 @MainActor
 final class DownloadProgressTracker {
     private var subscriber: Any?

@@ -3,7 +3,7 @@ import Foundation
 
 /// Which Apple Notes are brought into the island while sync is on.
 enum AppleNotesSyncScope: String, CaseIterable, Identifiable, Sendable {
-    /// Every note of the default Notes account (Atoll's behaviour).
+    /// Every note of the default Notes account (the default).
     case allNotes
     /// Only the notes inside the Notchy folder.
     case notchIslandFolder
@@ -18,7 +18,7 @@ enum AppleNotesSyncScope: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Preferences for the Notes tab, stored under `notes.*` in UserDefaults with Atoll's defaults.
+/// Preferences for the Notes tab, stored under `notes.*` in UserDefaults.
 @MainActor
 final class NotesSettings: ObservableObject {
     enum Key {
@@ -57,7 +57,7 @@ final class NotesSettings: ObservableObject {
     @Published var showsCharacterCount: Bool {
         didSet { defaults.set(showsCharacterCount, forKey: Key.showsCharacterCount) }
     }
-    /// Atoll's split layout: the clipboard grid on the left of the notes (260-pt island).
+    /// Split layout: the clipboard grid on the left of the notes (260-pt island).
     @Published var showsClipboardBesideNotes: Bool {
         didSet { defaults.set(showsClipboardBesideNotes, forKey: Key.showsClipboardBesideNotes) }
     }

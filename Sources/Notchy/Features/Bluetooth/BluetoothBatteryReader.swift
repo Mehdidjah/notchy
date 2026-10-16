@@ -39,7 +39,7 @@ enum BluetoothBatteryReader {
 
     /// Parses `system_profiler SPBluetoothDataType -json`. Each connected device is a
     /// one-entry dictionary from its name to its properties; levels are strings like "80%".
-    /// Like Atoll, the highest level among the main, left, right and case readings wins.
+    /// The highest level among the main, left, right and case readings wins.
     static func parse(_ data: Data) -> BluetoothBatteryReport {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let controllers = root["SPBluetoothDataType"] as? [[String: Any]]

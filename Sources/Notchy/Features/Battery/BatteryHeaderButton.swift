@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The battery at the right end of the open island's header (Atoll's `DynamicIslandBatteryView`
+/// The battery at the right end of the open island's header (`DynamicIslandBatteryView`
 /// at `batteryWidth: 30`): an optional "NN%" label and the battery glyph. Pressing it scales
 /// it to 0.95; releasing opens the battery popover. Renders nothing when the indicator is
 /// switched off or the Mac has no battery.
@@ -9,13 +9,13 @@ struct BatteryHeaderButton: View {
     @ObservedObject private var settings: BatterySettings
     @State private var isPressed = false
     @State private var isMenuPresented = false
-    /// Pointer over the popover. Atoll keeps the island open only while the popover is both
+    /// Pointer over the popover. The island stays open only while the popover is both
     /// shown and hovered (`isBatteryPopoverActive`).
     @State private var isHoveringPopover = false
     /// What was last reported to the host, so the hold is always released.
     @State private var reportedActive = false
 
-    /// Atoll's header battery width.
+    /// Header battery width.
     static let glyphWidth: CGFloat = 30
 
     init(monitor: BatteryMonitor = .shared, settings: BatterySettings = .shared) {

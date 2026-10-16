@@ -46,7 +46,7 @@ enum SystemHUDMediaKeyCommand: Equatable, Sendable {
     case volumeDown(fine: Bool)
     case toggleMute
 
-    /// Option+Shift gives Atoll's fine step.
+    /// Option+Shift gives the fine step.
     static func make(for key: SystemHUDMediaKey, modifiers: NSEvent.ModifierFlags) -> SystemHUDMediaKeyCommand? {
         guard key.isKeyDown else { return nil }
         let fine = modifiers.contains(.option) && modifiers.contains(.shift)
@@ -60,7 +60,7 @@ enum SystemHUDMediaKeyCommand: Equatable, Sendable {
 }
 
 /// How hard to keep trying to install the tap while Accessibility is not yet granted:
-/// every 2 s for the first minute, then every 15 s, giving up after an hour (Atoll's policy).
+/// every 2 s for the first minute, then every 15 s, giving up after an hour.
 enum SystemHUDTapRetryPolicy {
     static let fastInterval: Duration = .seconds(2)
     static let slowInterval: Duration = .seconds(15)

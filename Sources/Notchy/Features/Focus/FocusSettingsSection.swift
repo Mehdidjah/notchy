@@ -59,7 +59,7 @@ struct FocusSettingsSection: View {
 }
 
 /// The Full Disk Access card at the top of the section: a purple drive glyph and title, a
-/// caption, and two small buttons, on a faint rounded panel (Atoll's permission callout).
+/// caption, and two small buttons, on a faint rounded panel.
 /// Full Disk Access cannot be requested by an app, so the first button opens the pane.
 private struct FocusPermissionCallout: View {
     let openSettings: () -> Void

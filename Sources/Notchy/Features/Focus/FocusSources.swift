@@ -49,7 +49,7 @@ final class FocusNotificationObserver: NSObject, @unchecked Sendable {
     }
 }
 
-/// Polls the Focus database every 2 s (first read after 1 s, 250 ms leeway), Atoll's cadence.
+/// Polls the Focus database every 2 s (first read after 1 s, 250 ms leeway).
 ///
 /// Each tick re-checks Full Disk Access and reports changes; with access it re-reads
 /// ModeConfigurations.json when it changes and, when `readsAssertions` is set, Assertions.json
@@ -136,7 +136,7 @@ final class FocusDatabasePoller: @unchecked Sendable {
         let assertionsDate = FocusDatabase.modificationDate(of: FocusDatabase.assertionsURL)
         if let assertionsDate, let lastAssertionsDate, assertionsDate <= lastAssertionsDate { return }
         lastAssertionsDate = assertionsDate
-        // An unreadable or unexpected file counts as "no Focus", as in Atoll.
+        // An unreadable or unexpected file counts as "no Focus".
         let reading = (try? Data(contentsOf: FocusDatabase.assertionsURL))
             .flatMap(FocusDatabase.parseAssertions) ?? .inactive
         callbacks.assertions(reading)

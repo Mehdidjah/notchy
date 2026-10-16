@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Camera mirror rows for the Settings window, as in Atoll's "Additional features" group of
+/// Camera mirror rows for the Settings window, in the "Additional features" group of
 /// the Appearance pane: Enable Dynamic mirror, Mirror shape (Circle, Square) and Mirror
 /// Camera. Returns a `Section`, so embed it inside a `Form`.
 struct MirrorSettingsSection: View {
@@ -15,7 +15,7 @@ struct MirrorSettingsSection: View {
     var body: some View {
         Section {
             Toggle("Enable Dynamic mirror", isOn: $settings.isEnabled)
-                // Atoll greys this out on Macs without a camera; it can still be turned off.
+                // Greyed out on Macs without a camera; it can still be turned off.
                 .disabled(!controller.cameraAvailable && !settings.isEnabled)
 
             Picker("Mirror shape", selection: $settings.shape) {
@@ -42,7 +42,7 @@ struct MirrorSettingsSection: View {
                 }
             }
         } header: {
-            // Atoll's group heading for the mirror rows (Appearance pane); it has no footer.
+            // Group heading for the mirror rows (Appearance pane); it has no footer.
             Text("Additional features")
         }
         .onAppear {

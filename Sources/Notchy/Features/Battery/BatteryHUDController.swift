@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 
 /// One showing of a battery alert. A fresh `id` per showing re-creates the alert's views so
-/// their pulse and MagSafe animations start over, as Atoll's per-alert token does.
+/// their pulse and MagSafe animations start over, like a per-alert token.
 struct BatteryHUDPresentation: Equatable, Identifiable, Sendable {
     let id: UUID
     let kind: BatteryHUDKind
@@ -66,7 +66,7 @@ final class BatteryHUDController: ObservableObject {
               )
         else { return }
         present(trigger.kind)
-        // Atoll chimes whenever the level crosses the threshold, even with the alert off.
+        // Chimes whenever the level crosses the threshold, even with the alert off.
         if trigger.playsAlertSound, settings.playLowBatteryAlertSound {
             playLowBatteryAlert()
         }
@@ -93,7 +93,7 @@ final class BatteryHUDController: ObservableObject {
         scheduleHide(after: .seconds(settings.duration(for: kind)))
     }
 
-    /// Atoll's preview levels: the live level kept within 12...95 for charging, the low
+    /// Preview levels: the live level kept within 12...95 for charging, the low
     /// threshold capped to 5...20 for low, and 100 for full.
     func triggerTestHUD(_ kind: BatteryHUDKind) {
         let level: Int = switch kind {
@@ -128,7 +128,7 @@ final class BatteryHUDController: ObservableObject {
 
     private func playLowBatteryAlert() {
         guard playsAlertSound else { return }
-        // Atoll ships its own chime; a system alert sound stands in for it.
+        // A system alert sound serves as the chime.
         NSSound(named: NSSound.Name("Funk"))?.play()
     }
 }

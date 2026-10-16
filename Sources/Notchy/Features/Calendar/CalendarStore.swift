@@ -6,7 +6,7 @@ import SwiftUI
 /// Calendar data for the notch: the selected day's events and reminders, the upcoming
 /// entries that drive the reminder live activity, the calendar list and access state.
 ///
-/// Mirrors Atoll's CalendarManager timing: a forced fetch whenever the day changes, a 15-s
+/// Fetch timing: a forced fetch whenever the day changes, a 15-s
 /// dedupe for unforced fetches, EventKit change notifications throttled to one refresh per
 /// 20 s and ignored for 6 s after a refresh, and a 60-s refresh loop.
 @MainActor
@@ -34,7 +34,7 @@ final class CalendarStore: ObservableObject {
     @Published private(set) var reminderAuthorization: EKAuthorizationStatus
     @Published private(set) var isRequestingAccess = false
     /// True while the pointer is over the calendar, so a scroll there does not count as a
-    /// close swipe (Atoll's `isHoveringCalendar`).
+    /// close swipe.
     @Published var isHoveringCalendar = false
 
     let settings: CalendarSettings
@@ -146,14 +146,14 @@ final class CalendarStore: ObservableObject {
 
     // MARK: - Fetching
 
-    /// Shows `day` and fetches it (Atoll's `updateCurrentDate`, always forced).
+    /// Shows `day` and fetches it (always forced).
     func select(day: Date) {
         let normalized = Calendar.current.startOfDay(for: day)
         if normalized != selectedDay { selectedDay = normalized }
         Task { await refreshSelectedDay(force: true) }
     }
 
-    /// Back to today, as Atoll does whenever the notch opens or closes.
+    /// Back to today, done whenever the notch opens or closes.
     func resetToToday() {
         select(day: Date())
     }

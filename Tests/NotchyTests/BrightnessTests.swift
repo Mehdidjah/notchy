@@ -79,7 +79,7 @@ struct BrightnessTests {
     }
 
     @Test
-    func hudUsesAtollsSunGlyphsAndALevelPeek() {
+    func hudUsesSunGlyphsAndALevelPeek() {
         #expect(SystemHUDPresenter.brightnessSymbolName(for: 0.3) == "sun.min.fill")
         #expect(SystemHUDPresenter.brightnessSymbolName(for: 0.6) == "sun.min.fill")
         #expect(SystemHUDPresenter.brightnessSymbolName(for: 0.61) == "sun.max.fill")

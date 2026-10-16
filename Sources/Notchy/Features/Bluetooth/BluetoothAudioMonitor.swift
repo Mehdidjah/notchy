@@ -12,7 +12,7 @@ final class BluetoothAudioMonitor: ObservableObject {
     static let shared = BluetoothAudioMonitor()
 
     @Published private(set) var connectedDevices: [BluetoothAudioDevice] = []
-    /// The most recently connected device, kept after it disconnects (Atoll's label source).
+    /// The most recently connected device, kept after it disconnects (the label source).
     @Published private(set) var lastConnectedDevice: BluetoothAudioDevice?
     /// Each newly connected audio device, once. Devices already connected at start are not
     /// announced.

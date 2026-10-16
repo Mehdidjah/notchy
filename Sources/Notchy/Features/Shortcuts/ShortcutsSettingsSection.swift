@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Shortcuts settings, laid out like Atoll's Settings › Shortcuts: a General section
+/// The Shortcuts settings, laid out as Settings › Shortcuts: a General section
 /// with the master switch, then one section per feature (Media, Keep Awake, Navigation,
 /// Timer, Clipboard, AI Assistant, Terminal, Color Picker) holding “Title:” recorder rows
 /// and right-aligned caption footers. A row is disabled, with a “… is disabled” caption,
@@ -65,7 +65,7 @@ struct ShortcutsSettingsSection: View {
 
     // MARK: - Rows
 
-    /// Atoll builds its rows three ways: a bare recorder (Media, Navigation), a recorder over
+    /// Rows are built three ways: a bare recorder (Media, Navigation), a recorder over
     /// its caption (Keep Awake), and that stack pushed leading by a `Spacer` (the rest).
     @ViewBuilder
     private func row(for action: ShortcutAction, in group: ShortcutGroup) -> some View {
@@ -165,7 +165,7 @@ struct ShortcutsSettingsSection: View {
 }
 
 /// A complete Shortcuts tab for the Settings window: a grouped `Form` around
-/// `ShortcutsSettingsSection`, as Atoll's Settings › Shortcuts.
+/// `ShortcutsSettingsSection`, as Settings › Shortcuts.
 struct ShortcutsSettingsPane: View {
     var body: some View {
         Form {

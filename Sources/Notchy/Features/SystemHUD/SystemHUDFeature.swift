@@ -18,7 +18,7 @@ enum SystemHUDFeature {
         SystemHUDManager.shared.start()
         IslandActivityCenter.shared.register(inlineActivity)
         IslandActivityCenter.shared.register(capsLockActivity)
-        // Atoll keeps the HUD rows in its Controls pane and the Caps Lock rows in Live
+        // The HUD rows go in the Controls pane and the Caps Lock rows in Live
         // Activities.
         SettingsSectionRegistry.shared.register(.controls, id: "systemHUD") {
             SystemHUDSettingsSection(includesCapsLock: false)

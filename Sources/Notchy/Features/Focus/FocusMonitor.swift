@@ -2,7 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 
-/// Tracks whether a Focus mode is on and which one (Atoll's DoNotDisturbManager).
+/// Tracks whether a Focus mode is on and which one.
 ///
 /// Sources, all public: the Focus on/off distributed notifications; the Focus database polled
 /// every 2 s when Full Disk Access has been granted (never requested automatically); and,

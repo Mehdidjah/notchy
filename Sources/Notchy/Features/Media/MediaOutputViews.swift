@@ -1,8 +1,8 @@
 import Combine
 import SwiftUI
 
-/// Keeps the island open while something it presented (a popover) is on screen, the way
-/// Atoll's `setMediaOutputPopoverActive` does. Set by `HomeMediaSlot`.
+/// Keeps the island open while something it presented (a popover) is on screen.
+/// Set by `HomeMediaSlot`.
 struct MediaHoldOpenAction: Sendable {
     let perform: @MainActor @Sendable (_ reason: String, _ active: Bool) -> Void
 
@@ -25,7 +25,7 @@ extension EnvironmentValues {
 // MARK: - Output volume
 
 /// The system output volume for the media-output popover, through the HUD feature's
-/// `VolumeController`. Changes made here keep the volume HUD quiet for 1.5 s, as Atoll's do.
+/// `VolumeController`. Changes made here keep the volume HUD quiet for 1.5 s.
 @MainActor
 final class MediaOutputVolumeModel: ObservableObject {
     @Published private(set) var level: Float = 0

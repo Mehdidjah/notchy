@@ -123,7 +123,7 @@ final class StatsManager: ObservableObject {
     }
 
     /// Samples, applies, sleeps for the configured interval, repeats. A fresh start takes an
-    /// immediate first sample like Atoll; an interval change just waits out the new interval.
+    /// immediate first sample; an interval change just waits out the new interval.
     private func launchSamplingLoop(rebaseline: Bool, sampleImmediately: Bool) {
         samplingTask?.cancel()
         let probe = self.probe

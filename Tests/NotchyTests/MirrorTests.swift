@@ -70,7 +70,7 @@ struct MirrorTests {
     // MARK: Settings and camera choice
 
     @Test
-    func settingsUseAtollDefaultsAndPersist() {
+    func settingsUseDesignDefaultsAndPersist() {
         let defaults = makeDefaults()
         let settings = MirrorSettings(defaults: defaults)
         #expect(settings.isEnabled == false)
@@ -87,7 +87,7 @@ struct MirrorTests {
     }
 
     @Test
-    func shapesUseAtollCornerRadii() {
+    func shapesUseDesignCornerRadii() {
         #expect(MirrorShape.rectangle.previewCornerRadius == 13)
         #expect(MirrorShape.rectangle.placeholderCornerRadius == 12)
         #expect(MirrorShape.circle.previewCornerRadius == 100)
@@ -181,7 +181,7 @@ struct MirrorTests {
 
         backend.answerAccess()
         #expect(controller.authorization == .authorized)
-        #expect(controller.isPreviewRequested == false, "Atoll waits for another click after the grant")
+        #expect(controller.isPreviewRequested == false, "the preview waits for another click after the grant")
         #expect(backend.calls == ["requestAccess"])
 
         controller.togglePreview()
@@ -212,7 +212,7 @@ struct MirrorTests {
         controller.setMirror(UUID(), visible: true)
         controller.togglePreview(from: .mirror)
         controller.togglePreview(from: .headerButton)
-        #expect(sources == [.mirror, .headerButton], "each source gets Atoll's own alert")
+        #expect(sources == [.mirror, .headerButton], "each source gets its own alert")
         #expect(backend.calls.isEmpty)
         #expect(controller.authorization.isBlocked)
     }

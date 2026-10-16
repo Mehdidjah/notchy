@@ -1,8 +1,8 @@
 import Combine
 import SwiftUI
 
-/// Entry point for global keyboard shortcuts (Atoll's KeyboardShortcuts integration,
-/// rebuilt on the public Carbon hot-key API).
+/// Entry point for global keyboard shortcuts (a KeyboardShortcuts-style integration,
+/// built on the public Carbon hot-key API).
 ///
 /// The coordinator binds a handler per action, optionally gated by the owning feature's
 /// enabled flag, and calls `start()` once:
@@ -17,7 +17,7 @@ enum ShortcutsFeature {
     static var settings: ShortcutsSettings { .shared }
 
     /// Starts following the keyboard layout, registers every bound, enabled shortcut and
-    /// adds the rows to Settings › Shortcuts (Atoll's “keyboard” tab).
+    /// adds the rows to Settings › Shortcuts (the “keyboard” tab).
     static func start() {
         KeyboardLayout.shared.startObserving()
         ShortcutsManager.shared.start()
@@ -75,8 +75,8 @@ enum ShortcutsFeature {
 }
 
 extension View {
-    /// Mirrors an action's global shortcut as this control's in-app key equivalent, the way
-    /// Atoll's `keyboardShortcut(_ name:)` helper does, and follows rebinding.
+    /// Mirrors an action's global shortcut as this control's in-app key equivalent, like a
+    /// `keyboardShortcut(_ name:)` helper, and follows rebinding.
     func keyboardShortcut(for action: ShortcutAction) -> some View {
         modifier(ActionKeyboardShortcutModifier(action: action, settings: .shared))
     }

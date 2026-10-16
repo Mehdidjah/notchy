@@ -2,10 +2,10 @@ import AppKit
 import EventKit
 import SwiftUI
 
-/// Calendar rows for the Settings window, laid out like Atoll's Calendar pane. Returns several
+/// Calendar rows for the Settings window, laid out as a Calendar pane. Returns several
 /// `Section`s, so embed it inside a `Form`.
 ///
-/// As in Atoll, while calendar or reminder access is missing the pane shows only the red
+/// While calendar or reminder access is missing the pane shows only the red
 /// notice with "Request Access" and "Open System Settings"; once both are granted it shows
 /// Permissions, "Show calendar", Event List, All-Day Events, Reminder Live Activity,
 /// Third-party Calendar Integration and Select Calendars.
@@ -27,7 +27,7 @@ struct CalendarSettingsSection: View {
             }
         }
         .onAppear {
-            // As in Atoll, opening the Calendar pane asks for access the user has not decided on.
+            // Opening the Calendar pane asks for access the user has not decided on.
             store.refreshAuthorizationStatus()
             Task {
                 if store.canRequestAccess {
@@ -226,7 +226,7 @@ struct CalendarSettingsSection: View {
     }
 }
 
-/// The installed app's 16-pt icon (rounded at 20 %), or Atoll's fallback glyph when the app
+/// The installed app's 16-pt icon (rounded at 20 %), or a fallback glyph when the app
 /// is not installed: a red "calendar.badge.clock" for Fantastical, a blue
 /// "calendar.badge.plus" for Notion Calendar.
 private struct CalendarAppIcon: View {

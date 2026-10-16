@@ -7,7 +7,7 @@ enum NotesLayoutMode: String, Equatable, Sendable {
     case split
     case editor
 
-    /// Atoll's open heights for the Notes tab (header included): list 240, split 260, editor 320.
+    /// Open heights for the Notes tab (header included): list 240, split 260, editor 320.
     var preferredHeight: CGFloat {
         switch self {
         case .list: 240
@@ -18,20 +18,20 @@ enum NotesLayoutMode: String, Equatable, Sendable {
 }
 
 /// Published Notes layout for the host: the island grows to `preferredHeight` while the Notes
-/// tab is selected, animated with `.easeInOut(duration: 0.25)` like Atoll.
+/// tab is selected, animated with `.easeInOut(duration: 0.25)`.
 @MainActor
 final class NotesLayoutState: ObservableObject {
     static let shared = NotesLayoutState()
 
     /// The Notes tab's base open height in the host (`NotchTab.notes.openHeight`).
     static let baseHeight: CGFloat = NotesLayoutMode.list.preferredHeight
-    /// Atoll animates Notes height changes with this curve.
+    /// Notes height changes animate with this curve.
     static let heightAnimationDuration: Double = 0.25
 
     @Published private(set) var mode: NotesLayoutMode = .list
     @Published private(set) var preferredHeight: CGFloat = NotesLayoutMode.list.preferredHeight
-    /// True while the pointer is over the notes list or editor. Atoll suppresses the
-    /// swipe-up-to-close gesture then, so scrolling the notes never folds the island away.
+    /// True while the pointer is over the notes list or editor. The
+    /// swipe-up-to-close gesture is suppressed then, so scrolling the notes never folds the island away.
     @Published private(set) var suppressesCloseGesture = false
 
     init() {}

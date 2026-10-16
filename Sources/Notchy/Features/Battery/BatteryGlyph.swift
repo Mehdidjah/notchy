@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The header battery (Atoll's `BatteryView`).
+/// The header battery (`BatteryView`).
 ///
 /// Filled style, the default: a light body with the charge as a coloured fill from the left
 /// and the figure in dark rounded type centred over the whole body, a bolt or plug beside it
@@ -121,7 +121,7 @@ struct BatteryGlyph: View {
                 .padding(.leading, 2)
 
             if let outlinedStatusGlyph {
-                // Atoll's bitmaps are a white bolt / upright plug with a dark outline, fitted
+                // The bitmaps are a white bolt / upright plug with a dark outline, fitted
                 // to 17 x 17 and centred on a square as wide as the battery.
                 ZStack {
                     Image(systemName: outlinedStatusGlyph.fill)
@@ -142,7 +142,7 @@ struct BatteryGlyph: View {
 }
 
 /// The popover under the header battery: level, capacity, power state, time to full and a
-/// shortcut to the Battery pane of System Settings. 280 pt wide, like Atoll's.
+/// shortcut to the Battery pane of System Settings. 280 pt wide.
 struct BatteryMenuView: View {
     let snapshot: BatterySnapshot
     let onDismiss: () -> Void

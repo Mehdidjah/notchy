@@ -83,7 +83,7 @@ struct CaffeinatePopover: View {
     }
 }
 
-/// The HUD material behind the popover. Like Atoll it follows the system appearance rather
+/// The HUD material behind the popover. It follows the system appearance rather
 /// than forcing dark, so text and material always agree with the popover chrome.
 private struct CaffeinateHUDBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {

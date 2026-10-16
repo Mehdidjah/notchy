@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// Atoll's standard-style system-event row (`SystemEventIndicatorModifier`), for the sneak
+/// Standard-style system-event row, for the sneak
 /// peeks this feature sends when the inline style is off: a large glyph 14 pt from a level
 /// bar and percentage, "muted" in grey at zero, or the microphone's state.
 ///
 /// The island draws sneak peeks itself; this view is offered for its sneak-peek row so the
-/// volume row matches Atoll (see the integration request). Place it with Atoll's padding:
+/// volume row matches this design (see the integration request). Place it with this padding:
 /// bottom 10, leading 4, trailing 8.
 struct SystemHUDStandardRow: View {
     let peek: SneakPeek
-    /// Level set by dragging the bar; Atoll's bar writes its bound value, so the fill follows
+    /// Level set by dragging the bar; the bar writes its bound value, so the fill follows
     /// the pointer until the next event replaces the peek.
     @State private var draggedLevel: CGFloat?
 
@@ -32,7 +32,7 @@ struct SystemHUDStandardRow: View {
             section
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Atoll inherits the default body font and draws its glyphs at the large scale.
+        // Inherits the default body font and draws its glyphs at the large scale.
         .font(.body)
         .imageScale(.large)
         .environment(\.colorScheme, .dark)

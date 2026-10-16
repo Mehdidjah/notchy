@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-/// The click-to-record shortcut field Atoll's Settings use (KeyboardShortcuts'
+/// The click-to-record shortcut field Settings use (modelled on KeyboardShortcuts'
 /// `Recorder`): a native, centred `NSSearchField` at least 130 pt wide with the magnifier
 /// removed. It reads “Record Shortcut” when empty and shows the binding (⇧⌘V) with the
 /// search field's own clear button; once clicked it shows the system focus ring, hides the
@@ -10,7 +10,7 @@ import SwiftUI
 ///
 /// While listening: Escape stops, Tab stops and moves focus on, Delete clears, a click
 /// outside stops, a bare key or Shift-only keystroke beeps, and unusable keystrokes raise
-/// Atoll's alerts before listening again. Global hot keys are paused meanwhile so pressing
+/// alerts before listening again. Global hot keys are paused meanwhile so pressing
 /// an existing shortcut records it instead of firing it.
 struct ShortcutRecorder: View {
     /// KeyboardShortcuts' `minimumWidth`.
@@ -303,7 +303,7 @@ final class ShortcutRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     // MARK: - Alerts
 
-    /// Atoll's recorder alerts, as a warning sheet on the Settings window. “OK” returns to
+    /// The recorder alerts, as a warning sheet on the Settings window. “OK” returns to
     /// listening; “Use Anyway” (system shortcut) or “Reassign” (another Notchy action)
     /// keeps the keystroke.
     private func presentAlert(for issue: ShortcutIssue) {
@@ -333,7 +333,7 @@ final class ShortcutRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     private func alertDidEnd(_ response: NSApplication.ModalResponse, issue: ShortcutIssue) {
         guard issue.canOverride, response == .alertSecondButtonReturn, let shortcut = pendingShortcut else {
-            // Back to listening for a better keystroke, as Atoll's recorder does.
+            // Back to listening for a better keystroke.
             pendingShortcut = nil
             acceptedIssues = []
             focus()

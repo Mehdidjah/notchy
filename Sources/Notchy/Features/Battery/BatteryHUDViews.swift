@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Tint of a battery alert (Atoll): yellow in Low Power Mode; otherwise red for a low alert
+/// Tint of a battery alert: yellow in Low Power Mode; otherwise red for a low alert
 /// or for charging at 20 % or less, green for the rest.
 enum BatteryHUDTint {
     static func color(kind: BatteryHUDKind, level: Int, isLowPowerMode: Bool) -> Color {
@@ -23,7 +23,7 @@ enum BatteryHUDTint {
 }
 
 /// Left wing of the compact alert: the title, 16 pt in from the island's edge. Text longer
-/// than the wing runs under the black centre, as it does under the hardware notch in Atoll.
+/// than the wing runs under the black centre, as it does under the hardware notch.
 struct BatteryHUDCompactLeadingWing: View {
     let kind: BatteryHUDKind
 
