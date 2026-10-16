@@ -16,11 +16,15 @@ struct FaceFrameObservation: Equatable, Sendable {
 
 /// What the pipeline made of one frame.
 struct FaceFrameAnalysis: Sendable {
+    var capturedAt: TimeInterval?
     var face: FaceFrameObservation?
     /// The 150×150 chip the model saw, for the settings page.
     var chip: CGImage?
     var descriptor: [Float]?
     var problem: String?
+    var faceCount: Int = 0
+    /// Deny cues remain available even if alignment or embedding failed.
+    var liveness: FaceLivenessObservation?
 }
 
 /// Turns camera frames into face descriptors: Vision finds the face and its landmarks, the
@@ -39,34 +43,61 @@ actor FaceCheckPipeline {
     }
 
     func analyze(_ frame: CGImage) async -> FaceFrameAnalysis {
-        let face: FaceFrameObservation?
+        let detection: (face: FaceFrameObservation?, count: Int, device: Bool)
         do {
-            face = try Self.detectFace(in: frame)
+            detection = try Self.detectFrame(in: frame)
         } catch {
             return FaceFrameAnalysis(problem: "Face detection failed: \(error.localizedDescription)")
         }
-        guard let face else { return FaceFrameAnalysis() }
+        guard let face = detection.face else { return FaceFrameAnalysis(faceCount: detection.count) }
+        let liveness = FaceLivenessObservation(
+            geometry: FaceLivenessGeometry.measure(face.landmarks) ?? .unavailable,
+            yaw: face.yaw ?? .nan,
+            pitch: face.pitch ?? .nan,
+            quality: face.quality,
+            glare: FaceLivenessImageCues.glare(in: frame, faceBounds: face.bounds) ?? .unavailable,
+            enclosingDevice: detection.device,
+            faceCount: detection.count
+        )
+        guard detection.count == 1 else {
+            return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness)
+        }
         guard let alignment = FaceChipAligner.alignment(for: face.landmarks),
               let chip = FaceChipRenderer.renderImage(frame, alignment: alignment)
         else {
-            return FaceFrameAnalysis(face: face)
+            return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness)
         }
         do {
             let descriptor = try await embedder.descriptor(for: chip)
-            return FaceFrameAnalysis(face: face, chip: chip, descriptor: descriptor)
+            return FaceFrameAnalysis(face: face, chip: chip, descriptor: descriptor,
+                                     faceCount: detection.count, liveness: liveness)
         } catch FaceEmbedder.Failure.modelMissing {
-            return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model is missing from the app.")
+            return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model is missing from the app.",
+                                     faceCount: detection.count, liveness: liveness)
         } catch {
-            return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model failed: \(error.localizedDescription)")
+            return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model failed: \(error.localizedDescription)",
+                                     faceCount: detection.count, liveness: liveness)
         }
     }
 
     /// The largest face in the frame, with its landmarks, pose and capture quality.
     static func detectFace(in frame: CGImage) throws -> FaceFrameObservation? {
+        try detectFrame(in: frame).face
+    }
+
+    private static func detectFrame(in frame: CGImage) throws -> (face: FaceFrameObservation?, count: Int, device: Bool) {
         let handler = VNImageRequestHandler(cgImage: frame, orientation: .up)
         let rectangles = VNDetectFaceRectanglesRequest()
-        try handler.perform([rectangles])
-        guard let faces = rectangles.results, !faces.isEmpty else { return nil }
+        let devices = VNDetectRectanglesRequest()
+        devices.minimumConfidence = 0.8
+        devices.minimumSize = 0.15
+        devices.minimumAspectRatio = 0.32
+        devices.maximumAspectRatio = 0.95
+        devices.maximumObservations = 8
+        devices.quadratureTolerance = 20
+        // Running both requests before embedding means the first matching frame cannot bypass denial.
+        try handler.perform([rectangles, devices])
+        guard let faces = rectangles.results, !faces.isEmpty else { return (nil, 0, false) }
         let largest = faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }!
 
         let landmarksRequest = VNDetectFaceLandmarksRequest()
@@ -75,29 +106,38 @@ actor FaceCheckPipeline {
         qualityRequest.inputFaceObservations = [largest]
         try handler.perform([landmarksRequest, qualityRequest])
 
-        guard let withLandmarks = landmarksRequest.results?.first, let regions = withLandmarks.landmarks else {
-            return nil
-        }
+        let withLandmarks = landmarksRequest.results?.first
+        let regions = withLandmarks?.landmarks
         let size = CGSize(width: frame.width, height: frame.height)
         func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
             region?.pointsInImage(imageSize: size) ?? []
         }
         let landmarks = FaceLandmarkPoints(
-            leftEye: points(regions.leftEye),
-            rightEye: points(regions.rightEye),
-            nose: points(regions.nose),
-            noseCrest: points(regions.noseCrest),
-            outerLips: points(regions.outerLips)
+            leftEye: points(regions?.leftEye),
+            rightEye: points(regions?.rightEye),
+            nose: points(regions?.nose),
+            noseCrest: points(regions?.noseCrest),
+            outerLips: points(regions?.outerLips)
         ).flippedVertically(imageHeight: size.height)
 
         let box = largest.boundingBox
+        let faceBounds = CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height)
+        let device = (devices.results ?? []).contains { rectangle in
+            let corners = [rectangle.topLeft, rectangle.topRight, rectangle.bottomRight, rectangle.bottomLeft]
+                .map { CGPoint(x: $0.x, y: 1 - $0.y) }
+            return FaceLivenessImageCues.deviceSurroundsFace(
+                faceBounds, corners: corners, confidence: Double(rectangle.confidence),
+                imageAspect: Double(frame.width) / Double(frame.height)
+            )
+        }
         let quality = qualityRequest.results?.first?.faceCaptureQuality.map(Double.init) ?? 0
-        return FaceFrameObservation(
-            bounds: CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height),
+        let face = FaceFrameObservation(
+            bounds: faceBounds,
             landmarks: landmarks,
-            yaw: largest.yaw.map { $0.doubleValue * 180 / .pi },
-            pitch: largest.pitch.map { $0.doubleValue * 180 / .pi },
+            yaw: (withLandmarks?.yaw ?? largest.yaw).map { $0.doubleValue * 180 / .pi },
+            pitch: (withLandmarks?.pitch ?? largest.pitch).map { $0.doubleValue * 180 / .pi },
             quality: quality
         )
+        return (face, faces.count, device)
     }
 }
