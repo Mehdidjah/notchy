@@ -4,3 +4,4 @@ dist/
 *.xcuserstate
 .codex/
 __pycache__/
+.claude/
