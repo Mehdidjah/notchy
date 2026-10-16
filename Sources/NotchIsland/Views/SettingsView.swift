@@ -461,7 +461,9 @@ struct SettingsTile: View {
 /// Launch at login through the system login-item service. Unsigned development builds may be
 /// refused by the system; the toggle then reverts and shows why.
 private struct LaunchAtLoginToggle: View {
-    @State private var enabled = SMAppService.mainApp.status == .enabled
+    /// Read once when the row appears: the status is a synchronous call into the system, too
+    /// slow to repeat on every rebuild of the settings view.
+    @State private var enabled = false
     @State private var errorText: String?
 
     var body: some View {
@@ -482,5 +484,6 @@ private struct LaunchAtLoginToggle: View {
                 Text(errorText).font(.caption).foregroundStyle(.secondary)
             }
         }
+        .task { enabled = SMAppService.mainApp.status == .enabled }
     }
 }

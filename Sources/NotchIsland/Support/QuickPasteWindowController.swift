@@ -26,14 +26,25 @@ final class QuickPasteWindowController: NSWindowController, NSWindowDelegate {
         panel.maxSize = CGSize(width: 640, height: 620)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
+    }
+
+    /// The SwiftUI content exists only while the panel is shown, so a hidden quick-paste view
+    /// never re-renders when the island's model changes.
+    private func installContent() {
+        guard let panel = window, panel.contentView is NSHostingView<QuickPasteView> == false else { return }
         panel.contentView = NSHostingView(
-            rootView: QuickPasteView(model: model) { [weak panel] in panel?.orderOut(nil) }
+            rootView: QuickPasteView(model: model) { [weak self] in self?.closeWindow() }
         )
+    }
+
+    private func removeContent() {
+        window?.contentView = NSView()
     }
 
     required init?(coder: NSCoder) { nil }
 
     func show() {
+        installContent()
         targetTracker.rememberFrontmostApplication()
         positionNearPointer()
         NSApp.activate()
@@ -42,6 +53,19 @@ final class QuickPasteWindowController: NSWindowController, NSWindowDelegate {
 
     func closeWindow() {
         window?.orderOut(nil)
+        removeContent()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        removeContent()
+    }
+
+    /// `hidesOnDeactivate` hides the panel when another app comes forward.
+    func windowDidResignKey(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window?.isVisible == false else { return }
+            self.removeContent()
+        }
     }
 
     private func positionNearPointer() {

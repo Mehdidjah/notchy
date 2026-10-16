@@ -73,11 +73,15 @@ struct NotchRootView: View {
         )
         .clipShape(shape)
         .contentShape(shape)
-        .compositingGroup()
-        .shadow(
-            color: showsShadow ? .black.opacity(NotchSilhouette.shadowOpacity) : .clear,
-            radius: NotchSilhouette.shadowRadius
-        )
+        .background(alignment: .top) {
+            // The shadow belongs to the silhouette only, so the island's content is never
+            // re-rasterised to cast it.
+            if showsShadow {
+                shape
+                    .fill(Color.black)
+                    .shadow(color: .black.opacity(NotchSilhouette.shadowOpacity), radius: NotchSilhouette.shadowRadius)
+            }
+        }
         .opacity(isVisible || model.state.isCollapsed ? 1 : 0.001)
         .animation(hoverAnimation, value: model.isHovering)
         .animation(isOpen ? openAnimation : closeAnimation, value: model.state)

@@ -93,9 +93,10 @@ final class NotchViewModel: ObservableObject {
     ) {
         #if DEBUG
         let previewMode = ProcessInfo.processInfo.arguments.contains("--expanded-preview")
+            || PerfTabCycler.isRequested
         let initialItems = previewMode && items.isEmpty ? Clip.debugPreviewItems : items
         #else
-        let previewMode = false
+        let previewMode = PerfTabCycler.isRequested
         let initialItems = items
         #endif
         self.items = initialItems

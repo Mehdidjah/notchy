@@ -167,6 +167,7 @@ final class AppEnvironment {
         model.start()
         clipboardMonitor.start()
         panelController.show()
+        PerfTabCycler.startIfRequested(model: model)
         fullscreenDetector.start()
     }
 
