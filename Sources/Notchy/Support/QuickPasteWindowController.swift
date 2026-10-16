@@ -60,13 +60,6 @@ final class QuickPasteWindowController: NSWindowController, NSWindowDelegate {
         removeContent()
     }
 
-    /// `hidesOnDeactivate` hides the panel when another app comes forward.
-    func windowDidResignKey(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.window?.isVisible == false else { return }
-            self.removeContent()
-        }
-    }
 
     private func positionNearPointer() {
         guard let window else { return }
