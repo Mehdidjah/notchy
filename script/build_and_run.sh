@@ -2,8 +2,8 @@
 set -euo pipefail
 
 MODE="${1:-run}"
-APP_NAME="NotchIsland"
-BUNDLE_ID="com.local.NotchIsland"
+APP_NAME="Notchy"
+BUNDLE_ID="com.local.Notchy"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,6 +22,8 @@ case "$MODE" in
 esac
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+# The app was called NotchIsland; stop an old copy so it releases the clipboard store.
+pkill -x NotchIsland >/dev/null 2>&1 || true
 
 swift build --package-path "$ROOT_DIR" -c "$CONFIGURATION"
 BUILD_BINARY="$(swift build --package-path "$ROOT_DIR" -c "$CONFIGURATION" --show-bin-path)/$APP_NAME"
@@ -42,6 +44,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$BUNDLE_ID</string>
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleDisplayName</key>
+  <string>$APP_NAME</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
@@ -53,23 +57,23 @@ cat >"$INFO_PLIST" <<PLIST
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
   <key>NSAppleEventsUsageDescription</key>
-  <string>NotchIsland reads and controls Music and Spotify playback to show it in the notch.</string>
+  <string>Notchy reads and controls Music and Spotify playback to show it in the notch.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>NotchIsland shows today's events and upcoming meetings in the notch.</string>
+  <string>Notchy shows today's events and upcoming meetings in the notch.</string>
   <key>NSCalendarsUsageDescription</key>
-  <string>NotchIsland shows today's events and upcoming meetings in the notch.</string>
+  <string>Notchy shows today's events and upcoming meetings in the notch.</string>
   <key>NSRemindersFullAccessUsageDescription</key>
-  <string>NotchIsland lists today's reminders beside your events.</string>
+  <string>Notchy lists today's reminders beside your events.</string>
   <key>NSRemindersUsageDescription</key>
-  <string>NotchIsland lists today's reminders beside your events.</string>
+  <string>Notchy lists today's reminders beside your events.</string>
   <key>NSCameraUsageDescription</key>
-  <string>NotchIsland shows a camera mirror in the notch when you turn it on.</string>
+  <string>Notchy shows a camera mirror in the notch when you turn it on.</string>
   <key>NSMicrophoneUsageDescription</key>
-  <string>NotchIsland shows when an app is using the microphone.</string>
+  <string>Notchy shows when an app is using the microphone.</string>
   <key>NSAudioCaptureUsageDescription</key>
-  <string>NotchIsland draws a live audio visualizer for the music that is playing.</string>
+  <string>Notchy draws a live audio visualizer for the music that is playing.</string>
   <key>NSBluetoothAlwaysUsageDescription</key>
-  <string>NotchIsland shows when Bluetooth headphones connect and their battery level.</string>
+  <string>Notchy shows when Bluetooth headphones connect and their battery level.</string>
 </dict>
 </plist>
 PLIST

@@ -1,4 +1,4 @@
-# NotchIsland
+# Notchy
 
 A macOS menu-bar app that turns the MacBook notch into a Dynamic Island. The
 island opens into a tabbed panel: Clipboard history today, with Shelf, Timer and
@@ -27,12 +27,12 @@ Optional modes:
 ./script/build_and_run.sh --verify     # build, launch, confirm the process is running
 ./script/build_and_run.sh --debug      # run under lldb
 ./script/build_and_run.sh --logs       # launch and stream the process log
-./script/build_and_run.sh --telemetry  # launch and stream the com.local.NotchIsland subsystem
+./script/build_and_run.sh --telemetry  # launch and stream the com.local.Notchy subsystem
 ./script/build_and_run.sh --preview    # launch pinned open with sample clips
 swift test                             # unit tests
 ```
 
-The script builds the Swift package, stages `dist/NotchIsland.app`, stops any
+The script builds the Swift package, stages `dist/Notchy.app`, stops any
 previous instance, and launches the new build. The bundle is unsigned, so the
 Accessibility grant used for pasting may need to be renewed after rebuilding.
 
@@ -60,13 +60,13 @@ Accessibility grant used for pasting may need to be renewed after rebuilding.
 
 ## Layout
 
-- `Sources/NotchIsland/App` entry point and app delegate
-- `Sources/NotchIsland/Models` value types, state machine, settings, tabs
-- `Sources/NotchIsland/Services` clipboard monitor, normaliser, repository,
+- `Sources/Notchy/App` entry point and app delegate
+- `Sources/Notchy/Models` value types, state machine, settings, tabs
+- `Sources/Notchy/Services` clipboard monitor, normaliser, repository,
   paste coordinator, fullscreen detector, haptics
-- `Sources/NotchIsland/Stores` the island view model
-- `Sources/NotchIsland/Support` panel controller, geometry, composition root,
+- `Sources/Notchy/Stores` the island view model
+- `Sources/Notchy/Support` panel controller, geometry, composition root,
   window controllers, menu bar
-- `Sources/NotchIsland/Views` island shell, tabs, library, quick paste, settings
-- `Sources/NotchIsland/Features/<Feature>` self-contained feature tabs
-- `Tests/NotchIslandTests` Swift Testing suite
+- `Sources/Notchy/Views` island shell, tabs, library, quick paste, settings
+- `Sources/Notchy/Features/<Feature>` self-contained feature tabs
+- `Tests/NotchyTests` Swift Testing suite

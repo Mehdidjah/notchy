@@ -34,7 +34,7 @@ enableSystemHUD=true (master gate for volume/brightness/backlight/mic/capsLock/p
 
 ### Dependencies
 
-sindresorhus/Defaults 9.0.3 (MIT) for settings; none required in NotchIsland (use @AppStorage/UserDefaults).
+sindresorhus/Defaults 9.0.3 (MIT) for settings; none required in Notchy (use @AppStorage/UserDefaults).
 
 ### Implementation notes
 
@@ -153,7 +153,7 @@ None (Foundation/CoreAudio/IOKit/CoreGraphics/ApplicationServices).
 
 ### Implementation notes
 
-For NotchIsland prefer: CGEvent tap for media keys (public, needs Accessibility) + CoreAudio listeners (public) + IOKit/IODisplay or DisplayServices-free approach. Killing/suspending OSDUIHelper is a private, fragile hack that also requires no sandbox; a public alternative is to intercept the keys (which prevents the native OSD from being triggered at all for volume/brightness since macOS only draws the bezel in response to the key event it receives) — Atoll still suppresses because CoreAudio writes wake the OSD helper. Keyboard backlight and display brightness have no public write API on Apple Silicon besides private CoreBrightness/DisplayServices; mark as optional. Size: ~1,500 lines in Atoll; a minimal public-only reimplementation (tap + CoreAudio + IODisplay best-effort) ~500 lines.
+For Notchy prefer: CGEvent tap for media keys (public, needs Accessibility) + CoreAudio listeners (public) + IOKit/IODisplay or DisplayServices-free approach. Killing/suspending OSDUIHelper is a private, fragile hack that also requires no sandbox; a public alternative is to intercept the keys (which prevents the native OSD from being triggered at all for volume/brightness since macOS only draws the bezel in response to the key event it receives) — Atoll still suppresses because CoreAudio writes wake the OSD helper. Keyboard backlight and display brightness have no public write API on Apple Silicon besides private CoreBrightness/DisplayServices; mark as optional. Size: ~1,500 lines in Atoll; a minimal public-only reimplementation (tap + CoreAudio + IODisplay best-effort) ~500 lines.
 
 ### Key files
 
@@ -386,7 +386,7 @@ enableCameraDetection=true; enableMicrophoneDetection=true.
 
 ### Implementation notes
 
-Entirely public API; ~500 lines. Re-bind the mic listener on kAudioHardwarePropertyDefaultInputDevice changes in NotchIsland.
+Entirely public API; ~500 lines. Re-bind the mic listener on kAudioHardwarePropertyDefaultInputDevice changes in Notchy.
 
 ### Key files
 
@@ -424,7 +424,7 @@ enableDoNotDisturbDetection=true; focusMonitoringMode=.withoutDevTools (withoutD
 
 ### Implementation notes
 
-No public API exposes Focus state on macOS. Options for NotchIsland: the same undocumented distributed notifications (observed stable since macOS 12) + Assertions.json polling behind an FDA prompt; or INFocusStatusCenter (requires the com.apple.developer.focus-status entitlement — not available to generic apps). ~900 lines in Atoll; a lean version ~300.
+No public API exposes Focus state on macOS. Options for Notchy: the same undocumented distributed notifications (observed stable since macOS 12) + Assertions.json polling behind an FDA prompt; or INFocusStatusCenter (requires the com.apple.developer.focus-status entitlement — not available to generic apps). ~900 lines in Atoll; a lean version ~300.
 
 ### Key files
 
@@ -460,7 +460,7 @@ enableDownloadListener=true; enableSafariDownloads=true (not referenced in manag
 
 ### Implementation notes
 
-Public API; ~300 lines. Note the app is unsandboxed; a sandboxed NotchIsland needs the Downloads read-only entitlement.
+Public API; ~300 lines. Note the app is unsandboxed; a sandboxed Notchy needs the Downloads read-only entitlement.
 
 ### Key files
 
@@ -536,7 +536,7 @@ None beyond system frameworks.
 
 ### Implementation notes
 
-Public subset for NotchIsland: IOBluetooth paired-device polling + CoreAudio default-output route change as the connect trigger, battery via IORegistry BatteryPercent (public IOKit). Listening-mode detection has no public API; treat as optional/experimental. ~3,000 lines in Atoll; minimal ~400.
+Public subset for Notchy: IOBluetooth paired-device polling + CoreAudio default-output route change as the connect trigger, battery via IORegistry BatteryPercent (public IOKit). Listening-mode detection has no public API; treat as optional/experimental. ~3,000 lines in Atoll; minimal ~400.
 
 ### Key files
 

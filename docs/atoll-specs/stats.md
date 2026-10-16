@@ -34,7 +34,7 @@ enableStatsFeature Bool default false (models/Constants.swift:1282). Toggling it
 
 ### Implementation notes
 
-NotchIsland: add a `.stats` case to the tab model and gate it on a `stats.enabled` UserSettings key (default false). Render placeholders with the same three-element VStack. ~80 lines of view code.
+Notchy: add a `.stats` case to the tab model and gate it on a `stats.enabled` UserSettings key (default false). Render placeholders with the same three-element VStack. ~80 lines of view code.
 
 ### Key files
 
@@ -71,7 +71,7 @@ statsUpdateInterval Double default 1.0 (Constants.swift:1292), clamped to [1.0, 
 
 ### Implementation notes
 
-NotchIsland (Swift 6): make `StatsMonitor` a @MainActor ObservableObject; replace Timers with a `Task` loop using `Task.sleep(for: .seconds(interval))` cancelled on stop; keep the three delays (0.5 start, 0.1 tab-switch stop, 3.0 close stop) as constants; drive it from NotchViewModel state transitions (expanded + stats tab). ~150 lines.
+Notchy (Swift 6): make `StatsMonitor` a @MainActor ObservableObject; replace Timers with a `Task` loop using `Task.sleep(for: .seconds(interval))` cancelled on stop; keep the three delays (0.5 start, 0.1 tab-switch stop, 3.0 close stop) as constants; drive it from NotchViewModel state transitions (expanded + stats tab). ~150 lines.
 
 ### Key files
 
@@ -213,7 +213,7 @@ None.
 
 ### Implementation notes
 
-This is the only hard PRIVATE dependency. Options for NotchIsland: (a) replicate the dlopen/dlsym shim behind a feature flag and show "—" if any symbol is missing; (b) drop the frequency gauge. If replicating, isolate in a `nonisolated` final class with @unchecked Sendable; ~200 lines.
+This is the only hard PRIVATE dependency. Options for Notchy: (a) replicate the dlopen/dlsym shim behind a feature flag and show "—" if any symbol is missing; (b) drop the frequency gauge. If replicating, isolate in a `nonisolated` final class with @unchecked Sendable; ~200 lines.
 
 ### Key files
 
@@ -426,7 +426,7 @@ showCpuGraph true, showMemoryGraph true, showGpuGraph true, showNetworkGraph fal
 
 ### Implementation notes
 
-In NotchIsland's NotchGeometryResolver add `statsExtraRowHeight = 132` applied when the stats tab is active and >= 4 graphs enabled; animate the panel frame with easeInOut 0.3. Grid: use LazyVGrid/VStack exactly as above. ~120 lines.
+In Notchy's NotchGeometryResolver add `statsExtraRowHeight = 132` applied when the stats tab is active and >= 4 graphs enabled; animate the panel frame with easeInOut 0.3. Grid: use LazyVGrid/VStack exactly as above. ~120 lines.
 
 ### Key files
 
@@ -499,7 +499,7 @@ None.
 
 ### Implementation notes
 
-NotchIsland already has preventsAutomaticClose states (NotchState.previewing etc.); add a `statsPopoverPresented` flag that maps to a close-suppressing state. ~100 lines.
+Notchy already has preventsAutomaticClose states (NotchState.previewing etc.); add a `statsPopoverPresented` flag that maps to a close-suppressing state. ~100 lines.
 
 ### Key files
 
@@ -708,7 +708,7 @@ Full key list (Constants.swift:1281-1298): enableStatsFeature=false; autoStartSt
 
 ### Implementation notes
 
-Map to UserSettings keys e.g. stats.enabled, stats.stopWhenClosed, stats.updateInterval, stats.showCPU/Memory/GPU/Network/Disk, stats.temperatureUnit. ~150 lines in NotchIsland SettingsView.
+Map to UserSettings keys e.g. stats.enabled, stats.stopWhenClosed, stats.updateInterval, stats.showCPU/Memory/GPU/Network/Disk, stats.temperatureUnit. ~150 lines in Notchy SettingsView.
 
 ### Key files
 

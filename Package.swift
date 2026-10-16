@@ -3,22 +3,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "NotchIsland",
+    name: "Notchy",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "NotchIsland", targets: ["NotchIsland"])
+        .executable(name: "Notchy", targets: ["Notchy"])
     ],
     targets: [
         .executableTarget(
-            name: "NotchIsland",
-            path: "Sources/NotchIsland"
+            name: "Notchy",
+            path: "Sources/Notchy"
         ),
         .testTarget(
-            name: "NotchIslandTests",
-            dependencies: ["NotchIsland"],
-            path: "Tests/NotchIslandTests"
+            name: "NotchyTests",
+            dependencies: ["Notchy"],
+            path: "Tests/NotchyTests"
         )
     ]
 )

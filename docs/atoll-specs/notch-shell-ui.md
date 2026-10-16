@@ -34,7 +34,7 @@ hideDynamicIslandFromScreenCapture (Bool, false); showOnAllDisplays (Bool, false
 
 ### Implementation notes
 
-NotchIsland already has NotchPanelController; match: NSPanel [.borderless,.nonactivatingPanel], level .mainMenu+3, the 4 collection behaviors, hasShadow=false, first-mouse hosting view, 4pt top bleed above screen.maxY. Skip the private CGS Space (it only reinforces .canJoinAllSpaces/.fullScreenAuxiliary); public collectionBehavior is sufficient for macOS 14+. Size ~150 LOC.
+Notchy already has NotchPanelController; match: NSPanel [.borderless,.nonactivatingPanel], level .mainMenu+3, the 4 collection behaviors, hasShadow=false, first-mouse hosting view, 4pt top bleed above screen.maxY. Skip the private CGS Space (it only reinforces .canJoinAllSpaces/.fullScreenAuxiliary); public collectionBehavior is sufficient for macOS 14+. Size ~150 LOC.
 
 ### Key files
 
@@ -148,7 +148,7 @@ notchHeightMode (WindowHeightMode, .matchRealNotchSize; raw 'Match real notch he
 
 ### Implementation notes
 
-NotchIsland's NotchGeometryResolver should adopt: closed width = screen width - aux areas + 4; closed height = safeAreaInsets.top; wings = (closedHeight-12) squares flanking a black centre of notch width; hover adds 8 both axes. Keep effectiveClosedNotchHeight=0 only for non-notch displays. ~250 LOC for the closed layout container (without the live activities themselves).
+Notchy's NotchGeometryResolver should adopt: closed width = screen width - aux areas + 4; closed height = safeAreaInsets.top; wings = (closedHeight-12) squares flanking a black centre of notch width; hover adds 8 both axes. Keep effectiveClosedNotchHeight=0 only for non-notch displays. ~250 LOC for the closed layout container (without the live activities themselves).
 
 ### Key files
 
@@ -186,7 +186,7 @@ openNotchOnHover (Bool, true); minimumHoverDuration (TimeInterval, 0.3; slider 0
 
 ### Implementation notes
 
-NotchIsland's NotchViewModel should implement: handleHover(hovering) -> cancel task; hovering: animate isHovering, haptic if closed, guard closed && openOnHover, Task sleep(minimumHoverDuration) then open; !hovering: Task sleep 100 ms then finishHoverExit (animate isHovering=false; close if open and !preventAutoClose). Add the top-edge retention check (mouse.y >= screen.maxY - 1.5 and inside hit rect). ~200 LOC.
+Notchy's NotchViewModel should implement: handleHover(hovering) -> cancel task; hovering: animate isHovering, haptic if closed, guard closed && openOnHover, Task sleep(minimumHoverDuration) then open; !hovering: Task sleep 100 ms then finishHoverExit (animate isHovering=false; close if open and !preventAutoClose). Add the top-edge retention check (mouse.y >= screen.maxY - 1.5 and inside hit rect). ~200 LOC.
 
 ### Key files
 
@@ -333,7 +333,7 @@ externalDisplayStyle (ExternalDisplayStyle, .notch; raw values 'Standard Notch'/
 
 ### Implementation notes
 
-NotchIsland: add a `shellStyle` resolved per screen; in pill mode replace NotchShape with a continuous RoundedRectangle, add top offset 6 and shadow inset 14 on both sides and bottom. ~60 LOC on top of the shell.
+Notchy: add a `shellStyle` resolved per screen; in pill mode replace NotchShape with a continuous RoundedRectangle, add top offset 6 and shadow inset 14 on both sides and bottom. ~60 LOC on top of the shell.
 
 ### Key files
 
@@ -476,7 +476,7 @@ showOnAllDisplays (false); automaticallySwitchDisplay (true); preferred_screen_n
 
 ### Implementation notes
 
-NotchIsland already has a single panel controller; generalise to a dictionary keyed by NSScreen with a per-screen view model. ~120 LOC.
+Notchy already has a single panel controller; generalise to a dictionary keyed by NSScreen with a per-screen view model. ~120 LOC.
 
 ### Key files
 
@@ -512,7 +512,7 @@ lockScreenMusicLiquidGlassVariant, lockScreenTimerLiquidGlassVariant, verticalHU
 
 ### Implementation notes
 
-Not needed for the notch shell. If NotchIsland wants glass on macOS 26, use public .glassEffect; otherwise NSVisualEffectView. Avoid the private class.
+Not needed for the notch shell. If Notchy wants glass on macOS 26, use public .glassEffect; otherwise NSVisualEffectView. Avoid the private class.
 
 ### Key files
 
@@ -546,7 +546,7 @@ dynamicShelf (true); firstLaunch (@AppStorage true).
 
 ### Implementation notes
 
-NotchIsland's shelf is clipboard-based; keep the onDrop detector as the open trigger. ~30 LOC.
+Notchy's shelf is clipboard-based; keep the onDrop detector as the open trigger. ~30 LOC.
 
 ### Key files
 
@@ -592,7 +592,7 @@ Missing from the spec:
 - FullscreenMediaDetector nuances (observers/FullscreenMediaDetection.swift:73-145): Finder (com.apple.finder) is excluded; when Accessibility is not trusted every detector hit is treated as native fullscreen (:123); MacroVisionKit.configuration.includeSystemApps = true (:37); status is per-screen keyed by localizedName and logged with NSLog.
 - hover-polling stale-hover path and lock gating: the 1 s/100 ms poll also ends a hover when the pointer has left the window (open) or the closed hit rect (ContentView.swift:2177-2186); interactionsEnabled = !isLocked removes contentShape/onHover/onTapGesture and all pan gestures entirely while locked (:337-339, 712-747); recordingManager.isRecording true stops the click monitors and false restarts them if still hovering (:986-992); vm.onViewTeardown provides deterministic teardown because .onDisappear is unreliable for borderless panels (:895-898, 2151-2165).
 - extendHoverArea precise effect (ContentView.swift:355-364): it only removes the 10pt zeroHeightHoverPadding under the shell while the notch is open; it has no effect unless effectiveClosedNotchHeight == 0 (non-notch display hidden by fullscreen detection).
-- Dead code in the subsystem directories that NotchIsland should not port: components/Notch/DynamicIslandExtrasMenu.swift (70x70 r12 black large buttons, HStack spacing 20, shadow black 0.5 r10; unreferenced), components/Notch/ClipboardHistoryPopover.swift (280 wide, maxHeight 200, black 0.95, r12, stroke gray 0.2; unreferenced - ClipboardPopover is used instead), components/BottomRoundedRectangle.swift (unreferenced), components/Settings/EditPanelView.swift (only in a commented-out context-menu item, ContentView.swift:846-855), RecordingIndicatorLarge / RecordingIndicatorSubtle (RecordingIndicator.swift:114-183, unreferenced), DynamicIslandViewModel.isMouseHovering (:382-393, unreferenced), coordinator.optionKeyPressed (:164), NSScreen.screenWithMouse (extensions/MouseTracker.swift), BouncingButtonStyle (extensions/Button+Bouncing.swift), TabSelectionView's QuickShare state (TabSelectionView.swift:49-51), LiveActivityModifier (components/Live activities/LiveActivityModifier.swift).
+- Dead code in the subsystem directories that Notchy should not port: components/Notch/DynamicIslandExtrasMenu.swift (70x70 r12 black large buttons, HStack spacing 20, shadow black 0.5 r10; unreferenced), components/Notch/ClipboardHistoryPopover.swift (280 wide, maxHeight 200, black 0.95, r12, stroke gray 0.2; unreferenced - ClipboardPopover is used instead), components/BottomRoundedRectangle.swift (unreferenced), components/Settings/EditPanelView.swift (only in a commented-out context-menu item, ContentView.swift:846-855), RecordingIndicatorLarge / RecordingIndicatorSubtle (RecordingIndicator.swift:114-183, unreferenced), DynamicIslandViewModel.isMouseHovering (:382-393, unreferenced), coordinator.optionKeyPressed (:164), NSScreen.screenWithMouse (extensions/MouseTracker.swift), BouncingButtonStyle (extensions/Button+Bouncing.swift), TabSelectionView's QuickShare state (TabSelectionView.swift:49-51), LiveActivityModifier (components/Live activities/LiveActivityModifier.swift).
 - Other consumers of the shell shapes: components/LockScreen/LockScreenLiveActivityOverlay.swift:79-82 draws a lock-screen replica with DynamicIslandPillShape / NotchShape, and components/Live activities/DynamicIslandBattery.swift:603-605 clips the battery HUD surface with them; menu bar status item (menu/StatusBarMenu.swift:45-53, menubarIcon default true) is a separate NSStatusItem with a Quit item.
 - Header spacer uses coordinator.selectedScreen (global) rather than vm.screen to decide black vs clear (DynamicIslandHeader.swift:106-107); with showOnAllDisplays every window's spacer follows the globally selected screen's notch presence. Also the header receives .environmentObject(vm) and listens to coordinator.shouldToggleClipboardPopover and the 'ToggleClipboardPopover' notification (:374-406).
 
@@ -616,7 +616,7 @@ Private API summary:
 Source clone: /private/tmp/claude-501/-Users-a-dynamic-iland-dynamic-island/b501c539-18bc-4747-a9c4-d824916ad38f/scratchpad/atoll-clone/Atoll/DynamicIsland; REA evidence: /private/tmp/claude-501/-Users-a-dynamic-iland-dynamic-island/b501c539-18bc-4747-a9c4-d824916ad38f/scratchpad/rea-out (macho.json, dispatch.json, graph.json, plist.json; plist confirms CFBundleShortVersionString 2.3.3 / CFBundleVersion 20260720004, LSUIElement true, LSMinimumSystemVersion 14.6, SDK 26.5).
 
 PRIVATE API actually used by the notch-shell subsystem:
-1. CoreGraphics Services (CGS) Spaces, declared with @_silgen_name in private/CGSSpace.swift:70-87 and driven by managers/NotchSpaceManager.swift:25-34 (CGSSpace(level: 2147483647)) and DynamicIslandApp.swift:363, 371, 383-406, 436, 1642: _CGSDefaultConnection, CGSSpaceCreate(cid, 1, nil), CGSSpaceSetAbsoluteLevel, CGSShowSpaces/CGSHideSpaces, CGSAddWindowsToSpaces/CGSRemoveWindowsFromSpaces, CGSSpaceDestroy. macho.json imports confirm all eight (__CGSDefaultConnection, _CGSSpaceCreate, _CGSSpaceDestroy, _CGSSpaceSetAbsoluteLevel, _CGSShowSpaces, _CGSHideSpaces, _CGSAddWindowsToSpaces, _CGSRemoveWindowsFromSpaces) and dispatch.json confirms the classes _TtC5Atoll8CGSSpace and _TtC5Atoll17NotchSpaceManager. Purpose: pin every notch panel into a dedicated max-level Space so it stays above fullscreen apps across Space switches; the public collectionBehavior [.fullScreenAuxiliary,.canJoinAllSpaces,.ignoresCycle,.stationary] + level .mainMenu+3 (DynamicIslandWindow.swift:26-31, 57) already does most of this, so NotchIsland can skip CGS.
+1. CoreGraphics Services (CGS) Spaces, declared with @_silgen_name in private/CGSSpace.swift:70-87 and driven by managers/NotchSpaceManager.swift:25-34 (CGSSpace(level: 2147483647)) and DynamicIslandApp.swift:363, 371, 383-406, 436, 1642: _CGSDefaultConnection, CGSSpaceCreate(cid, 1, nil), CGSSpaceSetAbsoluteLevel, CGSShowSpaces/CGSHideSpaces, CGSAddWindowsToSpaces/CGSRemoveWindowsFromSpaces, CGSSpaceDestroy. macho.json imports confirm all eight (__CGSDefaultConnection, _CGSSpaceCreate, _CGSSpaceDestroy, _CGSSpaceSetAbsoluteLevel, _CGSShowSpaces, _CGSHideSpaces, _CGSAddWindowsToSpaces, _CGSRemoveWindowsFromSpaces) and dispatch.json confirms the classes _TtC5Atoll8CGSSpace and _TtC5Atoll17NotchSpaceManager. Purpose: pin every notch panel into a dedicated max-level Space so it stays above fullscreen apps across Space switches; the public collectionBehavior [.fullScreenAuxiliary,.canJoinAllSpaces,.ignoresCycle,.stationary] + level .mainMenu+3 (DynamicIslandWindow.swift:26-31, 57) already does most of this, so Notchy can skip CGS.
 2. SkyLightWindow SwiftPM package (Lakr233/SkyLightWindow rev 4a7e8628c85e6b2ec429b57657a556a2171a4864, Package.resolved): NOT applied to the notch panel (calls commented out, DynamicIslandApp.swift:432, 437) but SkyLightOperator.shared.delegateWindow() IS used for the closed-notch music-control flyout (managers/FlyoutWindowPresenter.swift:75) and for HUD/lock-screen windows. dispatch.json confirms _TtC14SkyLightWindow16SkyLightOperator, 13TopmostWindow (NSWindow subclass with canBecomeKey/Main), 23TopmostWindowController, 19NSWindowReadingView ship. macho.json shows no SLS*/CGSSetWindowLevel/CGSMainConnectionID imports beyond the CGS Space set above, so the package's window-server access appears to go through the same CGS Space functions or public API (package source not in the clone - unknown).
 3. Not shell, but feeding shell UI: CGSIsScreenWatcherPresent and CGSRegisterNotifyProc (events 1502/1503) in managers/ScreenRecordingManager.swift:23-30, 377, 433 (imports confirmed) drive the header RecordingIndicator and the recording HUD; CGSessionCopyCurrentDictionary (managers/LockScreenManager.swift:360, import confirmed; ApplicationServices SPI) feeds lock-state gating of the shell; the undocumented AX attribute 'AXFullScreen' (observers/FullscreenMediaDetection.swift:140-145) plus MacroVisionKit 0.1.0 decide hideOnClosed/effectiveClosedNotchHeight = 0; NSGlassEffectView via NSClassFromString with KVC on CABackdropLayer 'windowServerAware'/'scale' (helpers/LiquidGlassBackground.swift:79-83, 212-226) is HUD/lock-screen only (ObjC class LiquidGlassContainerView and Swift type LiquidGlassVariant confirmed in dispatch.json; the string itself is not in the JSON). graph.json also lists a bundled MediaRemoteAdapter.framework (now-playing bridge, other subsystem) that is not in LC_LOAD_DYLIB (75 deps, all public + Lottie + Sparkle).
 

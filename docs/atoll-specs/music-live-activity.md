@@ -10,7 +10,7 @@ ARCHITECTURE. One singleton `MusicManager` (DI/managers/MusicManager.swift:534) 
 
 SURFACES. (1) Closed notch "MusicLiveActivity" (ContentView.swift:1393-1518): left wing = album art square of side `closedHeight-12` (hover: wings grow by 12, outer height +8), right wing = 4..6-bar spectrum (bar 2 pt, gap 2 pt, 14 pt tall, 30 fps real-time or 0.3 s random CA animation) tinted with the album average color gradient, centre = black rect of `max(closedNotchWidth(+8 hover), 96)`; grows to 380 pt during an inline sneak peek with title marquee on the left and artist on the right. (2) Sneak peek on track change (`showSneakPeekOnTrackChange` default true, `enableSneakPeek` default false): standard style = under-notch `music.note` + "title - artist" grey marquee for 1.5 s; inline style = expanding view 3 s with .smooth animation. (3) Open notch standard player (NotchHomeView.swift:225-886): HStack(spacing 12) of AlbumArtView (square, corner radius 13 opened / 4 closed, 1/3 of that for wide art; 36x36 app-icon badge offset (10,10); scale 0.85 when paused; blurred glow texture radius 40 behind, opacity 0.5 playing) and MusicControlsView (title .headline marquee + explicit E badge 14 pt, artist tinted .headline medium, optional lyric line 12 pt, MusicSliderView in a `TimelineView(.animation(minimumInterval: 1/30))` with 8/14 pt track, 11 pt mono time labels, five control slots using 30 pt/40 pt HoverButtons, media-output & AirPlay popovers 240 pt). (4) Minimalistic player (MinimalisticMusicPlayerView.swift): 50 pt art, 12/10 pt text, 24 pt visualizer in a 42 pt block, inline slider 7/11 pt with "-remaining", 36x36 r14 squircle buttons and 54x54 r22 play/pause, exact height formula 50+10+56+(50 lyrics)+padding; "U-shaped" notch-hugging variant pulls art/visualizer up by `notchHeight-4`. (5) Horizontal two-finger swipe on the closed notch or open home skips track / seeks ±10 s with a haptic and a marching-chevron glyph. (6) Floating control overlay window (MusicControlOverlay) beneath the closed notch when `musicControlWindowEnabled` (PRIVATE SkyLightWindow). (7) Lyrics: LRCLIB search → NetEase fallback, LRC parsed, synced with a 0.25 s lead and 50-250 ms adaptive sleep, per-word sweep gradient with 0.06 feather, side panel (280 pt default) or inline line, pinned 1/3/5-line strip under the closed notch (10 pt font). (8) Animated artwork: Apple Music editorial video via MusicKit (public) and Spotify Canvas via spclient (needs sp_dc cookie), played with AVQueuePlayer+AVPlayerLooper muted, shown in the open-notch artwork when `showLiveCanvasInDynamicIsland`. (9) Track-change 3D flip (180° Y rotation .easeInOut 0.45 s, perspective 0.5, debounced 0.6 s) and 0.225 s manual-skip artwork hand-off.
 
-PUBLIC-ONLY REIMPLEMENTATION PATH FOR NOTCHISLAND: use AppleScript (NSAppleScript, public, needs `com.apple.security.automation.apple-events` + NSAppleEventsUsageDescription) for Apple Music and Spotify metadata/commands with DistributedNotificationCenter wake-ups; use the CoreAudio process-tap API (`CATapDescription`, `AudioHardwareCreateProcessTap`, aggregate device; public since macOS 14.2, needs NSAudioCaptureUsageDescription) for the real-time visualizer; use MusicKit (public) for animated artwork; keep the MediaRemote "Now Playing" source optional/behind a flag because it is PRIVATE and shipped only via the BSD-3 `mediaremote-adapter` helper (which NotchIsland may legally bundle, but it still calls a private framework). Everything else (SwiftUI layout, timers, lyrics providers over HTTPS, iTunes Search API, Lottie replacement via SwiftUI animation) is public.
+PUBLIC-ONLY REIMPLEMENTATION PATH FOR NOTCHISLAND: use AppleScript (NSAppleScript, public, needs `com.apple.security.automation.apple-events` + NSAppleEventsUsageDescription) for Apple Music and Spotify metadata/commands with DistributedNotificationCenter wake-ups; use the CoreAudio process-tap API (`CATapDescription`, `AudioHardwareCreateProcessTap`, aggregate device; public since macOS 14.2, needs NSAudioCaptureUsageDescription) for the real-time visualizer; use MusicKit (public) for animated artwork; keep the MediaRemote "Now Playing" source optional/behind a flag because it is PRIVATE and shipped only via the BSD-3 `mediaremote-adapter` helper (which Notchy may legally bundle, but it still calls a private framework). Everything else (SwiftUI layout, timers, lyrics providers over HTTPS, iTunes Search API, Lottie replacement via SwiftUI animation) is public.
 
 ## Playback data model and MusicManager state machine
 
@@ -85,7 +85,7 @@ Bundled mediaremote-adapter (BSD-3-Clause, github.com/ungive/mediaremote-adapter
 
 ### Implementation notes
 
-If NotchIsland wants a universal 'Now Playing' source it must either (a) bundle the same BSD-3 adapter + perl bridge (private API, App-Store-incompatible, may break on macOS updates) or (b) restrict to AppleScript/HTTP sources. Recommended: ship AppleScript Apple Music + Spotify by default, optional adapter-based source gated by a setting and a runtime probe. If bundling: spawn `Process` with stdout Pipe, parse JSON lines on a background actor, implement the diff/anchor rules above exactly. ~450 lines for the controller + 250 for the filtered variant.
+If Notchy wants a universal 'Now Playing' source it must either (a) bundle the same BSD-3 adapter + perl bridge (private API, App-Store-incompatible, may break on macOS updates) or (b) restrict to AppleScript/HTTP sources. Recommended: ship AppleScript Apple Music + Spotify by default, optional adapter-based source gated by a setting and a runtime probe. If bundling: spawn `Process` with stdout Pipe, parse JSON lines on a background actor, implement the diff/anchor rules above exactly. ~450 lines for the controller + 250 for the filtered variant.
 
 ### Key files
 
@@ -172,7 +172,7 @@ None.
 
 ### Implementation notes
 
-Optional for NotchIsland; straightforward URLSession + URLSessionWebSocketTask. ~400 lines.
+Optional for Notchy; straightforward URLSession + URLSessionWebSocketTask. ~400 lines.
 
 ### Key files
 
@@ -213,7 +213,7 @@ None.
 
 ### Implementation notes
 
-Port the width arithmetic verbatim (it is layout math, not code). Use `@Namespace` + matchedGeometryEffect for art and spectrum. Pairing eligibility helper is a pure function (helpers/ClosedMusicPairingVisibility.swift:19-35). ~350 lines including badge/secondary plumbing (NotchIsland can start with secondary = nil).
+Port the width arithmetic verbatim (it is layout math, not code). Use `@Namespace` + matchedGeometryEffect for art and spectrum. Pairing eligibility helper is a pure function (helpers/ClosedMusicPairingVisibility.swift:19-35). ~350 lines including badge/secondary plumbing (Notchy can start with secondary = nil).
 
 ### Key files
 
@@ -431,7 +431,7 @@ None.
 
 ### Implementation notes
 
-Reuse NotchIsland's existing gesture pipeline; add a 'pulse' token to the store so buttons can animate externally. ~150 lines.
+Reuse Notchy's existing gesture pipeline; add a 'pulse' token to the store so buttons can animate externally. ~150 lines.
 
 ### Key files
 
@@ -470,7 +470,7 @@ SkyLightWindow (private CGS APIs; license unverified).
 
 ### Implementation notes
 
-NotchIsland can use a normal borderless NSPanel at `.statusBar`/`.screenSaver` level positioned under the notch — public — and keep the same geometry/timing. ~300 lines.
+Notchy can use a normal borderless NSPanel at `.statusBar`/`.screenSaver` level positioned under the notch — public — and keep the same geometry/timing. ~300 lines.
 
 ### Key files
 
@@ -607,7 +607,7 @@ None.
 ## Unknowns
 
 - Lock-screen music panel (components/LockScreen/LockScreenMusicPanel.swift, FullScreenArtworkWindowManager, LockScreenManager) and its glass styles — large, belongs to the lock-screen subsystem; shares MusicSliderView/VolumeCapsuleSlider (VolumeCapsuleSlider.swift: track 13/10 pt, fill opacity 0.55/0.8/1, swell y1.14 .spring(0.3,0.75)).
-- Exact internals of MediaRemoteAdapter.framework (compiled BSD-3 binary from github.com/ungive/mediaremote-adapter); only exported symbol names and the perl CLI contract were inspected. Whether NotchIsland may redistribute it is a licensing (BSD-3 attribution) and App-Store-policy question, not a technical one.
+- Exact internals of MediaRemoteAdapter.framework (compiled BSD-3 binary from github.com/ungive/mediaremote-adapter); only exported symbol names and the perl CLI contract were inspected. Whether Notchy may redistribute it is a licensing (BSD-3 attribution) and App-Store-policy question, not a technical one.
 - SkyLightWindow package (Lakr233) — used for the floating control window; private CGS/SkyLight APIs; license not checked.
 - Spotify artist-name canonicalisation (`SpotifyTrackMetadataResolver`, SpotifyController.swift ~390-600) and the protobuf canvas request encoder — not read in detail.
 - YouTube Music WebSocket message handling (`YouTubeMusicWebSocketClient`, Controller:215-318) and like-button state parsing — only endpoints and intervals captured.

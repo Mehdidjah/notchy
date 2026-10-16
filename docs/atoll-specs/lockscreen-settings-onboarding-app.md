@@ -38,7 +38,7 @@ Defaults 9.0.3 (MIT), KeyboardShortcuts 2.3.0 (MIT), Sparkle 2.7.0 (MIT), Launch
 
 ### Implementation notes
 
-NotchIsland already has NotchPanelController/NotchGeometryResolver; adopt the same arithmetic: y = screen.maxY + bleed(4 on notch screens, 0 in pill mode) - height; width clamp to screen; pill mode adds 28 w / 6 h for shadow room; always round to whole points. Replace `Defaults` with UserDefaults-backed @Observable settings. Keep lock hide/restore (alpha 0 + orderOut, 1 s restore). Everything here is public API except Space pinning (see CGS feature). Estimated size: ~400 lines (window controller + size resolver + screen-change handling).
+Notchy already has NotchPanelController/NotchGeometryResolver; adopt the same arithmetic: y = screen.maxY + bleed(4 on notch screens, 0 in pill mode) - height; width clamp to screen; pill mode adds 28 w / 6 h for shadow room; always round to whole points. Replace `Defaults` with UserDefaults-backed @Observable settings. Keep lock hide/restore (alpha 0 + orderOut, 1 s restore). Everything here is public API except Space pinning (see CGS feature). Estimated size: ~400 lines (window controller + size resolver + screen-change handling).
 
 ### Key files
 
@@ -165,7 +165,7 @@ None (direct private symbols).
 
 ### Implementation notes
 
-Public-only alternative (recommended for NotchIsland): NSPanel with level .mainMenu+3 (or .screenSaver) and collectionBehavior [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle] plus re-ordering front on NSWorkspace.activeSpaceDidChangeNotification; this covers Mission Control/fullscreen in practice but may briefly flicker during Space transitions and cannot sit above the lock screen. If private use is accepted, isolate behind a `PrivateSpaces` feature flag in one file using @_silgen_name exactly as above; call on main thread only. ~90 lines.
+Public-only alternative (recommended for Notchy): NSPanel with level .mainMenu+3 (or .screenSaver) and collectionBehavior [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle] plus re-ordering front on NSWorkspace.activeSpaceDidChangeNotification; this covers Mission Control/fullscreen in practice but may briefly flicker during Space transitions and cannot sit above the lock screen. If private use is accepted, isolate behind a `PrivateSpaces` feature flag in one file using @_silgen_name exactly as above; call on main thread only. ~90 lines.
 
 ### Key files
 
@@ -205,7 +205,7 @@ SkyLightWindow (SwiftPM, Lakr233) — license not verified here.
 
 ### Implementation notes
 
-There is no public API to draw above loginwindow; NSWindow.Level(CGShieldingWindowLevel()) alone is not visible on the lock screen on modern macOS. Options for NotchIsland: (a) ship lock-screen widgets behind an opt-in 'experimental' flag using a 30-line dlsym wrapper mirroring the five SLS calls above (private, may break per OS release, must never run in a sandboxed build); (b) omit lock-screen rendering and keep only lock-state-driven behavior (hide notch, play sounds, pause HUDs). Keep the shared window recipe as a `LockScreenOverlayWindow` helper either way. Target-screen selection (built-in first) and Siri autohide are public and portable.
+There is no public API to draw above loginwindow; NSWindow.Level(CGShieldingWindowLevel()) alone is not visible on the lock screen on modern macOS. Options for Notchy: (a) ship lock-screen widgets behind an opt-in 'experimental' flag using a 30-line dlsym wrapper mirroring the five SLS calls above (private, may break per OS release, must never run in a sandboxed build); (b) omit lock-screen rendering and keep only lock-state-driven behavior (hide notch, play sounds, pause HUDs). Keep the shared window recipe as a `LockScreenOverlayWindow` helper either way. Target-screen selection (built-in first) and Siri autohide are public and portable.
 
 ### Key files
 
@@ -251,7 +251,7 @@ Defaults.
 
 ### Implementation notes
 
-Port verbatim semantics: dual notification + session poll; idempotent handlers; keep the timing table as a single enum. NotchIsland already has FullscreenDetector; add a LockStateMonitor actor on the main actor. ~250 lines.
+Port verbatim semantics: dual notification + session poll; idempotent handlers; keep the timing table as a single enum. Notchy already has FullscreenDetector; add a LockStateMonitor actor on the main actor. ~250 lines.
 
 ### Key files
 
@@ -334,7 +334,7 @@ Defaults; SkyLightWindow (private).
 
 ### Implementation notes
 
-Reuse NotchIsland's media views for the panel content; implement a LockScreenPanelController with the same frame math and 0.28 s easeInEaseOut resize. Material: use .ultraThinMaterial + optional glassEffect on macOS 26; skip the private NSGlassEffectView variant hack (keep 'Standard' only). Requires SkyLight to actually show over the lock screen. ~600 lines excluding media controls.
+Reuse Notchy's media views for the panel content; implement a LockScreenPanelController with the same frame math and 0.28 s easeInEaseOut resize. Material: use .ultraThinMaterial + optional glassEffect on macOS 26; skip the private NSGlassEffectView variant hack (keep 'Standard' only). Requires SkyLight to actually show over the lock screen. ~600 lines excluding media controls.
 
 ### Key files
 
@@ -418,7 +418,7 @@ Defaults.
 
 ### Implementation notes
 
-Public SwiftUI card; reuse NotchIsland timer model. Only show for manual timers while locked (mirrored system timers excluded). ~300 lines.
+Public SwiftUI card; reuse Notchy timer model. Only show for manual timers while locked (mirrored system timers excluded). ~300 lines.
 
 ### Key files
 
@@ -498,7 +498,7 @@ Defaults.
 
 ### Implementation notes
 
-Useful for NotchIsland's design-QA: a normal window hosting the same SwiftUI widgets with the same frame math. ~250 lines.
+Useful for Notchy's design-QA: a normal window hosting the same SwiftUI widgets with the same frame math. ~250 lines.
 
 ### Key files
 
@@ -539,7 +539,7 @@ Defaults, Sparkle, LaunchAtLogin, KeyboardShortcuts (recorders).
 
 ### Implementation notes
 
-NotchIsland's SettingsView can adopt the same grouped sidebar with 44pt rows, 26pt gradient icon tiles and a search index table of (tab, title, keywords, highlightID). Keep .formStyle(.grouped) and `Section { } header: { } footer: { }`. ~700 lines for the shell + search.
+Notchy's SettingsView can adopt the same grouped sidebar with 44pt rows, 26pt gradient icon tiles and a search index table of (tab, title, keywords, highlightID). Keep .formStyle(.grouped) and `Section { } header: { } footer: { }`. ~700 lines for the shell + search.
 
 ### Key files
 
@@ -578,7 +578,7 @@ Defaults, LaunchAtLogin-Modern.
 
 ### Implementation notes
 
-Map 1:1 onto NotchIsland UserSettings; keep key names so a future importer can read Atoll prefs.
+Map 1:1 onto Notchy UserSettings; keep key names so a future importer can read Atoll prefs.
 
 ### Key files
 
@@ -623,7 +623,7 @@ Defaults, Sparkle, KeyboardShortcuts.
 
 ### Implementation notes
 
-Port only the subsets NotchIsland supports; keep key names.
+Port only the subsets Notchy supports; keep key names.
 
 ### Key files
 
@@ -666,7 +666,7 @@ SwiftUIIntrospect (ProOnboard only).
 
 ### Implementation notes
 
-Straight SwiftUI port; replace the CAEmitterLayer sparkle with a simple Canvas or omit. Steps map to NotchIsland permissions (camera optional). ~500 lines.
+Straight SwiftUI port; replace the CAEmitterLayer sparkle with a simple Canvas or omit. Steps map to Notchy permissions (camera optional). ~500 lines.
 
 ### Key files
 
@@ -712,7 +712,7 @@ Sparkle 2.7.0 (MIT).
 
 ### Implementation notes
 
-NotchIsland has no dependencies; either add Sparkle later or skip. If added, copy the channel enum + delegate pattern (public Sparkle API). ~150 lines without the custom driver.
+Notchy has no dependencies; either add Sparkle later or skip. If added, copy the channel enum + delegate pattern (public Sparkle API). ~150 lines without the custom driver.
 
 ### Key files
 
@@ -795,7 +795,7 @@ AtollExtensionKit (branch main), Network.framework, WebKit, Lottie.
 
 ### Implementation notes
 
-Out of scope for a first NotchIsland release; if desired, the RPC surface (JSON-RPC over loopback WebSocket, NWListener) is fully public and the method list above is the contract. ~2 500 lines in Atoll.
+Out of scope for a first Notchy release; if desired, the RPC surface (JSON-RPC over loopback WebSocket, NWListener) is fully public and the method list above is the contract. ~2 500 lines in Atoll.
 
 ### Key files
 
@@ -849,7 +849,7 @@ Defaults.
 
 ### Implementation notes
 
-Port as-is (~250 lines); NotchIsland can reuse for its own permission UI.
+Port as-is (~250 lines); Notchy can reuse for its own permission UI.
 
 ### Key files
 
@@ -889,7 +889,7 @@ MacroVisionKit 0.1.0 (TheBoredTeam).
 
 ### Implementation notes
 
-NotchIsland already has Services/FullscreenDetector.swift; align semantics: hideNotchOption tri-state, per-screen dictionary, AXFullScreen confirmation when trusted, 0.5 s debounce. Replace MacroVisionKit with CGWindowListCopyWindowInfo(.optionOnScreenOnly) windows whose bounds equal a screen frame. ~150 lines.
+Notchy already has Services/FullscreenDetector.swift; align semantics: hideNotchOption tri-state, per-screen dictionary, AXFullScreen confirmation when trusted, 0.5 s debounce. Replace MacroVisionKit with CGWindowListCopyWindowInfo(.optionOnScreenOnly) windows whose bounds equal a screen frame. ~150 lines.
 
 ### Key files
 
@@ -918,7 +918,7 @@ NotchIsland already has Services/FullscreenDetector.swift; align semantics: hide
 Missing from the spec:
 
 - SPEC TRUNCATION: the spec text handed to me ends mid-sentence inside the 'Lock-screen reminder chip' layout (after '.shadow(appearance.contentShadow radius 8 y 3).'). Everything after that point (reminder panel geometry, extension widgets, settings catalogue, onboarding, shortcuts tab, extensions tab, about/updater, FullscreenMediaDetection, permission stores) could not be evaluated. All items below marked [T] must be present in the full spec; if they are, treat them as verified-correct cross-checks rather than gaps.
-- LockScreenWidgetPreviewManager (managers/LockScreenWidgetPreviewManager.swift, 578 lines, class confirmed in REA dispatch.json, 'Lock Screen Preview' string in binary) is never mentioned. It opens a titled/closable/miniaturizable/resizable NSWindow sized to screen.frame, title 'Lock Screen Preview', backgroundColor .clear, centred (L199-215); content = LockScreenPreviewScene which scales a full-screen layout by min(w/screenW, h/screenH) (L381-430) over WallpaperView (bundled desktop.jpeg -> asset 'desktop' -> NSWorkspace.desktopImageURL, L540-578). Mock data: 21 C / 72 F with min -5/max +6, 'Partly Cloudy', cloud.sun.fill, 'Cupertino', charging 42 min 78 %, AirPods Pro 74 % 'airpodspro', battery 63 %, AQI 42 (US) / 28 (EAQI), sunrise +2 h / sunset +9 h (L116-190); starts a 1783 s demo timer when the timer widget is enabled and forceStopTimer()s it on hide (L82-95); forces DoNotDisturbManager to 'Do Not Disturb'/com.apple.donotdisturb and injects two preview calendar events ('Pay rent' reminder +12..+42 min, systemBlue, high priority; 'Design Review' at 'Studio' +60..+90 min, systemOrange) via CalendarManager.setLockScreenPreviewEvents (L270-355); re-renders on 17 Defaults keys (L97-116). Toggled from Settings > Lock Screen > Widgets > 'Preview lock screen widgets' / 'Hide lock screen preview' (SettingsView.swift:5912-5918). NOTE its media-panel math uses defaultLowering -28 (L491) while the real LockScreenPanelManager uses -68 (LockScreenPanelManager.swift:~408) - an Atoll inconsistency NotchIsland should not copy.
+- LockScreenWidgetPreviewManager (managers/LockScreenWidgetPreviewManager.swift, 578 lines, class confirmed in REA dispatch.json, 'Lock Screen Preview' string in binary) is never mentioned. It opens a titled/closable/miniaturizable/resizable NSWindow sized to screen.frame, title 'Lock Screen Preview', backgroundColor .clear, centred (L199-215); content = LockScreenPreviewScene which scales a full-screen layout by min(w/screenW, h/screenH) (L381-430) over WallpaperView (bundled desktop.jpeg -> asset 'desktop' -> NSWorkspace.desktopImageURL, L540-578). Mock data: 21 C / 72 F with min -5/max +6, 'Partly Cloudy', cloud.sun.fill, 'Cupertino', charging 42 min 78 %, AirPods Pro 74 % 'airpodspro', battery 63 %, AQI 42 (US) / 28 (EAQI), sunrise +2 h / sunset +9 h (L116-190); starts a 1783 s demo timer when the timer widget is enabled and forceStopTimer()s it on hide (L82-95); forces DoNotDisturbManager to 'Do Not Disturb'/com.apple.donotdisturb and injects two preview calendar events ('Pay rent' reminder +12..+42 min, systemBlue, high priority; 'Design Review' at 'Studio' +60..+90 min, systemOrange) via CalendarManager.setLockScreenPreviewEvents (L270-355); re-renders on 17 Defaults keys (L97-116). Toggled from Settings > Lock Screen > Widgets > 'Preview lock screen widgets' / 'Hide lock screen preview' (SettingsView.swift:5912-5918). NOTE its media-panel math uses defaultLowering -28 (L491) while the real LockScreenPanelManager uses -68 (LockScreenPanelManager.swift:~408) - an Atoll inconsistency Notchy should not copy.
 - [T] Settings > Lock Screen tab structure (SettingsView.swift:5638-6470, struct LockScreenSettings): a SettingsSegmentedControl switching LockScreenSettingsSection .general / .widgets (L208-220, titles 'General'/'Widgets'). General: Enable lock screen live activity (5785), Lock/Fingerprint LockScreenIconStyleCard pair (5795-5824, card view at 6471), Lock sounds (5828), 'Siri detection speed' Picker with displayName+description rows, header 'Siri Detection' (5839-5853), 'Lock Screen Glass' Material picker (disabled below macOS 26, 5856-5870) + customization mode + LockScreenGlassVariantPreviewCell grid (6525), Diagnostics section with 'Copy Latest Crash Report' button (5901-5909). Widgets: Preview button (5912-5918, footer 'Opens a transparent preview window with mock data...'), 'Widget appearance' Dark/Light and 'Widget layout' Inline/Circular segmented pickers with circular caveat text (5926-5945), weather provider/unit/AQI/location/sunrise/gauge-tint controls, calendar row controls using CalendarLookaheadOption 15m/30m/1h/3h/6h/12h/rest_of_day/all_time with titles '15 mins'...'All time' (5700-5720), focus widget toggle, Reminder Widget section: 'Chip color', 'Alignment' Left/Center/Right (ReminderAlignmentOption leading/center/trailing, 5722-5736), 'Vertical offset' Slider -160...160 step 2 with 'N px' label, all disabled unless enableLockScreenReminderWidget && enableReminderLiveActivity (6180-6210), battery section gated by BatteryActivityManager.hasBattery() (6215), media-panel toggles (5955-6015), 'Timer glass material' picker (6052-6061), LockScreenPositioningControls (6575-6720): offset sliders +-160 for weather/music/timer, 'Media Panel Width' 320...460 with 'Reset Media Width', 'Timer Widget Width' 320...420 (LockScreenTimerWidget.defaultWidth) with 'Reset Timer Width', header 'Lock Screen Positioning', and an interactive LockScreenPositioningPreview (6840-6900) where the three widgets are dragged inside a mock screen (padding 26, radius 28, windowBackgroundColor 0.55, stroke white 0.12, shadow black 0.22 r20 y18; weather at 28 %, timer 50 %, music 78 % of height; sizes 0.42x0.22 / 0.5x0.2 scaled by timerWidth/420 / 0.56x0.34 scaled by musicWidth/390).
 - [T] The lock-screen settings are DUPLICATED in other tabs and the spec must say which tab owns each key: Media tab (struct Media, SettingsView.swift:3313-3330, 3542-3610) repeats 'Lock Screen Media': album-art parallax, Always show volume control (disabled unless showMediaOutputControl), show app icon, merged AirPlay output, panel border, enhanced liquid border (liquid) / blur (frosted), fullscreen artwork, artwork layout over canvas, keep album art; Appearance tab (struct Appearance, 4877-5637) repeats lock-screen glass style, timer glass style, timer surface and a 'Reset Width' button (5486) and runs enforceLockScreenGlassConsistency (5513-5517: frosted forces customizationMode .standard; customLiquid forces style .liquid; same rule again at 6420-6427); Timer tab (struct TimerSettings, 7393-7520) repeats 'Timer glass material' and timer surface.
 - [T] Settings window + shell: SettingsWindowController.swift:31-80 - NSWindow 700x600, styleMask [.titled,.closable,.miniaturizable,.resizable,.fullSizeContentView], title 'Atoll Settings', titlebarAppearsTransparent false, toolbarStyle .unified, isMovableByWindowBackground, level .normal, collectionBehavior [.managed,.participatesInCycle], isRestorable true, identifier 'DynamicIslandSettingsWindow', ScreenCaptureVisibilityManager scope .panelsOnly; showWindow() orders front, centers, NSApp.activate(ignoringOtherApps:) and re-makes key on next tick (L84-110); close/windowWillClose -> orderOut + NSApp.setActivationPolicy(.accessory); windowDidBecomeKey -> .regular (L114-150). SettingsView.swift:621-666: NavigationSplitView, sidebar .frame(minWidth: 200), .navigationSplitViewColumnWidth(min 200, ideal 210, max 240), .toolbar(removing: .sidebarToggle) on both columns, whole view .frame(width: 700); sidebar icon 26x26 tinted per tab (tint table L135-160, e.g. lockScreen .orange, extensions rgb(0.557,0.353,0.957), battery rgb(0.202,0.783,0.348)); group headers 'Media & Display','System','Productivity','Utilities','Developer','Integrations' (core/info have none, L33-45). Search index: 221 SettingsSearchEntry rows keyed by tab + highlightID '<tab>-<title>' (L171-223).

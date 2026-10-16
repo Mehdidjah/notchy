@@ -2,13 +2,13 @@
 
 Date: 2026-10-15
 
-NotchIsland's notch interaction (hover swell, dwell-to-open, click-to-open,
+Notchy's notch interaction (hover swell, dwell-to-open, click-to-open,
 swipe-to-open/close, open/close springs, shadow, corner radii, capture peek,
 fullscreen retraction) was reworked to match the shipped Atoll app. This file
 records where each behaviour was established so the implementation can be
 audited and re-checked after Atoll updates.
 
-Atoll is GPL-3.0. NotchIsland reimplements the observed behaviour in its own
+Atoll is GPL-3.0. Notchy reimplements the observed behaviour in its own
 code; no Atoll source was copied. Parameters (timings, radii, spring values)
 are facts about behaviour, not expression, and are listed below.
 
@@ -80,9 +80,9 @@ observations, not inferences.
   `NSWindow.Level.mainMenu + 3`, 640 by 218 points, centred on a 1728-point
   display, with its other windows off screen.
 
-## Behaviour adopted in NotchIsland
+## Behaviour adopted in Notchy
 
-| Behaviour | Value | Established by | NotchIsland |
+| Behaviour | Value | Established by | Notchy |
 | --- | --- | --- | --- |
 | Hover dwell before open | 0.3 s | `Constants.swift` `minimumHoverDuration` | `UserSettings.hoverDelayMilliseconds` default 300 |
 | Hover-exit grace before close | 100 ms | `ContentView.swift` `handleHover` | `UserSettings.closeDelayMilliseconds` default 100 |
@@ -106,13 +106,13 @@ observations, not inferences.
 
 ## Deliberately not adopted
 
-- Private `CGSSpace` and SkyLight APIs. NotchIsland stays on public AppKit:
+- Private `CGSSpace` and SkyLight APIs. Notchy stays on public AppKit:
   a full-width transparent panel at `.statusBar` level with pass-through hit
   testing, which is what keeps clicks outside the island reaching other apps.
 - `MediaRemoteAdapter`, lock-screen widgets, stats, and the rest of Atoll's
-  media stack. They are outside NotchIsland's scope and rely on private
+  media stack. They are outside Notchy's scope and rely on private
   frameworks.
-- Atoll's window is resized to the island on every open and close. NotchIsland
+- Atoll's window is resized to the island on every open and close. Notchy
   keeps one fixed strip and animates inside it, which avoids per-frame window
   transactions.
 
@@ -131,7 +131,7 @@ observations, not inferences.
 ## Unknowns
 
 - Atoll's exact menu-bar clearance logic for live activities was not compared;
-  NotchIsland's closed notch never extends into the menu strip, so it does not
+  Notchy's closed notch never extends into the menu strip, so it does not
   apply.
 - The scroll sign convention assumes the default natural scrolling direction,
   as Atoll's gesture code does. A reversed trackpad setting flips it.
