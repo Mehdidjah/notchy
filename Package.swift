@@ -13,12 +13,16 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Notchy",
-            path: "Sources/Notchy"
+            path: "Sources/Notchy",
+            // Face Check's Core ML model and its licence note. script/build_and_run.sh
+            // compiles the model into the app's Resources; SwiftPM leaves the folder alone.
+            exclude: ["Features/FaceCheck/Model"]
         ),
         .testTarget(
             name: "NotchyTests",
             dependencies: ["Notchy"],
-            path: "Tests/NotchyTests"
+            path: "Tests/NotchyTests",
+            resources: [.copy("Fixtures")]
         )
     ]
 )

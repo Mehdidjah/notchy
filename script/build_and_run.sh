@@ -33,6 +33,22 @@ mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
+# Face Check's face-descriptor model (dlib's public-domain ResNet, converted by
+# script/face-model/convert.py) ships compiled in Resources with its licence note. Without
+# Xcode's coremlcompiler the app still builds, and Face Check reports the model as missing.
+install_face_model() {
+  local model_dir="$ROOT_DIR/Sources/Notchy/Features/FaceCheck/Model"
+  local resources="$APP_CONTENTS/Resources"
+  if ! xcrun --find coremlcompiler >/dev/null 2>&1; then
+    echo "warning: coremlcompiler not found (it comes with Xcode); Face Check will be unavailable" >&2
+    return 0
+  fi
+  mkdir -p "$resources"
+  xcrun coremlcompiler compile "$model_dir/FaceDescriptor.mlpackage" "$resources" >/dev/null
+  cp "$model_dir/MODEL-LICENSE.md" "$resources/FaceDescriptor-LICENSE.md"
+}
+install_face_model
+
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
