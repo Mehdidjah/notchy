@@ -13,6 +13,9 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var selectedClipIDs: [Clip.ID] = []
     @Published private(set) var previewedClipID: Clip.ID?
     @Published private(set) var selectedClipID: Clip.ID?
+    @Published private(set) var peekedClipID: Clip.ID?
+    /// The sneak peek shown under the closed notch while `state == .peeking`.
+    @Published private(set) var currentSneakPeek: SneakPeek?
     @Published private(set) var captureErrorDescription: String?
     @Published var multiPasteSeparator: MultiPasteSeparator = .blankLine
     @Published var multiPasteOutputFormat: MultiPasteOutputFormat = .plainText
@@ -20,6 +23,14 @@ final class NotchViewModel: ObservableObject {
     @Published private(set) var pasteOutcome: PasteOutcome?
     @Published private(set) var isPasteRunning = false
     @Published private(set) var queue = SequentialPasteQueue()
+    /// True while the pointer rests on the island. Drives the collapsed swell and the shadow.
+    @Published private(set) var isHovering = false
+    /// Positive while an open swipe stretches the collapsed notch, negative while a close
+    /// swipe fades the open shelf. Returns to zero when the gesture ends or completes.
+    @Published private(set) var gestureProgress: CGFloat = 0
+    /// The tab shown in the open island and the direction the last switch travelled.
+    @Published private(set) var selectedTab: NotchTab = .home
+    @Published private(set) var tabSwitchForward = true
     @Published private(set) var notchGeometry = NotchGeometry(
         screenFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
         topInset: 30,
@@ -31,16 +42,41 @@ final class NotchViewModel: ObservableObject {
     var onOpenLibrary: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onOpenQuickPaste: (() -> Void)?
+    /// Answers whether the island should currently be retracted for a fullscreen app.
+    var fullscreenProvider: (() -> Bool)?
+    /// Answers which tab a live activity wants the island to open on, if any (Atoll opens on
+    /// the Timer tab while a timer runs, even with hover-to-open off).
+    var liveActivityTabProvider: (() -> NotchTab?)?
+    /// Reasons something outside the island's rect (a header popover, a share sheet, Quick
+    /// Look, a drag out) needs the island to stay open. The pointer leaving the island does
+    /// not fold it away while any reason is held.
+    @Published private(set) var holdReasons: Set<String> = []
+    var isHeaderPopoverActive: Bool { !holdReasons.isEmpty }
+
+    /// How long a newly captured clip stays on the collapsed notch before it folds away.
+    var peekDuration: Duration = .milliseconds(NotchInteractionDefaults.peekDurationMilliseconds)
+    /// How long the close spring takes before the island is considered idle again.
+    var closeAnimationDuration: Duration = .milliseconds(450)
 
     let settings: UserSettings
     private let repository: any ClipRepository
     private let pasteboardService: any PasteboardWriting
     private let pasteCoordinator: (any PasteCoordinating)?
     private weak var targetProvider: (any PasteTargetProviding)?
+    private let haptics: any HapticFeedbackPerforming
     private var stateMachine: NotchStateMachine
     private var pointerIsInside = false
+    private var lastHapticTime = Date.distantPast
     private var hoverTask: Task<Void, Never>?
+    /// The grace period after the pointer leaves.
     private var closeTask: Task<Void, Never>?
+    /// The close spring's settle time, kept apart from the grace period so a pointer that
+    /// wanders during the animation cannot strand the island in `.closing`.
+    private var closeAnimationTask: Task<Void, Never>?
+    private var peekTask: Task<Void, Never>?
+    private var dragOutTask: Task<Void, Never>?
+    private var cancellables: Set<AnyCancellable> = []
+    let activityCenter: IslandActivityCenter
     private var copiedFeedbackTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var pasteTask: Task<Void, Never>?
@@ -51,6 +87,8 @@ final class NotchViewModel: ObservableObject {
         pasteboardService: any PasteboardWriting = PasteboardService(),
         pasteCoordinator: (any PasteCoordinating)? = nil,
         targetProvider: (any PasteTargetProviding)? = nil,
+        haptics: (any HapticFeedbackPerforming)? = nil,
+        activityCenter: IslandActivityCenter? = nil,
         settings: UserSettings = UserSettings()
     ) {
         #if DEBUG
@@ -65,12 +103,18 @@ final class NotchViewModel: ObservableObject {
         self.pasteboardService = pasteboardService
         self.pasteCoordinator = pasteCoordinator
         self.targetProvider = targetProvider
+        self.haptics = haptics ?? SystemHapticFeedback()
+        self.activityCenter = activityCenter ?? .shared
         self.settings = settings
         let initialState: NotchState = settings.notchEnabled
             ? (previewMode ? .pinnedOpen : .idle)
             : .disabled
         stateMachine = NotchStateMachine(initialState: initialState)
         state = initialState
+        selectedTab = availableTabs.first ?? .clipboard
+        self.activityCenter.sneakPeekRequests
+            .sink { [weak self] peek in self?.presentSneakPeek(peek) }
+            .store(in: &cancellables)
     }
 
     var isExpanded: Bool { state.isVisible && state != .peeking && state != .closing }
@@ -78,6 +122,97 @@ final class NotchViewModel: ObservableObject {
     var usesExpandedShape: Bool { state.isVisible }
     var isPinnedOpen: Bool { state == .pinnedOpen }
     var isSelectionMode: Bool { state == .multiSelecting }
+    /// The collapsed notch grows slightly while hovered; the open shelf does not.
+    var showsHoverSwell: Bool { isHovering && state.isCollapsed }
+    var acceptsOpenGesture: Bool { state.isCollapsed }
+    var acceptsCloseGesture: Bool { state == .expanded }
+
+    /// Tabs offered in the open island, in Atoll's order. Clipboard is always present.
+    var availableTabs: [NotchTab] {
+        var tabs: [NotchTab] = []
+        if settings.showHomeTab { tabs.append(.home) }
+        if settings.showShelfTab { tabs.append(.shelf) }
+        if settings.showTimerTab { tabs.append(.timer) }
+        if settings.showStatsTab { tabs.append(.stats) }
+        if settings.showNotesTab { tabs.append(.notes) }
+        tabs.append(.clipboard)
+        return tabs
+    }
+
+    /// Extra height a tab asks for beyond its base height (inline lyrics on Home, the second
+    /// row of graphs on Stats). Feature modules answer through `extraOpenHeightProvider`.
+    var extraOpenHeightProvider: ((NotchTab) -> CGFloat)?
+
+    func extraOpenHeight(for tab: NotchTab) -> CGFloat {
+        if tab == .home { return HomeLayoutState.shared.extraHeight + (extraOpenHeightProvider?(tab) ?? 0) }
+        return extraOpenHeightProvider?(tab) ?? 0
+    }
+
+    var extraOpenHeight: CGFloat { extraOpenHeight(for: selectedTab) }
+
+    /// Fires when something that changes the open size (other than the tab) changed.
+    let openSizeDidChange = PassthroughSubject<Void, Never>()
+
+    /// Geometry for closed-notch activities at the current hover and swipe state.
+    func closedActivityContext(hovering: Bool? = nil) -> ClosedActivityContext {
+        ClosedActivityContext(
+            closedHeight: notchGeometry.topInset,
+            notchWidth: notchGeometry.syntheticOrHardwareWidth,
+            isHovering: hovering ?? isHovering,
+            gestureProgress: max(0, gestureProgress),
+            hasHardwareNotch: notchGeometry.isHardwareNotch
+        )
+    }
+
+    /// Column sizes of the activity that owns the closed notch, if any.
+    func closedActivityLayout(hovering: Bool? = nil) -> ClosedActivityLayout? {
+        activityCenter.layout(in: closedActivityContext(hovering: hovering))
+    }
+
+    /// Picks a valid tab after the tab settings change, and reopens on Home unless the user
+    /// asked to keep the last tab.
+    func normalizeSelectedTab(resetToFirst: Bool = false) {
+        let tabs = availableTabs
+        if resetToFirst || !tabs.contains(selectedTab), let first = tabs.first, first != selectedTab {
+            tabSwitchForward = true
+            selectedTab = first
+        }
+    }
+
+    /// Atoll's header clipboard button in tab mode: show the clipboard, or go back to Home.
+    func toggleClipboardTab() {
+        selectTab(selectedTab == .clipboard ? (availableTabs.first ?? .clipboard) : .clipboard)
+    }
+
+    func selectTab(_ tab: NotchTab) {
+        guard tab != selectedTab, availableTabs.contains(tab) else { return }
+        let order = NotchTab.allCases
+        let from = order.firstIndex(of: selectedTab) ?? 0
+        let to = order.firstIndex(of: tab) ?? 0
+        tabSwitchForward = to >= from
+        selectedTab = tab
+    }
+
+    /// A card is being dragged out to another app. The pointer leaves the island during the
+    /// drag, so hold the shelf open until the drag ends; the end is not reported reliably,
+    /// so a safety timer releases the hold.
+    func beginDragOut() {
+        guard transition(.beginDrag).to == .dragging else { return }
+        closeTask?.cancel()
+        dragOutTask?.cancel()
+        dragOutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(8))
+            guard !Task.isCancelled, let self, self.state == .dragging else { return }
+            self.endDragOut()
+        }
+    }
+
+    func endDragOut() {
+        dragOutTask?.cancel()
+        guard state == .dragging else { return }
+        transition(.endDrag)
+        if !pointerIsInside { scheduleCloseIfAllowed() }
+    }
 
     var filteredItems: [Clip] {
         items.filter { item in
@@ -88,6 +223,11 @@ final class NotchViewModel: ObservableObject {
     var previewedClip: Clip? {
         guard let previewedClipID else { return nil }
         return items.first { $0.id == previewedClipID }
+    }
+
+    var peekedClip: Clip? {
+        guard let peekedClipID else { return nil }
+        return items.first { $0.id == peekedClipID }
     }
 
     var selectedClip: Clip? {
@@ -121,6 +261,44 @@ final class NotchViewModel: ObservableObject {
         items.sort { $0.lastCopiedAt > $1.lastCopiedAt }
     }
 
+    /// Briefly drops a row under the collapsed notch to show what was just copied.
+    func presentCapturePeek(for clip: Clip) {
+        guard settings.showCapturePeek else { return }
+        let title = clip.title.replacingOccurrences(of: "\n", with: " ")
+        presentSneakPeek(
+            SneakPeek(kind: .clipboard, systemImage: clip.symbolName, title: title, subtitle: "Copied", duration: peekDuration),
+            clipID: clip.id
+        )
+    }
+
+    /// Shows a sneak peek under the closed notch, the way Atoll surfaces track changes and
+    /// system events, then folds it away. Skipped while the island is open or hovered; a newer
+    /// peek replaces one that is already showing.
+    func presentSneakPeek(_ peek: SneakPeek, clipID: Clip.ID? = nil) {
+        guard !pointerIsInside, state == .idle || state == .peeking else { return }
+        if state == .idle {
+            guard transition(.peekRequested).to == .peeking else { return }
+        }
+        currentSneakPeek = peek
+        peekedClipID = clipID
+        peekTask?.cancel()
+        let duration = peek.duration
+        peekTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled, let self, self.state == .peeking else { return }
+            self.transition(.peekElapsed)
+            if self.pointerIsInside {
+                // The pointer rested on the peek: arm a normal hover-open from here.
+                self.targetProvider?.rememberFrontmostApplication()
+                self.triggerHaptic()
+                self.transition(.pointerEntered)
+                if self.settings.openOnHover { self.scheduleDwell() }
+            } else {
+                self.scheduleCloseAnimationCompletion()
+            }
+        }
+    }
+
     func reportCaptureError(_ error: Error) {
         captureErrorDescription = error.localizedDescription
     }
@@ -138,40 +316,108 @@ final class NotchViewModel: ObservableObject {
     }
 
     func pointerEntered() {
-        if state == .idle { targetProvider?.rememberFrontmostApplication() }
+        let onCollapsedSurface = state.isCollapsed || state == .peeking
+        if onCollapsedSurface { targetProvider?.rememberFrontmostApplication() }
         pointerIsInside = true
+        if state == .dragging { endDragOut() }
         closeTask?.cancel()
+        isHovering = true
         let transition = transition(.pointerEntered)
-        if transition.to == .hoverArmed {
+        if onCollapsedSurface { triggerHaptic() }
+        if transition.to == .hoverArmed, settings.openOnHover || liveActivityTabProvider?() != nil {
             scheduleDwell()
         }
     }
 
+    func setHeaderPopoverActive(_ active: Bool) {
+        active ? holdOpen(reason: "headerPopover") : releaseHold(reason: "headerPopover")
+    }
+
+    func holdOpen(reason: String) {
+        guard holdReasons.insert(reason).inserted else { return }
+        closeTask?.cancel()
+    }
+
+    func releaseHold(reason: String) {
+        guard holdReasons.remove(reason) != nil, holdReasons.isEmpty, !pointerIsInside else { return }
+        scheduleCloseIfAllowed()
+    }
+
     func pointerExited() {
         pointerIsInside = false
-        if state == .hoverArmed {
-            hoverTask?.cancel()
-            transition(.pointerExited)
-            return
-        }
+        if isHeaderPopoverActive { return }
+        if state == .hoverArmed { hoverTask?.cancel() }
         if state == .peeking {
-            transition(.pointerExited)
-            scheduleCloseAnimationCompletion()
+            isHovering = false
             return
         }
         scheduleCloseIfAllowed()
     }
 
+    /// A click on the collapsed notch opens it at once; the shelf then follows the pointer
+    /// like a hover-open and folds away after the pointer leaves.
+    func openFromClick() {
+        guard state.isCollapsed || state == .peeking else { return }
+        cancelPendingTimers()
+        targetProvider?.rememberFrontmostApplication()
+        gestureProgress = 0
+        triggerHaptic()
+        selectLiveActivityTabIfNeeded()
+        transition(.openRequested)
+        if !pointerIsInside { scheduleCloseIfAllowed() }
+    }
+
+    /// Accumulated downward trackpad travel over the collapsed notch. The notch stretches
+    /// with the swipe and opens once the travel passes the configured sensitivity.
+    func updateOpenGesture(translation: CGFloat) {
+        guard settings.gesturesEnabled, acceptsOpenGesture else { return }
+        let sensitivity = CGFloat(settings.gestureSensitivity)
+        guard sensitivity > 0 else { return }
+        if translation > sensitivity {
+            gestureProgress = 0
+            cancelPendingTimers()
+            targetProvider?.rememberFrontmostApplication()
+            triggerHaptic()
+            selectLiveActivityTabIfNeeded()
+            transition(.openRequested)
+            return
+        }
+        gestureProgress = min(NotchSilhouette.gestureStretch, translation / sensitivity * NotchSilhouette.gestureStretch)
+    }
+
+    /// Accumulated upward trackpad travel over the open shelf. The content fades with the
+    /// swipe and the shelf closes once the travel passes the configured sensitivity.
+    func updateCloseGesture(translation: CGFloat) {
+        guard settings.gesturesEnabled, settings.closeGestureEnabled, acceptsCloseGesture else { return }
+        let sensitivity = CGFloat(settings.gestureSensitivity)
+        guard sensitivity > 0 else { return }
+        if translation > sensitivity {
+            gestureProgress = 0
+            closeTask?.cancel()
+            triggerHaptic()
+            if transition(.closeDelayElapsed).to == .closing {
+                dropHoverAfterClose()
+                scheduleCloseAnimationCompletion()
+            }
+            return
+        }
+        gestureProgress = -min(NotchSilhouette.gestureStretch, translation / sensitivity * NotchSilhouette.gestureStretch)
+    }
+
+    func endGesture() {
+        gestureProgress = 0
+    }
+
     func openPinned() {
         targetProvider?.rememberFrontmostApplication()
-        hoverTask?.cancel()
-        closeTask?.cancel()
+        cancelPendingTimers()
         transition(.openPinned)
     }
 
     func togglePin() {
+        let result = transition(state == .pinnedOpen ? .unpin : .pin)
+        guard result.wasAccepted else { return }
         closeTask?.cancel()
-        transition(state == .pinnedOpen ? .unpin : .pin)
         if state == .expanded, !pointerIsInside { scheduleCloseIfAllowed() }
     }
 
@@ -407,17 +653,34 @@ final class NotchViewModel: ObservableObject {
         transition(.escape)
         if previous == .previewing { previewedClipID = nil }
         if previous == .multiSelecting { selectedClipIDs.removeAll() }
-        if state == .closing { scheduleCloseAnimationCompletion() }
+        if previous == .peeking { peekTask?.cancel() }
+        if state == .closing {
+            dropHoverAfterClose()
+            scheduleCloseAnimationCompletion()
+        }
     }
 
     func setNotchEnabled(_ enabled: Bool) {
         settings.notchEnabled = enabled
         transition(enabled ? .enable : .disable)
+        if enabled, fullscreenProvider?() == true {
+            transition(.fullscreenEntered)
+        }
     }
 
+    /// Retracts the island for a fullscreen app, or restores it. Calls that would not change
+    /// anything are ignored so they cannot disturb timers that are mid-flight.
     func setFullscreen(_ fullscreen: Bool) {
-        hoverTask?.cancel()
-        closeTask?.cancel()
+        let retracted = state == .retractedForFullscreen
+        guard fullscreen != retracted else { return }
+        cancelPendingTimers()
+        if fullscreen {
+            isHovering = false
+            gestureProgress = 0
+            if state == .previewing { previewedClipID = nil }
+            if state == .multiSelecting { selectedClipIDs.removeAll() }
+            if state == .peeking { peekedClipID = nil; currentSneakPeek = nil }
+        }
         transition(fullscreen ? .fullscreenEntered : .fullscreenExited)
     }
 
@@ -429,43 +692,94 @@ final class NotchViewModel: ObservableObject {
     func setExpandedContentVisible(_: Bool) {}
     func finishCollapsePresentation() { transition(.closeAnimationElapsed) }
 
+    private func selectLiveActivityTabIfNeeded() {
+        guard let tab = liveActivityTabProvider?(), availableTabs.contains(tab) else { return }
+        selectTab(tab)
+    }
+
+    private func cancelPendingTimers() {
+        hoverTask?.cancel()
+        closeTask?.cancel()
+        closeAnimationTask?.cancel()
+        peekTask?.cancel()
+    }
+
     private func scheduleDwell() {
         hoverTask?.cancel()
         let delay = settings.hoverDelayMilliseconds
         hoverTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(delay))
             guard !Task.isCancelled, let self, self.pointerIsInside else { return }
+            self.selectLiveActivityTabIfNeeded()
             self.transition(.dwellElapsed)
         }
     }
 
+    /// After the pointer leaves, wait a short grace period, drop the hover swell and, when
+    /// nothing holds the shelf open, start the close animation. A brief brush outside the
+    /// notch therefore neither collapses the swell nor interrupts an armed dwell.
     private func scheduleCloseIfAllowed() {
-        guard state.isVisible, !state.preventsAutomaticClose else { return }
         closeTask?.cancel()
         let delay = settings.closeDelayMilliseconds
         closeTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(delay))
-            guard !Task.isCancelled, let self, !self.pointerIsInside,
-                  !self.state.preventsAutomaticClose else { return }
+            guard !Task.isCancelled, let self, !self.pointerIsInside, !self.isHeaderPopoverActive else { return }
+            self.isHovering = false
+            // Dropping the swell re-measures the island; the pointer may have been found again.
+            guard !Task.isCancelled, !self.pointerIsInside else { return }
+            if self.state == .hoverArmed {
+                self.transition(.pointerExited)
+                return
+            }
+            guard self.state.isVisible, !self.state.preventsAutomaticClose else { return }
             guard self.transition(.closeDelayElapsed).to == .closing else { return }
             self.scheduleCloseAnimationCompletion()
         }
     }
 
     private func scheduleCloseAnimationCompletion() {
-        closeTask?.cancel()
-        closeTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(180))
+        closeAnimationTask?.cancel()
+        let duration = closeAnimationDuration
+        closeAnimationTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: duration)
             guard !Task.isCancelled else { return }
             self?.transition(.closeAnimationElapsed)
         }
+    }
+
+    /// The close spring should own the collapse; the hover swell is released one turn later
+    /// so its bouncier curve does not take over the same frame change.
+    private func dropHoverAfterClose() {
+        Task { @MainActor [weak self] in
+            guard let self, !self.pointerIsInside || !self.state.isCollapsed else { return }
+            self.isHovering = false
+        }
+    }
+
+    private func triggerHaptic() {
+        guard settings.hapticsEnabled else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastHapticTime) > 0.3 else { return }
+        lastHapticTime = now
+        haptics.perform()
     }
 
     @discardableResult
     private func transition(_ event: NotchEvent) -> NotchTransition {
         let result = stateMachine.send(event)
         guard result.wasAccepted else { return result }
+        if result.from != result.to {
+            gestureProgress = 0
+            if result.from == .closing { closeAnimationTask?.cancel() }
+        }
         state = result.to
+        if result.from == .peeking, result.to != .peeking {
+            peekedClipID = nil
+            currentSneakPeek = nil
+        }
+        if result.to == .idle, result.from == .closing, !settings.openLastTab {
+            normalizeSelectedTab(resetToFirst: true)
+        }
         onStateChange?(result.to)
         return result
     }

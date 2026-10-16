@@ -33,6 +33,16 @@ enum NotchState: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// States in which the island renders at its collapsed, notch-sized silhouette.
+    var isCollapsed: Bool {
+        switch self {
+        case .idle, .hoverArmed, .closing:
+            true
+        default:
+            false
+        }
+    }
+
     var preventsAutomaticClose: Bool {
         switch self {
         case .searchFocused, .previewing, .multiSelecting, .dragging, .pinnedOpen:
@@ -49,6 +59,9 @@ enum NotchEvent: Sendable, Equatable {
     case pointerEntered
     case pointerExited
     case dwellElapsed
+    /// A click or a completed open swipe on the collapsed notch: opens without a dwell.
+    case openRequested
+    case peekRequested
     case peekElapsed
     case closeDelayElapsed
     case closeAnimationElapsed
@@ -109,12 +122,16 @@ struct NotchStateMachine: Sendable {
         case (.disabled, .enable): .idle
         case (.idle, .pointerEntered): .hoverArmed
         case (.idle, .openPinned): .pinnedOpen
+        case (.idle, .openRequested): .expanded
+        case (.idle, .peekRequested): .peeking
         case (.hoverArmed, .pointerExited): .idle
         case (.hoverArmed, .dwellElapsed): .expanded
+        case (.hoverArmed, .openRequested): .expanded
         case (.hoverArmed, .openPinned): .pinnedOpen
-        case (.peeking, .peekElapsed): .expanded
-        case (.peeking, .pointerExited): .closing
+        case (.peeking, .peekElapsed): .closing
+        case (.peeking, .openRequested): .expanded
         case (.peeking, .openPinned): .pinnedOpen
+        case (.peeking, .escape): .closing
         case (.expanded, .focusSearch): .searchFocused
         case (.expanded, .openPreview): .previewing
         case (.expanded, .beginMultiSelect): .multiSelecting
@@ -131,6 +148,7 @@ struct NotchStateMachine: Sendable {
         case (.pinnedOpen, .unpin): .expanded
         case (.pinnedOpen, .escape): .closing
         case (.closing, .pointerEntered): .hoverArmed
+        case (.closing, .openRequested): .expanded
         case (.closing, .openPinned): .pinnedOpen
         case (.closing, .closeAnimationElapsed): .idle
         case (.expanded, .escape): .closing
@@ -140,7 +158,9 @@ struct NotchStateMachine: Sendable {
 
     private func acceptsNoStateChange(_ event: NotchEvent, in state: NotchState) -> Bool {
         switch (state, event) {
-        case (.idle, .pointerExited), (.expanded, .pointerEntered), (.pinnedOpen, .pointerExited):
+        case (.idle, .pointerExited), (.expanded, .pointerEntered), (.pinnedOpen, .pointerExited),
+             (.hoverArmed, .pointerEntered), (.closing, .pointerExited),
+             (.peeking, .pointerEntered), (.peeking, .pointerExited):
             true
         default:
             false

@@ -35,6 +35,18 @@ struct CapturePolicy: Sendable, Equatable {
     var duplicateBehavior: DuplicateCaptureBehavior = .moveOriginalToFront
 }
 
+/// Interaction timings and feel for the notch island. The defaults follow the
+/// behaviour observed in shipped notch apps: a short dwell before a hover opens
+/// the island, a brief grace period after the pointer leaves, and a swipe
+/// threshold measured in accumulated trackpad scroll units.
+enum NotchInteractionDefaults {
+    static let hoverDelayMilliseconds = 300
+    static let closeDelayMilliseconds = 100
+    static let gestureSensitivity = 200.0
+    static let peekDurationMilliseconds = 1_500
+    static let hoverTimingVersion = 2
+}
+
 @MainActor
 final class UserSettings: ObservableObject {
     private enum Key {
@@ -49,7 +61,21 @@ final class UserSettings: ObservableObject {
         static let hoverDelayMilliseconds = "notch.hoverDelayMilliseconds"
         static let closeDelayMilliseconds = "notch.closeDelayMilliseconds"
         static let hoverTimingVersion = "notch.hoverTimingVersion"
-        static let expandedWidth = "notch.expandedWidth"
+        static let openNotchWidth = "notch.openWidth"
+        static let openOnHover = "notch.openOnHover"
+        static let hapticsEnabled = "notch.hapticsEnabled"
+        static let gesturesEnabled = "notch.gesturesEnabled"
+        static let closeGestureEnabled = "notch.closeGestureEnabled"
+        static let gestureSensitivity = "notch.gestureSensitivity"
+        static let showShadow = "notch.showShadow"
+        static let hideFromScreenCapture = "notch.hideFromScreenCapture"
+        static let showCapturePeek = "notch.showCapturePeek"
+        static let showHomeTab = "tabs.home"
+        static let showNotesTab = "tabs.notes"
+        static let openLastTab = "tabs.openLastTab"
+        static let showShelfTab = "tabs.shelf"
+        static let showTimerTab = "tabs.timer"
+        static let showStatsTab = "tabs.stats"
         static let defaultAction = "history.defaultAction"
         static let retentionPreset = "history.retentionPreset"
         static let maximumItemCount = "history.maximumItemCount"
@@ -82,7 +108,30 @@ final class UserSettings: ObservableObject {
     @Published var closeDelayMilliseconds: Int {
         didSet { defaults.set(closeDelayMilliseconds, forKey: Key.closeDelayMilliseconds) }
     }
-    @Published var expandedWidth: Double { didSet { defaults.set(expandedWidth, forKey: Key.expandedWidth) } }
+    @Published var openNotchWidth: Double { didSet { defaults.set(openNotchWidth, forKey: Key.openNotchWidth) } }
+    @Published var openOnHover: Bool { didSet { defaults.set(openOnHover, forKey: Key.openOnHover) } }
+    @Published var hapticsEnabled: Bool { didSet { defaults.set(hapticsEnabled, forKey: Key.hapticsEnabled) } }
+    @Published var gesturesEnabled: Bool { didSet { defaults.set(gesturesEnabled, forKey: Key.gesturesEnabled) } }
+    @Published var closeGestureEnabled: Bool {
+        didSet { defaults.set(closeGestureEnabled, forKey: Key.closeGestureEnabled) }
+    }
+    @Published var gestureSensitivity: Double {
+        didSet { defaults.set(gestureSensitivity, forKey: Key.gestureSensitivity) }
+    }
+    @Published var showShadow: Bool { didSet { defaults.set(showShadow, forKey: Key.showShadow) } }
+    @Published var hideFromScreenCapture: Bool {
+        didSet { defaults.set(hideFromScreenCapture, forKey: Key.hideFromScreenCapture) }
+    }
+    @Published var showCapturePeek: Bool {
+        didSet { defaults.set(showCapturePeek, forKey: Key.showCapturePeek) }
+    }
+    @Published var showHomeTab: Bool { didSet { defaults.set(showHomeTab, forKey: Key.showHomeTab) } }
+    @Published var showNotesTab: Bool { didSet { defaults.set(showNotesTab, forKey: Key.showNotesTab) } }
+    /// Reopen on the last tab instead of Home (Atoll: openLastTabByDefault, default off).
+    @Published var openLastTab: Bool { didSet { defaults.set(openLastTab, forKey: Key.openLastTab) } }
+    @Published var showShelfTab: Bool { didSet { defaults.set(showShelfTab, forKey: Key.showShelfTab) } }
+    @Published var showTimerTab: Bool { didSet { defaults.set(showTimerTab, forKey: Key.showTimerTab) } }
+    @Published var showStatsTab: Bool { didSet { defaults.set(showStatsTab, forKey: Key.showStatsTab) } }
     @Published var defaultAction: DefaultClipAction {
         didSet { defaults.set(defaultAction.rawValue, forKey: Key.defaultAction) }
     }
@@ -98,7 +147,8 @@ final class UserSettings: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let usesBalancedHoverTiming = defaults.integer(forKey: Key.hoverTimingVersion) >= 1
+        let storedTimingVersion = defaults.integer(forKey: Key.hoverTimingVersion)
+        let usesCurrentTiming = storedTimingVersion >= NotchInteractionDefaults.hoverTimingVersion
         captureEnabled = defaults.object(forKey: Key.captureEnabled) as? Bool ?? true
         manualCaptureOnly = defaults.bool(forKey: Key.manualCaptureOnly)
         ignoredApplications = Set(defaults.stringArray(forKey: Key.ignoredApplications) ?? [])
@@ -111,16 +161,36 @@ final class UserSettings: ObservableObject {
             rawValue: defaults.string(forKey: Key.duplicateBehavior) ?? ""
         ) ?? .moveOriginalToFront
         notchEnabled = defaults.object(forKey: Key.notchEnabled) as? Bool ?? true
-        hoverDelayMilliseconds = usesBalancedHoverTiming
-            ? max(0, defaults.object(forKey: Key.hoverDelayMilliseconds) as? Int ?? 500)
-            : 500
-        closeDelayMilliseconds = usesBalancedHoverTiming
-            ? max(0, defaults.object(forKey: Key.closeDelayMilliseconds) as? Int ?? 500)
-            : 500
-        expandedWidth = min(
-            920,
-            max(760, defaults.object(forKey: Key.expandedWidth) as? Double ?? 840)
+        hoverDelayMilliseconds = usesCurrentTiming
+            ? max(0, defaults.object(forKey: Key.hoverDelayMilliseconds) as? Int
+                ?? NotchInteractionDefaults.hoverDelayMilliseconds)
+            : NotchInteractionDefaults.hoverDelayMilliseconds
+        closeDelayMilliseconds = usesCurrentTiming
+            ? max(0, defaults.object(forKey: Key.closeDelayMilliseconds) as? Int
+                ?? NotchInteractionDefaults.closeDelayMilliseconds)
+            : NotchInteractionDefaults.closeDelayMilliseconds
+        openNotchWidth = min(
+            NotchTab.maximumOpenWidth,
+            max(NotchTab.defaultOpenWidth, defaults.object(forKey: Key.openNotchWidth) as? Double ?? NotchTab.defaultOpenWidth)
         )
+        openOnHover = defaults.object(forKey: Key.openOnHover) as? Bool ?? true
+        hapticsEnabled = defaults.object(forKey: Key.hapticsEnabled) as? Bool ?? true
+        gesturesEnabled = defaults.object(forKey: Key.gesturesEnabled) as? Bool ?? true
+        closeGestureEnabled = defaults.object(forKey: Key.closeGestureEnabled) as? Bool ?? true
+        gestureSensitivity = min(
+            600,
+            max(50, defaults.object(forKey: Key.gestureSensitivity) as? Double
+                ?? NotchInteractionDefaults.gestureSensitivity)
+        )
+        showShadow = defaults.object(forKey: Key.showShadow) as? Bool ?? true
+        hideFromScreenCapture = defaults.bool(forKey: Key.hideFromScreenCapture)
+        showCapturePeek = defaults.object(forKey: Key.showCapturePeek) as? Bool ?? true
+        showHomeTab = defaults.object(forKey: Key.showHomeTab) as? Bool ?? true
+        showNotesTab = defaults.object(forKey: Key.showNotesTab) as? Bool ?? true
+        openLastTab = defaults.bool(forKey: Key.openLastTab)
+        showShelfTab = defaults.object(forKey: Key.showShelfTab) as? Bool ?? true
+        showTimerTab = defaults.object(forKey: Key.showTimerTab) as? Bool ?? true
+        showStatsTab = defaults.object(forKey: Key.showStatsTab) as? Bool ?? true
         defaultAction = DefaultClipAction(
             rawValue: defaults.string(forKey: Key.defaultAction) ?? ""
         ) ?? .paste
@@ -130,10 +200,10 @@ final class UserSettings: ObservableObject {
         maximumItemCount = max(100, defaults.object(forKey: Key.maximumItemCount) as? Int ?? 10_000)
         hideInFullscreen = defaults.bool(forKey: Key.hideInFullscreen)
 
-        if !usesBalancedHoverTiming {
+        if !usesCurrentTiming {
             defaults.set(hoverDelayMilliseconds, forKey: Key.hoverDelayMilliseconds)
             defaults.set(closeDelayMilliseconds, forKey: Key.closeDelayMilliseconds)
-            defaults.set(1, forKey: Key.hoverTimingVersion)
+            defaults.set(NotchInteractionDefaults.hoverTimingVersion, forKey: Key.hoverTimingVersion)
         }
     }
 
