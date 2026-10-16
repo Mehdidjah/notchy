@@ -3,7 +3,7 @@ import QuartzCore
 
 /// Developer aid for measuring tab-switch smoothness: launched with `--perf-cycle-tabs`, the
 /// app opens the island pinned, steps through every tab a few times while a display link
-/// times every frame, prints a per-tab report, then quits. Does nothing without the argument.
+/// times every frame, then measures the face animation and quits. Does nothing without the argument.
 @MainActor
 enum PerfTabCycler {
     static let argument = "--perf-cycle-tabs"
@@ -37,28 +37,71 @@ enum PerfTabCycler {
                     samples[tab, default: []].append(window)
                 }
             }
+            let faceSamples = await measureFaceActivity(model: model, recorder: recorder)
             recorder.stop()
             print(report(samples, refresh: recorder.nominalInterval))
+            for name in faceSamples.keys.sorted() {
+                print(summary(name: "face-\(name)", windows: faceSamples[name] ?? []))
+            }
             fflush(stdout)
             NSApp.terminate(nil)
         }
+    }
+
+    /// Exercises presentation only: no camera, face comparison, or authorization request.
+    private static func measureFaceActivity(model: NotchViewModel, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
+        let activity = FaceCheckLiveActivity()
+        activity.hapticsEnabled = { false }
+        activity.onRetry = { [weak activity] in activity?.begin(reason: "Animation preview") }
+        model.selectTab(.home)
+        model.collapseForFaceCheck()
+        model.activityCenter.register(activity)
+        var samples: [String: [FrameRecorder.Window]] = [:]
+        for _ in 0..<rounds {
+            var start = CACurrentMediaTime()
+            activity.begin(reason: "Animation preview")
+            try? await Task.sleep(for: .seconds(1))
+            samples["expand", default: []].append(recorder.window(from: start, length: 0.8))
+            start = CACurrentMediaTime()
+            activity.update(prompt: "Blink once")
+            try? await Task.sleep(for: .seconds(1))
+            samples["scan", default: []].append(recorder.window(from: start, length: 0.9))
+            start = CACurrentMediaTime()
+            activity.finish(recognized: true, message: "Recognized")
+            try? await Task.sleep(for: .milliseconds(1_500))
+            samples["success", default: []].append(recorder.window(from: start, length: 1.4))
+            start = CACurrentMediaTime()
+            activity.finish(recognized: false, message: "Try again")
+            try? await Task.sleep(for: .milliseconds(1_500))
+            samples["failure", default: []].append(recorder.window(from: start, length: 1.4))
+            start = CACurrentMediaTime()
+            activity.handleHover(true)
+            try? await Task.sleep(for: .seconds(1))
+            samples["retry", default: []].append(recorder.window(from: start, length: 0.8))
+            activity.dismiss()
+            try? await Task.sleep(for: .milliseconds(700))
+        }
+        model.activityCenter.unregister(id: activity.activityID)
+        return samples
     }
 
     private static func report(_ samples: [NotchTab: [FrameRecorder.Window]], refresh: Double) -> String {
         var lines = [String(format: "PERF nominal frame %.2f ms", refresh * 1000)]
         for tab in NotchTab.allCases {
             guard let windows = samples[tab], !windows.isEmpty else { continue }
-            let worst = windows.map(\.worstFrame).max() ?? 0
-            let hitches = windows.map(\.hitchCount).reduce(0, +)
-            let dropped = windows.map(\.droppedFrames).reduce(0, +)
-            let firstFrame = windows.map(\.firstFrameDelay).max() ?? 0
-            let select = windows.map(\.selectCost).max() ?? 0
-            lines.append(String(
-                format: "PERF %@ switches=%d worstFrame=%.1fms hitches=%d dropped=%d firstFrame=%.1fms selectCall=%.1fms",
-                tab.rawValue, windows.count, worst * 1000, hitches, dropped, firstFrame * 1000, select * 1000
-            ))
+            lines.append(summary(name: tab.rawValue, windows: windows))
         }
         return lines.joined(separator: "\n")
+    }
+
+    private static func summary(name: String, windows: [FrameRecorder.Window]) -> String {
+        let worst = windows.map(\.worstFrame).max() ?? 0
+        let hitches = windows.map(\.hitchCount).reduce(0, +)
+        let dropped = windows.map(\.droppedFrames).reduce(0, +)
+        let firstFrame = windows.map(\.firstFrameDelay).max() ?? 0
+        let select = windows.map(\.selectCost).max() ?? 0
+        return String(format: "PERF %@ switches=%d worstFrame=%.1fms hitches=%d dropped=%d firstFrame=%.1fms selectCall=%.1fms",
+                      name, windows.count, worst * 1000, hitches, dropped, firstFrame * 1000, select * 1000)
     }
 }
 

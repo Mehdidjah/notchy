@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 
@@ -19,6 +20,7 @@ final class AppEnvironment {
     let settingsWindowController: SettingsWindowController
     let menuBarController: MenuBarController
     private var cancellables: Set<AnyCancellable> = []
+    private var faceCheckWindow: FaceCheckWindowController?
 
     init() throws {
         settings = UserSettings()
@@ -34,7 +36,8 @@ final class AppEnvironment {
             pasteboardService: pasteboardService,
             pasteCoordinator: pasteCoordinator,
             targetProvider: targetTracker,
-            settings: settings
+            settings: settings,
+            faceAuthorizer: FaceCheckController.shared
         )
         let normalizer = ClipboardNormalizer(payloadStore: payloadStore)
         clipboardMonitor = ClipboardMonitor(
@@ -155,11 +158,42 @@ final class AppEnvironment {
         // Volume, brightness and microphone HUDs on the closed notch, and Caps Lock.
         SystemHUDFeature.start()
 
-        // Face Check: the settings page only. The camera and the face model load when it is used.
+        // The camera and model load only for a preview, enrollment, or an explicit check.
+        let faceCheck = FaceCheckController.shared
+        let faceWindow = FaceCheckWindowController(controller: faceCheck)
+        faceCheckWindow = faceWindow
+        model.activityCenter.register(faceCheck.liveActivity)
+        faceCheck.liveActivity.hapticsEnabled = { [weak settings] in settings?.hapticsEnabled ?? false }
+        faceCheck.onBeginCheck = { [weak model, weak faceWindow] in
+            guard let model else { return }
+            model.collapseForFaceCheck()
+            if model.state == .disabled || model.state == .retractedForFullscreen { faceWindow?.show() }
+        }
+        faceCheck.onSaved = { [weak model] in model?.collapseForFaceCheck() }
+        faceCheck.onNeedsEnrollment = { [weak model, weak settings] in
+            settings?.showFaceTab = true
+            model?.selectTab(.face)
+            model?.openPinned()
+        }
+        faceCheck.loadIdentities()
+        let workspaceEvents = NSWorkspace.shared.notificationCenter
+        Publishers.Merge(
+            workspaceEvents.publisher(for: NSWorkspace.sessionDidResignActiveNotification),
+            workspaceEvents.publisher(for: NSWorkspace.willSleepNotification)
+        )
+        .receive(on: RunLoop.main)
+        .sink { [weak model] _ in
+            faceCheck.stopCamera()
+            model?.lockSensitiveClips()
+        }
+        .store(in: &cancellables)
         SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection() }
     }
 
     private func stopFeatures() {
+        FaceCheckController.shared.stopCamera()
+        faceCheckWindow?.hide()
+        model.activityCenter.unregister(id: FaceCheckController.shared.liveActivity.activityID)
         SystemHUDFeature.stop()
         MediaFeature.stop()
         CalendarFeature.stop()

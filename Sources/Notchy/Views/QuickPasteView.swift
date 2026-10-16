@@ -99,7 +99,7 @@ struct QuickPasteView: View {
         let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return model.items }
         return model.items.filter {
-            [$0.title, $0.searchableText, $0.ocrText, $0.sourceApplicationName, $0.note]
+            !model.isClipLocked($0) && [$0.title, $0.searchableText, $0.ocrText, $0.sourceApplicationName, $0.note]
                 .compactMap { $0 }
                 .joined(separator: "\n")
                 .localizedCaseInsensitiveContains(value)
@@ -113,7 +113,7 @@ struct QuickPasteView: View {
             close()
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: clip.symbolName)
+                Image(systemName: model.isClipLocked(clip) ? "lock.fill" : clip.symbolName)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(index == selectedIndex ? .white : .secondary)
                     .frame(width: 28, height: 28)

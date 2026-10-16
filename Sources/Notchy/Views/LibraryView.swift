@@ -144,6 +144,10 @@ struct LibraryView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Label(clip.contentType.displayName, systemImage: clip.symbolName)
                         .font(.headline)
+                    if model.isClipLocked(clip) {
+                        Button("Reveal with Face Check", systemImage: "faceid") { model.reveal(clip) }
+                            .buttonStyle(.borderedProminent)
+                    }
                     Text(clip.value)
                         .font(clip.kind == .code ? .system(.body, design: .monospaced) : .body)
                         .textSelection(.enabled)
@@ -176,10 +180,10 @@ struct LibraryView: View {
     private var visibleItems: [Clip] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let source = model.filteredItems.filter { clip in
-            query.isEmpty || [clip.title, clip.searchableText, clip.ocrText, clip.sourceApplicationName, clip.note]
+            query.isEmpty || (!model.isClipLocked(clip) && [clip.title, clip.searchableText, clip.ocrText, clip.sourceApplicationName, clip.note]
                 .compactMap { $0 }
                 .joined(separator: "\n")
-                .localizedCaseInsensitiveContains(query)
+                .localizedCaseInsensitiveContains(query))
         }
         return source.sorted {
             sortNewestFirst ? $0.lastCopiedAt > $1.lastCopiedAt : $0.lastCopiedAt < $1.lastCopiedAt
@@ -213,6 +217,9 @@ struct LibraryView: View {
 
     @ViewBuilder
     private func clipMenu(_ clip: Clip) -> some View {
+        if model.isClipLocked(clip) {
+            Button("Reveal with Face Check") { model.reveal(clip) }
+        }
         Button("Paste") { model.paste(clip) }
         Button("Copy") { model.copyUsingCoordinator(clip) }
         Button("Favorite") { model.toggleFavorite(clip) }

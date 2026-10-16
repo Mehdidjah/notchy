@@ -21,6 +21,7 @@ struct NotchClipboardTabView: View {
                         ForEach(model.items) { clip in
                             ClipGridCard(
                                 clip: clip,
+                                isLocked: model.isClipLocked(clip),
                                 isHovered: hoveredClipID == clip.id,
                                 justCopied: model.copiedItemID == clip.id,
                                 onDelete: { model.delete(clip) }
@@ -33,6 +34,9 @@ struct NotchClipboardTabView: View {
                             .onTapGesture { model.performPrimaryAction(clip) }
                             .modifier(DragOutModifier(clip: clip, model: model))
                             .contextMenu {
+                                if model.isClipLocked(clip) {
+                                    Button("Reveal with Face Check", systemImage: "faceid") { model.reveal(clip) }
+                                }
                                 Button("Paste", systemImage: "arrow.down.doc") { model.paste(clip) }
                                 Button("Copy", systemImage: "doc.on.doc") { model.copyUsingCoordinator(clip) }
                                 Button(clip.isFavorite ? "Remove Favorite" : "Favorite", systemImage: "star") {
@@ -133,10 +137,9 @@ private struct DragOutModifier: ViewModifier {
     let model: NotchViewModel
 
     func body(content: Content) -> some View {
-        if clip.isDraggable {
+        if model.canDrag(clip) {
             content.onDrag {
-                model.beginDragOut()
-                return clip.dragItemProvider()
+                model.dragItemProvider(for: clip)
             }
         } else {
             content
@@ -148,6 +151,7 @@ private struct DragOutModifier: ViewModifier {
 /// and a hover-revealed delete button in the top-trailing corner.
 struct ClipGridCard: View {
     let clip: Clip
+    var isLocked = false
     let isHovered: Bool
     let justCopied: Bool
     let onDelete: () -> Void
@@ -161,7 +165,7 @@ struct ClipGridCard: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(clip.contentType.displayName)
+                    Text(isLocked ? "Face Check to reveal" : clip.contentType.displayName)
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                     if clip.isPinned {
@@ -213,7 +217,7 @@ struct ClipGridCard: View {
             } else {
                 RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.06))
             }
-            Image(systemName: justCopied ? "checkmark.circle.fill" : clip.symbolName)
+            Image(systemName: isLocked ? "lock.fill" : (justCopied ? "checkmark.circle.fill" : clip.symbolName))
                 .font(.system(size: 16))
                 .foregroundStyle(justCopied ? Color.green : Color.blue)
         }

@@ -80,7 +80,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         if !model.items.isEmpty {
             let recentMenu = NSMenu(title: "Recent Clips")
             for (index, clip) in model.items.prefix(10).enumerated() {
-                let title = shortTitle(clip.title)
+                // Menus retain their titles while tracking, past a temporary reveal's expiry.
+                let title = clip.isSensitive ? "Hidden clipboard item" : shortTitle(clip.title)
                 let item = NSMenuItem(
                     title: "\(index == 9 ? 0 : index + 1). \(title)",
                     action: #selector(pasteRecent(_:)),

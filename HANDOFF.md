@@ -17,11 +17,12 @@ A macOS 14+ notch app ("dynamic island" for the MacBook notch): a clipboard mana
 ./script/build_and_run.sh --debug    # debug build under lldb
 ./script/build_and_run.sh --perf     # release build, cycles through the tabs, prints frame timings, quits
 swift build
-swift test                           # ~530 tests (Swift Testing)
+swift test                           # 575 tests (Swift Testing)
 swift test --filter FaceCheck        # one area
 ```
 
 - Normal runs use the **release** configuration on purpose: debug builds animate far worse.
+- The owner asked to stop the app during this session. It was left stopped; use `--build` for further checks and do not relaunch until asked.
 - The build script writes Info.plist (bundle id `com.local.Notchy`, privacy usage strings) and compiles the face model into `Contents/Resources` with `xcrun coremlcompiler` (needs Xcode).
 - The app is **unsigned (ad-hoc)**, so macOS forgets permissions (camera, Calendar, Accessibility, Automation) after every rebuild. This is expected.
 - Known timing-flaky tests that fail only under the full parallel run and pass alone: `FocusTests` toastMode* and `modeSwitchDuringTheToastSnapsShutThenReopens`, `TimerTests.closedNotchLabelFlashesOnStartAndHoldsOnceFinished`, `StatsTests.repeatedStateReportsDoNotRestartPendingTimers`, `StatsManagerTests.monitoringStartsAfterTheDelayAndStopsOnTabSwitch`. Fixing them (replace fixed sleeps with polling, as `NotchViewModelTests` does with `eventually`) is on the backlog.
@@ -74,19 +75,20 @@ Done:
 - `Model/FaceDescriptor.mlpackage`: dlib's public-domain face-recognition ResNet (128-d descriptors, 150×150 chips) converted with `script/face-model/` (original converter + parity check; see its README and `MODEL-LICENSE.md`). Parity with dlib is cosine ≥ 0.99998.
 - `FaceEmbedder` (actor, own queue, CPU+Neural Engine), `FaceChipAligner`/`FaceChipRenderer`/`FaceChipTemplate` (dlib's 5-point chip geometry from Vision landmarks; Boost-licensed constants), `FaceMatcher` (template + closest-sample dual gate, strict/balanced/relaxed = 0.50/0.55/0.60), `FaceEnrollment` (nine-pose tracker), `FaceEnrollmentStore` (AES-GCM sealed JSON).
 - `FaceCheckKeyStorage`: store key derived from a Secure Enclave key + a saved public peer (no keychain: the unsigned app can't use the data-protection keychain, and file-keychain items break on every rebuild).
-- `FaceCheckCamera` (capture, drops frames while busy), `FaceCheckPipeline` (Vision → align → embed, own queue), `FaceCheckController` (main-actor state: preview, enrolment, 3 s test, presets, saved faces).
-- UI: Settings → System → Face Check page, and the Face Check tab in the island (`NotchFaceTabView`). A test result plays as a sneak peek.
+- `FaceCheckCamera` (capture, drops frames while busy, timestamps before analysis, explicitly unmirrored output), `FaceCheckPipeline` (Vision → liveness cues → align → embed, own queue), `FaceCheckController` (preview ownership, enrollment, 10 s check timeout independent of camera frames, presets, saved faces).
+- UI: Settings → System → Face Check page and `NotchFaceTabView`. Enrollment requires fresh liveness before saving; success only plays after persistence succeeds.
+- `FaceCheckLiveActivity`, priority 35: native pill → blue breathing face → rotating rings → blue check, or dimmed face/shake for failure. `FaceCheckEmblem` draws original paths in an asynchronous Canvas. Expansion .45 s, success 1.7 s, failure 5 s with hover retry; haptics and Reduce Motion. `FaceCheckWindowController` presents the same controls when the notch is disabled/fullscreen-hidden. The performance harness measures each animation stage without authorizing actions.
+- `FaceCheckAuthorizing` connects the controller to clipboard actions. Sensitive items are centrally redacted, including payload paths/search/previews. Grants last 60 s and are rechecked at export; replacement/deletion invalidates approvals. Clearing history requires a fresh check when enrollment exists. Face additions/deletions require checks; unusable enrollment can be reset with macOS owner authentication.
+- `FaceLivenessTracker`: blink → random shoulder turn with nose parallax beyond a planar projective fit → return to center. Glare on the face and enclosing device outlines reject. Missing/invalid/multiple-face frames reset evidence. `FaceVerificationSession` requires the same enrolled identity throughout. All match presets require liveness.
+- Tests cover liveness geometry/images/sequences, authorization/camera lifecycle, native presentation geometry, clipboard redaction/export/expiry and exactly-once callbacks. See `docs/face-check.md` for the manual camera matrix and optional snapshot command.
 
-Next, in order (owner asked for these):
-1. **Notch scan animations, drawn natively in SwiftUI:** a closed-notch state that expands into a scanning state (breathing pulse), a success state when a face is saved or recognised, a failure state with hover-to-retry, then a collapse back. Implement as a `ClosedLiveActivity` plus sneak peeks; add a `faceCheck` priority between Caps Lock (30) and music (40). Use haptics through the existing `HapticFeedback` service.
-2. **Scan once, save, recognised later:** after enrolment play the success animation; later quick checks play the recognised animation in the notch.
-3. **Real jobs inside Notchy:** a face check to reveal sensitive clipboard items (the clipboard already flags them) and to confirm destructive actions (clear history, delete all face data).
-4. **Liveness (photo/video check):** deny cues (screen glare on the face crop, a device-shaped rectangle around the face) that fail the scan outright; confirm cues (3D-vs-flat landmark geometry across head turns, nose parallax vs yaw, eyelid-distance blinks), at least one required in the strict mode. Pure functions over landmark points with unit tests.
+Next: real-camera calibration and spoof testing with the owner. Static/planar fixtures pass the automated rejection tests, but RGB heuristics cannot guarantee rejection of all photos or replayed videos. Left/right challenge signs follow unmirrored camera coordinates (left is positive yaw); the preview is mirrored separately. Vision pitch is negated at the enrollment boundary because its positive direction is down.
 
 Open items from the code review: one model identifier source (use `FaceEmbedder.modelIdentifier` everywhere), a byte-exact renderer fixture test, `fsync` before the store's rename, make a `coremlcompiler` failure non-fatal under `set -e` in the build script, mention the Boost-licensed chip constants in the licence note. The enrolment grid's left/right mapping is unverified on a real camera; flip `FaceEnrollmentGrid.rows` if it fills on the wrong side.
 
 ## Performance notes
 
+- The latest completed release tab run measured 8.3–8.4 ms worst frames outside Face; Face measured 29.1 ms, with two hitches/three dropped frames, versus 41.1 ms before this work. The new native-animation measurement run was interrupted when the owner requested that the app stop. An LLDB diagnostic run is not a release timing baseline; the new stages still need a normal `--perf` run when launching is authorized.
 - Tab-switch worst frames (release build, 120 Hz) are about 8.3 ms on every tab except Home (~25 ms on first appearance; open item).
 - Causes already fixed: the island shadow was cast from a composited group (CPU re-rasterisation every frame; now a separate silhouette), and the Settings/Library/Quick Paste windows kept live SwiftUI content observing the model while hidden (now built on show, released on close).
 - Tried and rejected: keeping visited tabs alive between switches. It made revisits slower (30–60 ms frames), so it was not merged.

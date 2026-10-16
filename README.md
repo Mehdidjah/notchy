@@ -1,8 +1,8 @@
 # Notchy
 
 A macOS menu-bar app that turns the MacBook notch into a Dynamic Island. The
-island opens into a tabbed panel: Clipboard history today, with Shelf, Timer and
-Stats tabs landing feature by feature. The interaction model (hover swell,
+island opens into a tabbed panel with Home, Shelf, Timer, Stats, Notes, Face Check,
+and Clipboard. The interaction model (hover swell,
 dwell-to-open, click, two-finger swipe, springs, radii, fullscreen retraction)
 is built to feel native to the notch.
 
@@ -54,6 +54,25 @@ Accessibility grant used for pasting may need to be renewed after rebuilding.
 - **Windows.** Quick Paste panel, a full Clipboard Library window with grid,
   list and board views, and a Settings window (General, Capture, Notch, History,
   Privacy, Permissions).
+- **Face Check.** Scan in the Face tab, blink and follow the head-turn prompt,
+  then capture the enrollment poses. Successful storage plays a native “Face
+  saved” animation. “Check now” and protected clipboard actions open a scan in
+  the notch, followed by a recognized or retry state. Failed checks support
+  hover-to-retry for five seconds. A small check window appears if the notch is
+  hidden. Camera processing and encrypted face descriptors stay on this Mac.
+
+Sensitive clipboard items start hidden in every view. Face Check reveals an
+item for 60 seconds; app deactivation hides revealed content again.
+Copy, paste, drag, combined paste, and queued paste enforce the same gate.
+Clearing history requires a fresh check when a face is enrolled. Adding or
+deleting saved faces also requires a check; unavailable face data can be reset
+through macOS owner authentication.
+
+Every match setting requires a fresh blink, a randomly requested head turn,
+non-planar nose motion, and a return to center. Large reflections on the face
+and enclosing device outlines reject the attempt. These RGB-camera heuristics
+need testing with the actual camera and lighting; they do not guarantee rejection
+of every photo or replayed video. See [Face Check validation](docs/face-check.md).
 
 ## Layout
 

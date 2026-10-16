@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 final class NotchViewModel: ObservableObject {
     @Published private(set) var state: NotchState
-    @Published private(set) var items: [Clip]
+    @Published private var storedItems: [Clip]
     @Published var query = ""
     @Published var selectedCategory: ClipboardCategory = .history
     @Published var usesCompactCards = false
@@ -22,6 +22,7 @@ final class NotchViewModel: ObservableObject {
     @Published var customSeparator = ""
     @Published private(set) var pasteOutcome: PasteOutcome?
     @Published private(set) var isPasteRunning = false
+    @Published private(set) var isAuthorizingClipboard = false
     @Published private(set) var queue = SequentialPasteQueue()
     /// True while the pointer rests on the island. Drives the collapsed swell and the shadow.
     @Published private(set) var isHovering = false
@@ -64,6 +65,18 @@ final class NotchViewModel: ObservableObject {
     private let pasteCoordinator: (any PasteCoordinating)?
     private weak var targetProvider: (any PasteTargetProviding)?
     private let haptics: any HapticFeedbackPerforming
+    private let faceAuthorizer: (any FaceCheckAuthorizing)?
+    private let accessClock: @MainActor () -> TimeInterval
+    private let revealDuration: TimeInterval
+    private struct RevealGrant {
+        let version: UUID
+        let expiresAt: TimeInterval
+    }
+    @Published private var revealGrants: [Clip.ID: RevealGrant] = [:]
+    private var clipVersions: [Clip.ID: UUID] = [:]
+    private var pendingAuthorizationID: UUID?
+    private var pendingAuthorizationClipIDs: Set<Clip.ID> = []
+    private var revealExpiryTask: Task<Void, Never>?
     private var stateMachine: NotchStateMachine
     private var pointerIsInside = false
     private var lastHapticTime = Date.distantPast
@@ -89,7 +102,10 @@ final class NotchViewModel: ObservableObject {
         targetProvider: (any PasteTargetProviding)? = nil,
         haptics: (any HapticFeedbackPerforming)? = nil,
         activityCenter: IslandActivityCenter? = nil,
-        settings: UserSettings = UserSettings()
+        settings: UserSettings = UserSettings(),
+        faceAuthorizer: (any FaceCheckAuthorizing)? = nil,
+        revealDuration: TimeInterval = 60,
+        accessClock: @escaping @MainActor () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     ) {
         #if DEBUG
         let previewMode = ProcessInfo.processInfo.arguments.contains("--expanded-preview")
@@ -99,12 +115,16 @@ final class NotchViewModel: ObservableObject {
         let previewMode = PerfTabCycler.isRequested
         let initialItems = items
         #endif
-        self.items = initialItems
+        self.storedItems = initialItems
+        self.clipVersions = Dictionary(uniqueKeysWithValues: initialItems.map { ($0.id, UUID()) })
         self.repository = repository ?? InMemoryClipRepository(clips: initialItems)
         self.pasteboardService = pasteboardService
         self.pasteCoordinator = pasteCoordinator
         self.targetProvider = targetProvider
         self.haptics = haptics ?? SystemHapticFeedback()
+        self.faceAuthorizer = faceAuthorizer
+        self.accessClock = accessClock
+        self.revealDuration = max(0, revealDuration)
         self.activityCenter = activityCenter ?? .shared
         self.settings = settings
         let initialState: NotchState = settings.notchEnabled
@@ -116,7 +136,19 @@ final class NotchViewModel: ObservableObject {
         self.activityCenter.sneakPeekRequests
             .sink { [weak self] peek in self?.presentSneakPeek(peek) }
             .store(in: &cancellables)
+        NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)
+            .sink { [weak self] _ in self?.lockSensitiveClips(cancelPending: false) }
+            .store(in: &cancellables)
+        for notification in [NSWorkspace.sessionDidResignActiveNotification, NSWorkspace.willSleepNotification] {
+            NSWorkspace.shared.notificationCenter.publisher(for: notification)
+                .sink { [weak self] _ in self?.lockSensitiveClips() }
+                .store(in: &cancellables)
+        }
     }
+
+    /// All presentation surfaces receive redacted values, including payload paths and metadata.
+    /// Original values are resolved by ID only at the operation boundary below.
+    var items: [Clip] { storedItems.map(presentationClip) }
 
     var isExpanded: Bool { state.isVisible && state != .peeking && state != .closing }
     var showsExpandedContent: Bool { state.showsShelfContent }
@@ -218,28 +250,28 @@ final class NotchViewModel: ObservableObject {
     }
 
     var filteredItems: [Clip] {
-        items.filter { item in
+        storedItems.filter { item in
             matchesSelectedCategory(item) && matchesSearch(item)
-        }
+        }.map(presentationClip)
     }
 
     var previewedClip: Clip? {
         guard let previewedClipID else { return nil }
-        return items.first { $0.id == previewedClipID }
+        return storedItems.first { $0.id == previewedClipID }.map(presentationClip)
     }
 
     var peekedClip: Clip? {
         guard let peekedClipID else { return nil }
-        return items.first { $0.id == peekedClipID }
+        return storedItems.first { $0.id == peekedClipID }.map(presentationClip)
     }
 
     var selectedClip: Clip? {
         guard let selectedClipID else { return filteredItems.first }
-        return items.first { $0.id == selectedClipID }
+        return storedItems.first { $0.id == selectedClipID }.map(presentationClip)
     }
 
     var selectedClips: [Clip] {
-        selectedClipIDs.compactMap { id in items.first { $0.id == id } }
+        selectedClipIDs.compactMap { id in storedItems.first { $0.id == id }.map(presentationClip) }
     }
 
     func start() {
@@ -247,8 +279,10 @@ final class NotchViewModel: ObservableObject {
         loadTask = Task { [weak self, repository] in
             do {
                 let stored = try await repository.fetchAll(limit: nil)
-                guard !Task.isCancelled else { return }
-                self?.items = stored
+                guard !Task.isCancelled, let self else { return }
+                self.lockSensitiveClips()
+                self.storedItems = stored
+                self.clipVersions = Dictionary(uniqueKeysWithValues: stored.map { ($0.id, UUID()) })
             } catch {
                 self?.captureErrorDescription = error.localizedDescription
             }
@@ -256,20 +290,27 @@ final class NotchViewModel: ObservableObject {
     }
 
     func acceptCapturedClip(_ clip: Clip) {
-        if let index = items.firstIndex(where: { $0.id == clip.id || $0.contentHash == clip.contentHash }) {
-            items[index] = clip
+        if let index = storedItems.firstIndex(where: { $0.id == clip.id || $0.contentHash == clip.contentHash }) {
+            let previous = storedItems[index]
+            guard previous != clip else { return }
+            if pendingAuthorizationClipIDs.contains(previous.id) { cancelClipboardAuthorization() }
+            revealGrants.removeValue(forKey: previous.id)
+            clipVersions.removeValue(forKey: previous.id)
+            storedItems[index] = clip
         } else {
-            items.append(clip)
+            storedItems.append(clip)
         }
-        items.sort { $0.lastCopiedAt > $1.lastCopiedAt }
+        clipVersions[clip.id] = UUID()
+        storedItems.sort { $0.lastCopiedAt > $1.lastCopiedAt }
     }
 
     /// Briefly drops a row under the collapsed notch to show what was just copied.
     func presentCapturePeek(for clip: Clip) {
         guard settings.showCapturePeek else { return }
-        let title = clip.title.replacingOccurrences(of: "\n", with: " ")
+        let visibleClip = presentationClip(clip)
+        let title = visibleClip.title.replacingOccurrences(of: "\n", with: " ")
         presentSneakPeek(
-            SneakPeek(kind: .clipboard, systemImage: clip.symbolName, title: title, subtitle: "Copied", duration: peekDuration),
+            SneakPeek(kind: .clipboard, systemImage: isClipLocked(clip) ? "lock.fill" : visibleClip.symbolName, title: title, subtitle: "Copied", duration: peekDuration),
             clipID: clip.id
         )
     }
@@ -278,6 +319,7 @@ final class NotchViewModel: ObservableObject {
     /// events, then folds it away. Skipped while the island is open or hovered; a newer
     /// peek replaces one that is already showing.
     func presentSneakPeek(_ peek: SneakPeek, clipID: Clip.ID? = nil) {
+        guard activityCenter.activeActivity?.suppressesAutomaticOpen != true else { return }
         guard !pointerIsInside, state == .idle || state == .peeking else { return }
         if state == .idle {
             guard transition(.peekRequested).to == .peeking else { return }
@@ -311,7 +353,7 @@ final class NotchViewModel: ObservableObject {
     }
 
     func count(for category: ClipboardCategory) -> Int {
-        items.filter { matchesCategory($0, category: category) }.count
+        storedItems.filter { matchesCategory($0, category: category) }.count
     }
 
     func setHovered(_ hovered: Bool) {
@@ -325,6 +367,11 @@ final class NotchViewModel: ObservableObject {
         if state == .dragging { endDragOut() }
         closeTask?.cancel()
         isHovering = true
+        if activityCenter.activeActivity?.handleHover(true) == true
+            || activityCenter.activeActivity?.suppressesAutomaticOpen == true {
+            hoverTask?.cancel()
+            return
+        }
         let transition = transition(.pointerEntered)
         if onCollapsedSurface { triggerHaptic() }
         if transition.to == .hoverArmed, settings.openOnHover || liveActivityTabProvider?() != nil {
@@ -348,6 +395,7 @@ final class NotchViewModel: ObservableObject {
 
     func pointerExited() {
         pointerIsInside = false
+        _ = activityCenter.activeActivity?.handleHover(false)
         if isHeaderPopoverActive { return }
         if state == .hoverArmed { hoverTask?.cancel() }
         if state == .peeking {
@@ -360,6 +408,8 @@ final class NotchViewModel: ObservableObject {
     /// A click on the collapsed notch opens it at once; the shelf then follows the pointer
     /// like a hover-open and folds away after the pointer leaves.
     func openFromClick() {
+        if activityCenter.activeActivity?.handleTap() == true { return }
+        guard activityCenter.activeActivity?.suppressesAutomaticOpen != true else { return }
         guard state.isCollapsed || state == .peeking else { return }
         cancelPendingTimers()
         targetProvider?.rememberFrontmostApplication()
@@ -373,6 +423,7 @@ final class NotchViewModel: ObservableObject {
     /// Accumulated downward trackpad travel over the collapsed notch. The notch stretches
     /// with the swipe and opens once the travel passes the configured sensitivity.
     func updateOpenGesture(translation: CGFloat) {
+        guard activityCenter.activeActivity?.suppressesAutomaticOpen != true else { return }
         guard settings.gesturesEnabled, acceptsOpenGesture else { return }
         let sensitivity = CGFloat(settings.gestureSensitivity)
         guard sensitivity > 0 else { return }
@@ -430,9 +481,12 @@ final class NotchViewModel: ObservableObject {
     }
 
     func openPreview(_ clip: Clip) {
-        previewedClipID = clip.id
-        selectedClipID = clip.id
-        transition(.openPreview)
+        withAuthorizedClips(ids: [clip.id], reason: "Reveal this hidden clipboard item") { model, clips in
+            guard let clip = clips.first else { return }
+            model.previewedClipID = clip.id
+            model.selectedClipID = clip.id
+            model.transition(.openPreview)
+        }
     }
 
     func closePreview() {
@@ -513,8 +567,10 @@ final class NotchViewModel: ObservableObject {
     }
 
     func copy(_ item: Clip) {
-        guard pasteboardService.copy(item.value) else { return }
-        showCopiedFeedback(for: item.id)
+        withAuthorizedClips(ids: [item.id], reason: "Copy this hidden clipboard item") { model, clips in
+            guard let clip = clips.first, model.pasteboardService.copy(clip.value) else { return }
+            model.showCopiedFeedback(for: clip.id)
+        }
     }
 
     func performPrimaryAction(_ item: Clip) {
@@ -530,61 +586,93 @@ final class NotchViewModel: ObservableObject {
 
     func paste(_ item: Clip, plainTextOnly: Bool = false) {
         guard !isPasteRunning else { return }
+        let target = targetProvider?.targetApplication()
+        withAuthorizedClips(ids: [item.id], reason: "Paste this hidden clipboard item") { model, clips in
+            guard let clip = clips.first else { return }
+            model.performPaste(clip, to: target, plainTextOnly: plainTextOnly)
+        }
+    }
+
+    private func performPaste(
+        _ item: Clip, to target: NSRunningApplication?, plainTextOnly: Bool,
+        sourceIDs: [Clip.ID]? = nil
+    ) {
+        guard !isPasteRunning else { return }
         guard let pasteCoordinator else {
-            copy(item)
+            guard pasteboardService.copy(item.value) else { return }
+            showCopiedFeedback(for: item.id)
             pasteOutcome = .copiedOnly
             return
         }
         isPasteRunning = true
-        let target = targetProvider?.targetApplication()
+        let version = clipVersions[item.id]
+        let sourceVersions = (sourceIDs ?? [item.id]).compactMap { id in clipVersions[id].map { (id, $0) } }
         pasteTask?.cancel()
         pasteTask = Task { @MainActor [weak self, pasteCoordinator, repository] in
+            guard !Task.isCancelled else { return }
+            guard self?.canUseSourceVersions(sourceVersions) == true else {
+                self?.isPasteRunning = false
+                return
+            }
             let outcome = await pasteCoordinator.paste(item, to: target, plainTextOnly: plainTextOnly)
             guard !Task.isCancelled, let self else { return }
             self.pasteOutcome = outcome
             self.isPasteRunning = false
-            if outcome == .pasted {
+            if outcome == .pasted, let version, self.clipVersions[item.id] == version {
                 var updated = item
                 updated.lastPastedAt = Date()
                 updated.pasteCount += 1
                 try? await repository.replace(updated)
-                self.acceptCapturedClip(updated)
+                if self.clipVersions[item.id] == version { self.acceptCapturedClip(updated) }
             }
         }
     }
 
     func copyUsingCoordinator(_ item: Clip, plainTextOnly: Bool = false) {
-        guard let pasteCoordinator else { copy(item); return }
-        pasteTask?.cancel()
-        pasteTask = Task { @MainActor [weak self, pasteCoordinator] in
-            let outcome = await pasteCoordinator.copy(item, plainTextOnly: plainTextOnly)
-            guard !Task.isCancelled else { return }
-            self?.pasteOutcome = outcome
-            if case .failed = outcome {
+        guard !isPasteRunning else { return }
+        withAuthorizedClips(ids: [item.id], reason: "Copy this hidden clipboard item") { model, clips in
+            guard let clip = clips.first else { return }
+            guard let pasteCoordinator = model.pasteCoordinator else {
+                guard model.pasteboardService.copy(clip.value) else { return }
+                model.showCopiedFeedback(for: clip.id)
                 return
             }
-            self?.showCopiedFeedback(for: item.id)
+            model.isPasteRunning = true
+            let version = model.clipVersions[clip.id]
+            model.pasteTask?.cancel()
+            model.pasteTask = Task { @MainActor [weak model, pasteCoordinator] in
+                guard !Task.isCancelled else { return }
+                guard let version, model?.canUseSourceVersions([(clip.id, version)]) == true else {
+                    model?.isPasteRunning = false
+                    return
+                }
+                let outcome = await pasteCoordinator.copy(clip, plainTextOnly: plainTextOnly)
+                guard !Task.isCancelled, let model else { return }
+                model.isPasteRunning = false
+                model.pasteOutcome = outcome
+                if case .failed = outcome { return }
+                model.showCopiedFeedback(for: clip.id)
+            }
         }
     }
 
     func pasteSelectedCombined() {
-        let value = MultiPasteComposer().combine(
-            clips: selectedClips,
-            separator: multiPasteSeparator,
-            outputFormat: multiPasteOutputFormat,
-            customSeparator: customSeparator
-        )
-        guard !value.isEmpty else { return }
-        let combined = Clip(
-            contentType: .clipGroup,
-            plainText: value,
-            searchableText: value,
-            byteSize: Int64(value.utf8.count),
-            contentHash: "combined:\(value.hashValue)",
-            isManuallySaved: false,
-            cardStyle: .dark
-        )
-        paste(combined, plainTextOnly: multiPasteOutputFormat != .preserveFormatting)
+        guard !isPasteRunning else { return }
+        let target = targetProvider?.targetApplication()
+        let separator = multiPasteSeparator
+        let format = multiPasteOutputFormat
+        let custom = customSeparator
+        withAuthorizedClips(ids: selectedClipIDs, reason: "Paste the selected hidden clipboard items") { model, clips in
+            let value = MultiPasteComposer().combine(
+                clips: clips, separator: separator, outputFormat: format, customSeparator: custom
+            )
+            guard !value.isEmpty else { return }
+            let combined = Clip(
+                contentType: .clipGroup, plainText: value, byteSize: Int64(value.utf8.count),
+                contentHash: "combined:\(value.hashValue)", isSensitive: clips.contains(where: \.isSensitive)
+            )
+            model.performPaste(combined, to: target, plainTextOnly: format != .preserveFormatting, sourceIDs: clips.map(\.id))
+        }
     }
 
     func startQueueMode() {
@@ -592,10 +680,13 @@ final class NotchViewModel: ObservableObject {
     }
 
     func pasteNextQueueItem() {
-        guard let id = queue.currentClipID,
-              let clip = items.first(where: { $0.id == id }) else { return }
-        paste(clip)
-        _ = queue.advance()
+        guard !isPasteRunning, let id = queue.currentClipID else { return }
+        let target = targetProvider?.targetApplication()
+        withAuthorizedClips(ids: [id], reason: "Paste this hidden clipboard item") { model, clips in
+            guard model.queue.currentClipID == id, let clip = clips.first else { return }
+            model.performPaste(clip, to: target, plainTextOnly: false)
+            _ = model.queue.advance()
+        }
     }
 
     func previousQueueItem() { queue.movePrevious() }
@@ -604,21 +695,25 @@ final class NotchViewModel: ObservableObject {
     func cancelQueue() { queue.cancel() }
 
     func toggleFavorite(_ item: Clip) {
-        var updated = item
+        guard var updated = storedItems.first(where: { $0.id == item.id }) else { return }
         updated.isFavorite.toggle()
         updated.updatedAt = Date()
         persistUpdatedClip(updated)
     }
 
     func togglePinned(_ item: Clip) {
-        var updated = item
+        guard var updated = storedItems.first(where: { $0.id == item.id }) else { return }
         updated.isPinned.toggle()
         updated.updatedAt = Date()
         persistUpdatedClip(updated)
     }
 
     func delete(_ item: Clip) {
-        items.removeAll { $0.id == item.id }
+        if pendingAuthorizationClipIDs.contains(item.id) { cancelClipboardAuthorization() }
+        storedItems.removeAll { $0.id == item.id }
+        clipVersions.removeValue(forKey: item.id)
+        revealGrants.removeValue(forKey: item.id)
+        if previewedClipID == item.id { closePreview() }
         selectedClipIDs.removeAll { $0 == item.id }
         Task { [repository] in try? await repository.delete(ids: [item.id]) }
     }
@@ -644,14 +739,179 @@ final class NotchViewModel: ObservableObject {
     }
 
     func clearHistoryPreservingProtected() {
-        items.removeAll { !($0.isFavorite || $0.isPinned || $0.isManuallySaved) }
-        selectedClipIDs.removeAll()
-        Task { [repository] in
-            try? await repository.clearHistory(preservingProtected: true)
+        authorizeOperation(reason: "Clear clipboard history", requiresEnrollment: false) { model in
+            let deletedIDs = Set(model.storedItems.filter { !($0.isFavorite || $0.isPinned || $0.isManuallySaved) }.map(\.id))
+            model.storedItems.removeAll { deletedIDs.contains($0.id) }
+            model.clipVersions = model.clipVersions.filter { !deletedIDs.contains($0.key) }
+            model.revealGrants = model.revealGrants.filter { !deletedIDs.contains($0.key) }
+            model.selectedClipIDs.removeAll()
+            model.queue.cancel()
+            if let id = model.previewedClipID, deletedIDs.contains(id) { model.closePreview() }
+            Task { [repository = model.repository] in
+                try? await repository.delete(ids: deletedIDs)
+            }
         }
     }
 
+    func isClipLocked(_ clip: Clip) -> Bool {
+        guard let current = storedItems.first(where: { $0.id == clip.id }) else { return clip.isSensitive }
+        return isStoredClipLocked(current)
+    }
+
+    private func isStoredClipLocked(_ current: Clip) -> Bool {
+        guard current.isSensitive else { return false }
+        guard let grant = revealGrants[current.id], grant.version == clipVersions[current.id] else { return true }
+        return accessClock() >= grant.expiresAt
+    }
+
+    func reveal(_ clip: Clip) {
+        withAuthorizedClips(ids: [clip.id], reason: "Reveal this hidden clipboard item") { _, _ in }
+    }
+
+    func canDrag(_ clip: Clip) -> Bool {
+        !isClipLocked(clip) && storedItems.first(where: { $0.id == clip.id })?.isDraggable == true
+    }
+
+    /// Recheck at drag creation, so an expired grant cannot export a previously rendered card.
+    func dragItemProvider(for clip: Clip) -> NSItemProvider {
+        guard canDrag(clip), let current = storedItems.first(where: { $0.id == clip.id }) else {
+            return NSItemProvider()
+        }
+        beginDragOut()
+        return current.dragItemProvider()
+    }
+
+    func lockSensitiveClips(cancelPending: Bool = true) {
+        if cancelPending { cancelClipboardAuthorization() }
+        revealExpiryTask?.cancel()
+        revealGrants.removeAll()
+        redactCapturePeekIfNeeded()
+    }
+
+    func cancelClipboardAuthorization() {
+        let wasPending = pendingAuthorizationID != nil
+        pendingAuthorizationID = nil
+        pendingAuthorizationClipIDs.removeAll()
+        isAuthorizingClipboard = false
+        if wasPending { faceAuthorizer?.cancelAuthorization() }
+    }
+
+    /// Timer delivery is only a redraw aid. All readers and exporters also check the clock.
+    func expireSensitiveReveals() {
+        let now = accessClock()
+        revealGrants = revealGrants.filter { $0.value.expiresAt > now && $0.value.version == clipVersions[$0.key] }
+        redactCapturePeekIfNeeded()
+        scheduleRevealExpiry()
+    }
+
+    private func presentationClip(_ clip: Clip) -> Clip {
+        guard isStoredClipLocked(clip) else { return clip }
+        return Clip(
+            id: clip.id, createdAt: clip.createdAt, updatedAt: clip.updatedAt,
+            lastCopiedAt: clip.lastCopiedAt, contentType: .generic,
+            plainText: "Hidden clipboard item", searchableText: "",
+            sourceApplicationName: "Face Check required", contentHash: "",
+            copyCount: 0, pasteCount: 0, isFavorite: clip.isFavorite, isPinned: clip.isPinned,
+            isSensitive: true, isManuallySaved: clip.isManuallySaved
+        )
+    }
+
+    private func withAuthorizedClips(
+        ids: [Clip.ID], reason: String,
+        operation: @escaping @MainActor (NotchViewModel, [Clip]) -> Void
+    ) {
+        guard !ids.isEmpty, !isAuthorizingClipboard else { return }
+        let clips = ids.compactMap { id in storedItems.first { $0.id == id } }
+        guard clips.count == ids.count else { return }
+        guard clips.contains(where: isStoredClipLocked) else {
+            operation(self, clips)
+            return
+        }
+        let versions = ids.compactMap { clipVersions[$0] }
+        guard versions.count == ids.count else { return }
+        authorizeOperation(reason: reason, requiresEnrollment: true, clipIDs: Set(ids)) { model in
+            guard zip(ids, versions).allSatisfy({ model.clipVersions[$0.0] == $0.1 }) else { return }
+            let current = ids.compactMap { id in model.storedItems.first { $0.id == id } }
+            guard current.count == ids.count else { return }
+            let expiry = model.accessClock() + model.revealDuration
+            for clip in current where clip.isSensitive {
+                guard let version = model.clipVersions[clip.id] else { continue }
+                model.revealGrants[clip.id] = RevealGrant(version: version, expiresAt: expiry)
+            }
+            model.scheduleRevealExpiry()
+            // A zero-duration grant is never permission to export.
+            guard !current.contains(where: model.isStoredClipLocked) else { return }
+            operation(model, current)
+        }
+    }
+
+    private func authorizeOperation(
+        reason: String, requiresEnrollment: Bool, clipIDs: Set<Clip.ID> = [],
+        operation: @escaping @MainActor (NotchViewModel) -> Void
+    ) {
+        guard !isAuthorizingClipboard, let faceAuthorizer else { return }
+        let id = UUID()
+        pendingAuthorizationID = id
+        pendingAuthorizationClipIDs = clipIDs
+        isAuthorizingClipboard = true
+        faceAuthorizer.authorize(reason: reason, requiresEnrollment: requiresEnrollment) { [weak self] allowed in
+            guard let self, self.pendingAuthorizationID == id else { return }
+            self.pendingAuthorizationID = nil
+            self.pendingAuthorizationClipIDs.removeAll()
+            self.isAuthorizingClipboard = false
+            guard allowed else { return }
+            operation(self)
+        }
+    }
+
+    private func canUseSourceVersions(_ versions: [(Clip.ID, UUID)]) -> Bool {
+        !versions.isEmpty && versions.allSatisfy { id, version in
+            guard clipVersions[id] == version, let clip = storedItems.first(where: { $0.id == id }) else { return false }
+            return !isStoredClipLocked(clip)
+        }
+    }
+
+    private func scheduleRevealExpiry() {
+        revealExpiryTask?.cancel()
+        guard let nextExpiry = revealGrants.values.map(\.expiresAt).min() else { return }
+        let delay = max(0.001, nextExpiry - accessClock())
+        revealExpiryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard !Task.isCancelled else { return }
+            self?.expireSensitiveReveals()
+        }
+    }
+
+    private func redactCapturePeekIfNeeded() {
+        guard let id = peekedClipID, let clip = storedItems.first(where: { $0.id == id }),
+              isClipLocked(clip), var peek = currentSneakPeek else { return }
+        peek.title = "Hidden clipboard item"
+        peek.systemImage = "lock.fill"
+        currentSneakPeek = peek
+    }
+
+    /// Give a closed activity the island without carrying an open tab's transient state.
+    func collapseForFaceCheck() {
+        cancelPendingTimers()
+        dragOutTask?.cancel()
+        holdReasons.removeAll()
+        gestureProgress = 0
+        isHovering = false
+        previewedClipID = nil
+        peekedClipID = nil
+        currentSneakPeek = nil
+        let next: NotchState = !settings.notchEnabled ? .disabled
+            : (fullscreenProvider?() == true ? .retractedForFullscreen : .idle)
+        stateMachine = NotchStateMachine(initialState: next)
+        state = next
+        onStateChange?(next)
+    }
+
     func escape() {
+        if pendingAuthorizationID == nil, activityCenter.activeActivity?.activityID == "faceCheck" {
+            faceAuthorizer?.cancelAuthorization()
+        }
+        cancelClipboardAuthorization()
         let previous = state
         transition(.escape)
         if previous == .previewing { previewedClipID = nil }
@@ -712,7 +972,8 @@ final class NotchViewModel: ObservableObject {
         let delay = settings.hoverDelayMilliseconds
         hoverTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(delay))
-            guard !Task.isCancelled, let self, self.pointerIsInside else { return }
+            guard !Task.isCancelled, let self, self.pointerIsInside,
+                  self.activityCenter.activeActivity?.suppressesAutomaticOpen != true else { return }
             self.selectLiveActivityTabIfNeeded()
             self.transition(.dwellElapsed)
         }
@@ -807,7 +1068,15 @@ final class NotchViewModel: ObservableObject {
     }
 
     private func matchesCategory(_ item: Clip, category: ClipboardCategory) -> Bool {
-        switch category {
+        if isStoredClipLocked(item) {
+            return switch category {
+            case .history, .all: true
+            case .favorites: item.isFavorite
+            case .pinned: item.isPinned
+            default: false
+            }
+        }
+        return switch category {
         case .history, .all: true
         case .favorites: item.isFavorite
         case .pinned: item.isPinned
@@ -824,6 +1093,7 @@ final class NotchViewModel: ObservableObject {
     private func matchesSearch(_ item: Clip) -> Bool {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else { return true }
+        guard !isStoredClipLocked(item) else { return false }
         let searchable = [
             item.title,
             item.searchableText,
