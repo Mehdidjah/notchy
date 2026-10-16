@@ -4,15 +4,27 @@ import Foundation
 import os
 import VideoToolbox
 
+protocol FaceCheckCameraCapturing: Sendable {
+    var session: AVCaptureSession { get }
+    var authorizationStatus: AVAuthorizationStatus { get }
+    func requestAuthorization() async -> Bool
+    func start(onFrame: @escaping FaceCheckCamera.FrameHandler, completion: @escaping @Sendable (Bool) -> Void)
+    func stop(completion: (@Sendable () -> Void)?)
+}
+
+extension FaceCheckCameraCapturing {
+    func stop() { stop(completion: nil) }
+}
+
 /// The camera for Face Check: one `AVCaptureSession` with a preview for the settings page and a
 /// frame tap for the analysis pipeline.
 ///
 /// Session work runs in order on one serial queue; frames arrive on another. A frame is handed
 /// on only while the pipeline is idle, so a slow frame is dropped rather than queued and the
 /// camera never builds a backlog. Nothing here touches the main thread.
-final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
+final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, FaceCheckCameraCapturing, @unchecked Sendable {
     /// Receives one frame at a time; the next frame is offered once it returns.
-    typealias FrameHandler = @Sendable (CGImage) async -> Void
+    typealias FrameHandler = @Sendable (CGImage, TimeInterval) async -> Void
 
     /// The session the preview layer draws from. Only reconfigured on `sessionQueue`.
     let session = AVCaptureSession()
@@ -30,6 +42,9 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     static func requestAccess() async -> Bool {
         await AVCaptureDevice.requestAccess(for: .video)
     }
+
+    var authorizationStatus: AVAuthorizationStatus { Self.authorization }
+    func requestAuthorization() async -> Bool { await Self.requestAccess() }
 
     /// Opens the front camera and starts delivering frames to `onFrame`. Reports whether the
     /// session is running.
@@ -72,6 +87,11 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
                 output.setSampleBufferDelegate(self, queue: frameQueue)
                 if session.canAddOutput(output) { session.addOutput(output) }
             }
+            // Vision uses the original camera coordinates. Only the preview is mirrored.
+            if let connection = output.connection(with: .video), connection.isVideoMirroringSupported {
+                connection.automaticallyAdjustsVideoMirroring = false
+                connection.isVideoMirrored = false
+            }
             session.commitConfiguration()
         }
         guard input != nil else { return false }
@@ -95,6 +115,9 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     // MARK: Frames
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        // Stamp delivery before conversion/model work. Analysis completion is not the time
+        // the eyelids or head moved, and must not define the challenge's temporal evidence.
+        let capturedAt = ProcessInfo.processInfo.systemUptime
         guard let onFrame = handler.withLock({ $0 }) else { return }
         let claimed = isBusy.withLock { busy -> Bool in
             if busy { return false }
@@ -114,7 +137,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         }
         let isBusy = isBusy
         Task.detached(priority: .userInitiated) {
-            await onFrame(image)
+            await onFrame(image, capturedAt)
             isBusy.withLock { $0 = false }
         }
     }

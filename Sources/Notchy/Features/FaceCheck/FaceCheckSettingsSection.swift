@@ -8,6 +8,7 @@ struct FaceCheckSettingsSection: View {
     @ObservedObject private var controller: FaceCheckController
     @State private var enrolName = "Me"
     @State private var confirmDeleteAll = false
+    @State private var previewID = UUID()
 
     init(controller: FaceCheckController = .shared) {
         _controller = ObservedObject(wrappedValue: controller)
@@ -54,7 +55,7 @@ struct FaceCheckSettingsSection: View {
                         Button("Enrol my face") { controller.startEnrolment(name: enrolName) }
                             .disabled(controller.activity != .watching)
                     }
-                    Text("Look at the camera, then slowly turn your head in a circle until the grid fills. You can finish early once the straight-on pose is captured.")
+                    Text("Blink and follow the head-turn prompt first. Then slowly turn your head until the grid fills. Finish now is available after the live check and a straight-on sample.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -72,7 +73,7 @@ struct FaceCheckSettingsSection: View {
                         Text("\(preset.title) (\(String(format: "%.2f", preset.maximumDistance)))").tag(preset)
                     }
                 }
-                Text("Lower distance means more alike. A test passes when your face is within the limit. Strict rejects look-alikes better but may need better light.")
+                Text("Every check needs a face match, a blink, and a requested head turn. Lower distance means a stricter match; it never turns off the live check. Camera checks cannot guarantee protection against every photo or replayed video.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -98,8 +99,11 @@ struct FaceCheckSettingsSection: View {
                     .disabled(controller.identities.isEmpty && controller.storeProblem == nil)
             }
         }
-        .onAppear { controller.loadIdentities() }
-        .onDisappear { controller.stopCamera() }
+        .onAppear {
+            controller.loadIdentities()
+            controller.retainPreview(previewID, start: false)
+        }
+        .onDisappear { controller.releasePreview(previewID) }
         .confirmationDialog("Delete all face data?", isPresented: $confirmDeleteAll) {
             Button("Delete", role: .destructive) { controller.deleteAllFaceData() }
         } message: {

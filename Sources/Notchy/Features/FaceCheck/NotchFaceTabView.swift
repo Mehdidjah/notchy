@@ -6,6 +6,7 @@ import SwiftUI
 struct NotchFaceTabView: View {
     let model: NotchViewModel
     @ObservedObject private var controller: FaceCheckController
+    @State private var previewID = UUID()
 
     init(model: NotchViewModel, controller: FaceCheckController = .shared) {
         self.model = model
@@ -31,9 +32,16 @@ struct NotchFaceTabView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             controller.loadIdentities()
-            controller.startCamera()
+            controller.retainPreview(previewID, start: true)
         }
-        .onDisappear { controller.stopCamera() }
+        .onDisappear {
+            controller.releasePreview(previewID)
+            model.releaseHold(reason: "faceEnrollment")
+        }
+        .onChange(of: controller.activity) { _, activity in
+            if activity == .enrolling || activity == .saving { model.holdOpen(reason: "faceEnrollment") }
+            else { model.releaseHold(reason: "faceEnrollment") }
+        }
     }
 
     // MARK: Parts
@@ -95,7 +103,9 @@ struct NotchFaceTabView: View {
                 IslandActionButton(title: "Cancel", systemImage: "xmark") { controller.cancelEnrolment() }
             }
         case .testing:
-            Text("Scanning…").font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
+            IslandActionButton(title: "Cancel check", systemImage: "xmark") { controller.cancelVerification() }
+        case .saving:
+            Text("Saving your face…").font(.system(size: 12)).foregroundStyle(.secondary)
         case .watching:
             HStack(spacing: 8) {
                 if controller.identities.isEmpty {
@@ -103,7 +113,7 @@ struct NotchFaceTabView: View {
                         controller.startEnrolment(name: "Me")
                     }
                 } else {
-                    IslandActionButton(title: "Test", systemImage: "faceid", prominent: true) { controller.startTest() }
+                    IslandActionButton(title: "Check now", systemImage: "faceid", prominent: true) { controller.startTest() }
                     IslandActionButton(title: "Scan again", systemImage: "arrow.clockwise") {
                         controller.startEnrolment(name: "Me")
                     }
@@ -133,7 +143,7 @@ struct NotchFaceTabView: View {
         case .denied: return "Notchy needs camera access."
         case .unavailable: return "No camera available."
         case .starting: return "Starting the camera…"
-        case .off: return "Camera off"
+        case .off: return controller.status.isEmpty ? "Camera off" : controller.status
         case .on:
             if controller.activity == .watching, controller.identities.isEmpty, controller.face != nil {
                 return "Ready to scan your face."
