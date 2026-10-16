@@ -152,6 +152,26 @@ struct SystemHUDTests {
     }
 
     @Test
+    func brightnessKeysAreReportedButNeverSwallowed() {
+        let up = SystemHUDMediaKey(data1: (2 << 16) | (0xA << 8))
+        #expect(up.isBrightnessKey && up.brightnessPress == .up)
+        let heldDown = SystemHUDMediaKey(data1: (3 << 16) | (0xA << 8) | 1)
+        #expect(heldDown.brightnessPress == .down, "a held key keeps stepping, so repeats count")
+        let release = SystemHUDMediaKey(data1: (2 << 16) | (0xB << 8))
+        #expect(release.brightnessPress == nil)
+        let volumeUp = SystemHUDMediaKey(keyCode: SystemHUDMediaKey.soundUp, isKeyDown: true, isRepeat: false)
+        #expect(volumeUp.brightnessPress == nil && !volumeUp.isBrightnessKey)
+
+        for key in [up, heldDown, release] {
+            #expect(!SystemHUDMediaKeyInterceptor.swallows(key, interceptingVolume: true))
+            #expect(!SystemHUDMediaKeyInterceptor.swallows(key, interceptingVolume: false))
+        }
+        #expect(SystemHUDMediaKeyInterceptor.swallows(volumeUp, interceptingVolume: true))
+        #expect(!SystemHUDMediaKeyInterceptor.swallows(volumeUp, interceptingVolume: false),
+                "a tap kept only for brightness keys passes volume keys on too")
+    }
+
+    @Test
     func tapRetryBacksOffAfterTheFirstMinute() {
         #expect(SystemHUDTapRetryPolicy.interval(afterAttempt: 0) == .seconds(2))
         #expect(SystemHUDTapRetryPolicy.interval(afterAttempt: 29) == .seconds(2))
@@ -274,6 +294,26 @@ struct SystemHUDTests {
         #expect(peeks[2].title == "Mic muted" && peeks[2].systemImage == "mic.slash.fill")
         #expect(peeks.allSatisfy { $0.duration == .milliseconds(1_500) })
         #expect(SystemHUDStandardRow.handles(peeks[0]) && SystemHUDStandardRow.handles(peeks[2]))
+    }
+
+    @Test
+    func standardStyleShowsBrightnessInTheLevelRow() {
+        let settings = SystemHUDSettings(defaults: makeDefaults())
+        settings.style = .standard
+        let center = IslandActivityCenter()
+        var peeks: [SneakPeek] = []
+        let subscription = center.sneakPeekRequests.sink { peeks.append($0) }
+        defer { subscription.cancel() }
+        let presenter = SystemHUDPresenter(settings: settings, activityCenter: center)
+
+        presenter.presentBrightness(level: 0.3)
+        presenter.presentBrightness(level: 0)
+        #expect(!presenter.isShowingInlineHUD)
+        #expect(peeks.count == 2)
+        #expect(peeks.allSatisfy { $0.kind == .brightness && $0.systemImage == "sun.max.fill" })
+        #expect(peeks.allSatisfy(SystemHUDStandardRow.handles), "drawn by the level row, like volume")
+        #expect(peeks[0].level == 0.3)
+        #expect(peeks[1].level == 0 && peeks[1].title == "Brightness", "zero is a level, not \"muted\"")
     }
 
     @Test

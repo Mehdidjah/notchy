@@ -17,6 +17,11 @@ final class SystemHUDManager {
     /// loginwindow, the same signal the lock-screen manager uses.
     static let screenLockedNotification = Notification.Name("com.apple.screenIsLocked")
     static let screenUnlockedNotification = Notification.Name("com.apple.screenIsUnlocked")
+    /// After a display wakes or the screen setup changes, macOS restores the backlight (and
+    /// the built-in panel may come and go, as with the lid). The brightness monitor waits
+    /// this long and starts over from a fresh baseline, so the restore is never mistaken
+    /// for a key press.
+    static let brightnessRestartDelay: Duration = .seconds(1)
 
     let settings: SystemHUDSettings
     let presenter: SystemHUDPresenter
@@ -29,6 +34,13 @@ final class SystemHUDManager {
     private(set) var isRunning = false
     private var cancellables: Set<AnyCancellable> = []
     private var lockObservers: [NSObjectProtocol] = []
+    private var displayObservers: [(center: NotificationCenter, token: NSObjectProtocol)] = []
+    /// Between `screensDidSleep` and `screensDidWake`: the backlight is off, nothing to watch.
+    private var isDisplayAsleep = false
+    private let screenTopology: @MainActor () -> ScreenTopology
+    /// The screen setup when the display observers were installed or last changed.
+    private var knownScreenTopology: ScreenTopology?
+    private var brightnessRestartTask: Task<Void, Never>?
     private var lastDrag: ContinuousClock.Instant?
     private var lastFeedback: ContinuousClock.Instant?
     private let clock = ContinuousClock()
@@ -53,7 +65,8 @@ final class SystemHUDManager {
         microphone: MicrophoneMuteMonitor = .shared,
         interceptor: SystemHUDMediaKeyInterceptor = .shared,
         capsLock: CapsLockMonitor = .shared,
-        brightness: BrightnessMonitor = .shared
+        brightness: BrightnessMonitor = .shared,
+        screenTopology: @escaping @MainActor () -> ScreenTopology = { ScreenTopology.current() }
     ) {
         self.settings = settings
         self.presenter = presenter
@@ -62,6 +75,7 @@ final class SystemHUDManager {
         self.interceptor = interceptor
         self.capsLock = capsLock
         self.brightness = brightness
+        self.screenTopology = screenTopology
     }
 
     func start() {
@@ -75,6 +89,9 @@ final class SystemHUDManager {
             .sink { [weak self] muted in self?.presenter.presentMicrophone(isMuted: muted) }
             .store(in: &cancellables)
         interceptor.onCommand = { [weak self] command, _ in self?.handle(command) }
+        interceptor.onBrightnessKey = { [weak self] direction in
+            self?.brightness.brightnessKeyPressed(direction)
+        }
         brightness.onUserChange = { [weak self] level in
             self?.presenter.presentBrightness(level: CGFloat(level))
         }
@@ -94,6 +111,7 @@ final class SystemHUDManager {
         .store(in: &cancellables)
 
         installLockObservers()
+        installDisplayObservers()
         // Accessibility is often granted from System Settings or another onboarding step
         // while the app runs; coming back to the app is a cheap moment to retry the tap.
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
@@ -111,12 +129,17 @@ final class SystemHUDManager {
         isRunning = false
         cancellables.removeAll()
         interceptor.onCommand = nil
-        interceptor.setEnabled(false)
+        interceptor.onBrightnessKey = nil
+        interceptor.configure(interceptVolumeKeys: false, observeBrightnessKeys: false)
         removeLockObservers()
+        removeDisplayObservers()
+        brightnessRestartTask?.cancel()
+        brightnessRestartTask = nil
         volume.stop()
         microphone.stop()
         capsLock.stop()
         brightness.stop()
+        brightness.brightnessKeyTapDidStop()
         brightness.onUserChange = nil
         presenter.hideInlineHUD()
     }
@@ -125,17 +148,34 @@ final class SystemHUDManager {
     func reconfigure() {
         guard isRunning else { return }
         let hudOn = settings.enableSystemHUD
-        interceptor.setEnabled(
-            hudOn && settings.enableVolumeHUD && settings.interceptMediaKeys && !presenter.isScreenLocked
+        let brightnessOn = hudOn && settings.enableBrightnessHUD && !presenter.isScreenLocked
+        // The tap also runs for the brightness HUD alone: it only reports brightness keys
+        // and passes them on, so it is useful even with volume interception off.
+        interceptor.configure(
+            interceptVolumeKeys: hudOn && settings.enableVolumeHUD && settings.interceptMediaKeys
+                && !presenter.isScreenLocked,
+            observeBrightnessKeys: brightnessOn
         )
+        brightnessKeyTapChanged(isObserving: interceptor.isObservingBrightnessKeys)
         if hudOn && settings.enableMicrophoneHUD { microphone.start() } else { microphone.stop() }
-        if hudOn && settings.enableBrightnessHUD && !presenter.isScreenLocked {
+        if brightnessOn && !isDisplayAsleep && brightnessRestartTask == nil {
             brightness.start()
         } else {
             brightness.stop()
         }
         if settings.enableCapsLockIndicator { capsLock.start() } else { capsLock.stop() }
         if !hudOn || !settings.usesInlineStyle { presenter.hideInlineHUD() }
+    }
+
+    /// Keeps the brightness monitor's record of whether the tap sees brightness keys in
+    /// step with the tap. Locking removes the tap only while the island is hidden, and
+    /// unlocking installs it again under the same Accessibility grant, so the record
+    /// stands; forgetting it would put the monitor back on the typing tier after every
+    /// unlock until the next brightness key. Losing Accessibility or turning the HUD off
+    /// (seen on unlock at the latest, which reconfigures) clears it.
+    func brightnessKeyTapChanged(isObserving: Bool) {
+        guard !isObserving, !presenter.isScreenLocked else { return }
+        brightness.brightnessKeyTapDidStop()
     }
 
     // MARK: Events
@@ -211,5 +251,72 @@ final class SystemHUDManager {
         guard presenter.isScreenLocked != locked else { return }
         presenter.isScreenLocked = locked
         reconfigure()
+    }
+
+    // MARK: Display sleep and screen changes
+
+    /// Display sleep turns the backlight off and wake turns it back on: both look like
+    /// brightness changes right after input. Opening the lid or changing the screen setup
+    /// can do the same. The brightness monitor sits these out and re-reads its baseline.
+    private func installDisplayObservers() {
+        knownScreenTopology = screenTopology()
+        let workspace = NSWorkspace.shared.notificationCenter
+        let sleep = workspace.addObserver(forName: NSWorkspace.screensDidSleepNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.displaysDidSleep() }
+        }
+        let wake = workspace.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.displaysDidWake() }
+        }
+        let screens = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.screenParametersDidChange() }
+        }
+        displayObservers = [(workspace, sleep), (workspace, wake), (.default, screens)]
+    }
+
+    private func removeDisplayObservers() {
+        displayObservers.forEach { $0.center.removeObserver($0.token) }
+        displayObservers.removeAll()
+        knownScreenTopology = nil
+    }
+
+    /// AppKit posts `didChangeScreenParameters` whenever the EDR headroom changes, which on
+    /// an XDR panel showing HDR content is every brightness step. Restarting then would
+    /// stop the monitor for a second at the very key presses it should show, so only a
+    /// change of the screens themselves restarts it; the monitor absorbs headroom changes
+    /// on its own. Before the observers are installed there is nothing to compare with.
+    func screenParametersDidChange() {
+        let topology = screenTopology()
+        defer { knownScreenTopology = topology }
+        guard let known = knownScreenTopology, known != topology else { return }
+        restartBrightnessSoon()
+    }
+
+    private func displaysDidSleep() {
+        isDisplayAsleep = true
+        brightnessRestartTask?.cancel()
+        brightnessRestartTask = nil
+        brightness.stop()
+    }
+
+    private func displaysDidWake() {
+        isDisplayAsleep = false
+        restartBrightnessSoon()
+    }
+
+    /// Stops the brightness monitor now and lets `reconfigure` start it again, from a fresh
+    /// baseline, once the backlight has settled.
+    private func restartBrightnessSoon() {
+        brightness.stop()
+        brightnessRestartTask?.cancel()
+        brightnessRestartTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.brightnessRestartDelay)
+            guard !Task.isCancelled, let self else { return }
+            self.brightnessRestartTask = nil
+            self.reconfigure()
+        }
     }
 }

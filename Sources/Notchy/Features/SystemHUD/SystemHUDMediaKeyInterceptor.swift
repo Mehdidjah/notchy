@@ -38,6 +38,27 @@ struct SystemHUDMediaKey: Equatable, Sendable {
     var isVolumeKey: Bool {
         keyCode == Self.soundUp || keyCode == Self.soundDown || keyCode == Self.mute
     }
+
+    var isBrightnessKey: Bool {
+        keyCode == Self.brightnessUp || keyCode == Self.brightnessDown
+    }
+
+    /// A brightness key going down, repeats included: holding the key keeps stepping the
+    /// level, and each step should keep the HUD up. Nil for releases and other keys.
+    var brightnessPress: BrightnessKeyDirection? {
+        guard isKeyDown else { return nil }
+        switch keyCode {
+        case Self.brightnessUp: return .up
+        case Self.brightnessDown: return .down
+        default: return nil
+        }
+    }
+}
+
+/// Which way a brightness key asks the level to go.
+enum BrightnessKeyDirection: Sendable, Equatable {
+    case up
+    case down
 }
 
 /// What a swallowed volume key asks for.
@@ -73,22 +94,34 @@ enum SystemHUDTapRetryPolicy {
 }
 
 /// Swallows the hardware volume keys with a public `CGEventTap` so the macOS bezel never
-/// appears, and hands them to `onCommand`. Brightness keys always pass through: there is no
-/// public API to set a built-in display's brightness.
+/// appears, and hands them to `onCommand`. Brightness keys always pass through unchanged
+/// (there is no public API to set a built-in display's brightness, so macOS must still act
+/// on them); their key-downs are reported to `onBrightnessKey` so the brightness HUD knows
+/// a key, not auto-brightness or idle dimming, moved the level, and can show the level when
+/// the key cannot move it (already at 0 % or 100 %).
 ///
 /// The tap needs Accessibility. Until it is granted the keys reach macOS untouched (the HUD
-/// still follows the level through CoreAudio) and the tap is retried on a schedule.
+/// still follows the level through CoreAudio and the backlight registry) and the tap is
+/// retried on a schedule.
 @MainActor
 final class SystemHUDMediaKeyInterceptor: ObservableObject {
     static let shared = SystemHUDMediaKeyInterceptor()
 
     /// True while the tap is installed and swallowing volume keys.
     @Published private(set) var isIntercepting = false
+    /// True while the tap is installed and reporting brightness keys.
+    @Published private(set) var isObservingBrightnessKeys = false
     @Published private(set) var isAccessibilityTrusted = AXIsProcessTrusted()
 
     var onCommand: ((SystemHUDMediaKeyCommand, NSEvent.ModifierFlags) -> Void)?
+    /// A brightness key went down (repeats included). The event itself is never altered.
+    var onBrightnessKey: ((BrightnessKeyDirection) -> Void)?
 
+    /// Swallow volume keys.
     private var wantsInterception = false
+    /// Report brightness keys.
+    private var wantsBrightnessKeys = false
+    private var wantsTap: Bool { wantsInterception || wantsBrightnessKeys }
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var retryTask: Task<Void, Never>?
@@ -96,16 +129,24 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
 
     init() {}
 
-    /// Turns interception on or off. Turning it on without Accessibility starts the retry poll.
+    /// Turns volume-key interception on or off, keeping brightness-key reporting as it is.
     func setEnabled(_ enabled: Bool) {
-        wantsInterception = enabled
-        if enabled {
+        configure(interceptVolumeKeys: enabled, observeBrightnessKeys: wantsBrightnessKeys)
+    }
+
+    /// Installs the tap while either job needs it and removes it otherwise. Wanting it
+    /// without Accessibility starts the retry poll.
+    func configure(interceptVolumeKeys: Bool, observeBrightnessKeys: Bool) {
+        wantsInterception = interceptVolumeKeys
+        wantsBrightnessKeys = observeBrightnessKeys
+        if wantsTap {
             refreshAccessibility()
             if !installTapIfPossible() { scheduleRetry() }
         } else {
             cancelRetry()
             removeTap()
         }
+        publishTapState()
     }
 
     /// Shows the system Accessibility prompt once per launch.
@@ -122,7 +163,7 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
         } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
-        if wantsInterception { scheduleRetry() }
+        if wantsTap { scheduleRetry() }
     }
 
     func refreshAccessibility() {
@@ -132,9 +173,14 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
 
     // MARK: Tap
 
+    /// Always an active (`.defaultTap`) tap, even when only brightness keys are wanted: a
+    /// listen-only tap on key events can fall under Input Monitoring, a separate permission
+    /// the app never asks for, while the active tap is covered by the Accessibility grant
+    /// volume interception already uses. Brightness and other non-volume events are always
+    /// returned unchanged.
     @discardableResult
     private func installTapIfPossible() -> Bool {
-        guard wantsInterception else { return false }
+        guard wantsTap else { return false }
         if tap != nil { return true }
         guard AXIsProcessTrusted() else { return false }
 
@@ -160,7 +206,7 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
         // The callback relies on running on the main run loop (see `MainActor.assumeIsolated`).
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: created, enable: true)
-        isIntercepting = true
+        publishTapState()
         cancelRetry()
         return true
     }
@@ -175,11 +221,18 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
         }
         tap = nil
         runLoopSource = nil
-        if isIntercepting { isIntercepting = false }
+        publishTapState()
+    }
+
+    private func publishTapState() {
+        let intercepting = tap != nil && wantsInterception
+        if isIntercepting != intercepting { isIntercepting = intercepting }
+        let observing = tap != nil && wantsBrightnessKeys
+        if isObservingBrightnessKeys != observing { isObservingBrightnessKeys = observing }
     }
 
     private func scheduleRetry() {
-        guard retryTask == nil, tap == nil, wantsInterception else { return }
+        guard retryTask == nil, tap == nil, wantsTap else { return }
         retryTask = Task { @MainActor [weak self] in
             let clock = ContinuousClock()
             let started = clock.now
@@ -189,7 +242,7 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
                 attempt += 1
                 guard !Task.isCancelled, let self else { return }
                 self.refreshAccessibility()
-                if self.installTapIfPossible() || !self.wantsInterception { break }
+                if self.installTapIfPossible() || !self.wantsTap { break }
                 if clock.now - started >= SystemHUDTapRetryPolicy.giveUpAfter { break }
             }
             self?.retryTask = nil
@@ -201,13 +254,24 @@ final class SystemHUDMediaKeyInterceptor: ObservableObject {
         retryTask = nil
     }
 
+    /// Only volume keys are ever swallowed, and only while interception is on. Brightness
+    /// keys must reach macOS, the only thing that can set a built-in display's brightness.
+    static func swallows(_ key: SystemHUDMediaKey, interceptingVolume: Bool) -> Bool {
+        interceptingVolume && key.isVolumeKey
+    }
+
     /// Returns true when the event should be swallowed. Runs on the main thread.
     fileprivate func handle(type: CGEventType, key: SystemHUDMediaKey?, modifiers: NSEvent.ModifierFlags) -> Bool {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if wantsInterception, let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            if wantsTap, let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return false
         }
-        guard wantsInterception, let key, key.isVolumeKey else { return false }
+        guard let key else { return false }
+        if let direction = key.brightnessPress, wantsBrightnessKeys {
+            // Keep the callback short: the registry read happens after it returns.
+            Task { @MainActor [weak self] in self?.onBrightnessKey?(direction) }
+        }
+        guard Self.swallows(key, interceptingVolume: wantsInterception) else { return false }
         if let command = SystemHUDMediaKeyCommand.make(for: key, modifiers: modifiers) {
             // Keep the callback short: CoreAudio work happens after it returns.
             Task { @MainActor [weak self] in self?.onCommand?(command, modifiers) }

@@ -1,7 +1,8 @@
 import Foundation
 
-/// Entry point for the system HUDs: volume and microphone HUDs (inline or standard style),
-/// the optional volume-key tap, and the Caps Lock indicator.
+/// Entry point for the system HUDs: volume, brightness and microphone HUDs (inline or
+/// standard style), the media-key tap (volume interception, brightness-key reporting), and
+/// the Caps Lock indicator.
 @MainActor
 enum SystemHUDFeature {
     static let inlineActivity = InlineHUDActivity(

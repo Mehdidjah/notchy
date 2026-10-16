@@ -129,10 +129,19 @@ private struct ClosedIslandContent: View {
         VStack(spacing: 0) {
             closedRow
             if let sneakPeek {
-                SneakPeekRow(peek: sneakPeek)
-                    .frame(height: NotchSilhouette.sneakPeekRowHeight - 10)
-                    .padding(.bottom, 10)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                Group {
+                    // Volume, brightness and microphone peeks use the HUD's own level row.
+                    if SystemHUDStandardRow.handles(sneakPeek) {
+                        SystemHUDStandardRow(peek: sneakPeek)
+                            .padding(.leading, 4)
+                            .padding(.trailing, 8)
+                    } else {
+                        SneakPeekRow(peek: sneakPeek)
+                    }
+                }
+                .frame(height: NotchSilhouette.sneakPeekRowHeight - 10)
+                .padding(.bottom, 10)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(.horizontal, NotchSilhouette.closedHorizontalPadding)

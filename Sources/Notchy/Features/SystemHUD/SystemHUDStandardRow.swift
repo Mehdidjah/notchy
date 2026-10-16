@@ -2,7 +2,9 @@ import SwiftUI
 
 /// Standard-style system-event row, for the sneak
 /// peeks this feature sends when the inline style is off: a large glyph 14 pt from a level
-/// bar and percentage, "muted" in grey at zero, or the microphone's state.
+/// bar and percentage, "muted" in grey at zero, or the microphone's state. Brightness draws
+/// like volume with the sun centred, a display-only bar (there is no public API to set a
+/// built-in display's brightness) and no muted state.
 ///
 /// The island draws sneak peeks itself; this view is offered for its sneak-peek row so the
 /// volume row matches this design (see the integration request). Place it with this padding:
@@ -15,7 +17,7 @@ struct SystemHUDStandardRow: View {
 
     /// Whether this row knows how to draw `peek`.
     static func handles(_ peek: SneakPeek) -> Bool {
-        peek.kind == .volume || isMicrophone(peek)
+        peek.kind == .volume || peek.kind == .brightness || isMicrophone(peek)
     }
 
     private static func isMicrophone(_ peek: SneakPeek) -> Bool {
@@ -40,7 +42,8 @@ struct SystemHUDStandardRow: View {
         .onChange(of: peek.id) { _, _ in draggedLevel = nil }
     }
 
-    /// Volume glyphs sit on the leading edge of their 20 x 15 box, the microphone is centred.
+    /// Volume glyphs sit on the leading edge of their 20 x 15 box; the sun and the
+    /// microphone are centred.
     private var glyph: some View {
         let symbol = peek.kind == .volume
             ? SystemHUDPresenter.speakerSymbolName(for: level)
@@ -57,7 +60,13 @@ struct SystemHUDStandardRow: View {
 
     @ViewBuilder
     private var section: some View {
-        if peek.kind == .volume {
+        if peek.kind == .brightness {
+            HStack(spacing: 8) {
+                SystemHUDProgressBar(value: level, isVolume: false, isInline: false)
+                SystemHUDPercentageLabel(value: level)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if peek.kind == .volume {
             let isMuted = level <= 0
             Group {
                 if isMuted {

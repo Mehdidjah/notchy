@@ -154,10 +154,13 @@ final class SystemHUDPresenter: ObservableObject {
         isBluetooth ? "headphones" : speakerSymbolName(for: level)
     }
 
-    /// Brightness glyph: the small sun up to 60 %, the large one above.
+    /// Inline brightness glyph: the small sun up to 60 %, the large one above.
     static func brightnessSymbolName(for level: CGFloat) -> String {
         level > 0.6 ? "sun.max.fill" : "sun.min.fill"
     }
+
+    /// The standard row draws the large sun at every level.
+    static let standardBrightnessSymbolName = "sun.max.fill"
 
     static func microphoneSymbolName(isMuted: Bool) -> String {
         isMuted ? "mic.slash.fill" : "mic.fill"
@@ -169,9 +172,10 @@ final class SystemHUDPresenter: ObservableObject {
         return String(format: "%3d", percent)
     }
 
-    /// The standard-style peek: a level row for volume (a "muted" line at zero), a text line
-    /// for the microphone. The standard row always draws the speaker for the level, even
-    /// on a Bluetooth route (only the inline HUD swaps in headphones).
+    /// The standard-style peek: a level row for volume (a "muted" line at zero) and for
+    /// brightness, a text line for the microphone. The standard row always draws the
+    /// speaker for the level, even on a Bluetooth route (only the inline HUD swaps in
+    /// headphones), and always the large sun for brightness.
     static func standardSneakPeek(kind: SystemHUDKind, level: CGFloat, isBluetooth: Bool) -> SneakPeek {
         switch kind {
         case .volume:
@@ -183,7 +187,7 @@ final class SystemHUDPresenter: ObservableObject {
             return SneakPeek(kind: .volume, systemImage: symbol, title: "Volume", level: Double(level),
                              tint: .white, duration: displayDuration)
         case .brightness:
-            return SneakPeek(kind: .brightness, systemImage: brightnessSymbolName(for: level), title: "Brightness",
+            return SneakPeek(kind: .brightness, systemImage: standardBrightnessSymbolName, title: "Brightness",
                              level: Double(level), tint: .white, duration: displayDuration)
         case .microphone:
             let muted = level <= 0
