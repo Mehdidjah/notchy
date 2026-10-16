@@ -6,6 +6,7 @@ struct NotchRootView: View {
     @ObservedObject private var activityCenter: IslandActivityCenter
     @ObservedObject private var homeLayout = HomeLayoutState.shared
     @State private var openSizeRevision = 0
+    @State private var lastActivityID: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(model: NotchViewModel) {
@@ -24,6 +25,9 @@ struct NotchRootView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Notchy")
         .onReceive(model.openSizeDidChange.receive(on: RunLoop.main)) { openSizeRevision &+= 1 }
+        .onChange(of: activityCenter.activeActivityID) { _, id in
+            if let id { lastActivityID = id }
+        }
     }
 
     private var island: some View {
@@ -41,11 +45,16 @@ struct NotchRootView: View {
             activity: activityLayout
         )
         let isVisible = model.state.isVisible
-        let shape = NotchShape(
-            topFlareRadius: isOpen ? NotchSilhouette.openTopFlare : NotchSilhouette.closedTopFlare,
-            bottomCornerRadius: isOpen ? NotchSilhouette.openBottomRadius : NotchSilhouette.closedBottomRadius
-        )
-        let showsShadow = settings.showShadow && (isOpen || model.isHovering || isPeeking)
+        let faceActivity = showsActivity ? activityCenter.activeActivity as? FaceCheckLiveActivity : nil
+        let faceExpanded = faceActivity.map { $0.phase != .preparing && $0.phase != .hidden } ?? false
+        let detachedFace = faceActivity != nil && !model.notchGeometry.isHardwareNotch
+        let shape = detachedFace
+            ? AnyShape(RoundedRectangle(cornerRadius: faceExpanded ? 48 : 12, style: .continuous))
+            : AnyShape(NotchShape(
+                topFlareRadius: faceExpanded ? 16 : (isOpen ? NotchSilhouette.openTopFlare : NotchSilhouette.closedTopFlare),
+                bottomCornerRadius: faceExpanded ? 60 : (isOpen ? NotchSilhouette.openBottomRadius : NotchSilhouette.closedBottomRadius)
+            ))
+        let showsShadow = settings.showShadow && (isOpen || model.isHovering || isPeeking || faceActivity != nil)
         let closeSwipe = max(0, -model.gestureProgress)
 
         return ZStack(alignment: .top) {
@@ -82,6 +91,7 @@ struct NotchRootView: View {
                     .shadow(color: .black.opacity(NotchSilhouette.shadowOpacity), radius: NotchSilhouette.shadowRadius)
             }
         }
+        .offset(y: detachedFace ? 3 : 0)
         .opacity(isVisible || model.state.isCollapsed ? 1 : 0.001)
         .animation(hoverAnimation, value: model.isHovering)
         .animation(isOpen ? openAnimation : closeAnimation, value: model.state)
@@ -91,11 +101,14 @@ struct NotchRootView: View {
         .animation(reduceMotion ? .easeInOut(duration: 0.12) : .smooth, value: homeLayout.extraHeight)
         .animation(reduceMotion ? .easeInOut(duration: 0.12) : .easeInOut(duration: 0.3), value: openSizeRevision)
         .animation(liveActivityAnimation, value: activityCenter.activeActivityID)
+        .animation(liveActivityAnimation, value: activityLayout)
     }
 
     /// Hover swells the wings with a quick bounce.
     private var hoverAnimation: Animation {
-        reduceMotion ? .easeInOut(duration: 0.12) : .bouncy.speed(1.2)
+        if reduceMotion { return .easeInOut(duration: 0.12) }
+        if activityCenter.activeActivityID == "faceCheck" { return .easeInOut(duration: 0.18) }
+        return .bouncy.speed(1.2)
     }
 
     /// Opening settles with a critically damped spring; closing uses a slightly longer one.
@@ -113,7 +126,14 @@ struct NotchRootView: View {
 
     /// Activities swap in with a spring (response 0.34, damping 0.88).
     private var liveActivityAnimation: Animation {
-        reduceMotion ? .easeInOut(duration: 0.12) : .spring(response: 0.34, dampingFraction: 0.88)
+        if reduceMotion { return .easeInOut(duration: 0.12) }
+        if activityCenter.activeActivityID == "faceCheck" {
+            return .spring(response: 0.45, dampingFraction: 0.7)
+        }
+        if activityCenter.activeActivityID == nil, lastActivityID == "faceCheck" {
+            return .spring(response: 0.45, dampingFraction: 1)
+        }
+        return .spring(response: 0.34, dampingFraction: 0.88)
     }
 }
 
@@ -162,6 +182,11 @@ private struct ClosedIslandContent: View {
     private var closedRow: some View {
         if let layout, let activity = activityCenter.activeActivity {
             let context = model.closedActivityContext()
+            if let expandedContent = activity.expandedContent(in: context) {
+                expandedContent
+                    .frame(width: layout.contentWidth, height: layout.outerHeight, alignment: .top)
+                    .transition(.opacity)
+            } else {
             HStack(spacing: 0) {
                 activity.leftWing(in: context)
                     .frame(width: layout.leftWidth, height: layout.contentHeight)
@@ -182,6 +207,7 @@ private struct ClosedIslandContent: View {
                         .animation(.smooth(duration: 0.22))
                 )
             )
+            }
         } else {
             Color.clear
                 .frame(

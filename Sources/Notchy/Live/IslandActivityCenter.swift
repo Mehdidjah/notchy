@@ -44,6 +44,7 @@ enum ClosedActivityPriority {
     static let batteryHUD = 10
     static let inlineHUD = 20
     static let capsLock = 30
+    static let faceCheck = 35
     static let music = 40
     static let timer = 50
     static let reminder = 60
@@ -74,12 +75,29 @@ protocol ClosedLiveActivity: AnyObject {
     /// Optional content drawn over the black centre, for example song text on displays
     /// without a camera housing.
     func centerOverlay(in context: ClosedActivityContext) -> AnyView?
+    /// An activity may unfold without opening a tab. Its content reserves the camera housing.
+    func expandedContent(in context: ClosedActivityContext) -> AnyView?
+    func layout(in context: ClosedActivityContext) -> ClosedActivityLayout
+    var suppressesAutomaticOpen: Bool { get }
+    @discardableResult func handleHover(_ hovering: Bool) -> Bool
+    @discardableResult func handleTap() -> Bool
 }
 
 extension ClosedLiveActivity {
     func leftWingWidth(in context: ClosedActivityContext) -> CGFloat { context.wingBaseWidth }
     func rightWingWidth(in context: ClosedActivityContext) -> CGFloat { context.wingBaseWidth }
     func centerOverlay(in context: ClosedActivityContext) -> AnyView? { nil }
+    func expandedContent(in context: ClosedActivityContext) -> AnyView? { nil }
+    var suppressesAutomaticOpen: Bool { false }
+    func handleHover(_ hovering: Bool) -> Bool { false }
+    func handleTap() -> Bool { false }
+    func layout(in context: ClosedActivityContext) -> ClosedActivityLayout {
+        ClosedActivityLayout(
+            leftWidth: max(0, leftWingWidth(in: context)), centerWidth: context.centerWidth,
+            rightWidth: max(0, rightWingWidth(in: context)),
+            contentHeight: context.contentHeight, outerHeight: context.outerHeight
+        )
+    }
 }
 
 /// A short message that drops under the closed notch and folds away by itself
@@ -158,12 +176,6 @@ final class IslandActivityCenter: ObservableObject {
     /// Column sizes for the winning activity in `context`, or nil when none is visible.
     func layout(in context: ClosedActivityContext) -> ClosedActivityLayout? {
         guard let activity = activeActivity else { return nil }
-        return ClosedActivityLayout(
-            leftWidth: max(0, activity.leftWingWidth(in: context)),
-            centerWidth: context.centerWidth,
-            rightWidth: max(0, activity.rightWingWidth(in: context)),
-            contentHeight: context.contentHeight,
-            outerHeight: context.outerHeight
-        )
+        return activity.layout(in: context)
     }
 }
