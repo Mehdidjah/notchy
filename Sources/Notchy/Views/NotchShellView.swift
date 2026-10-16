@@ -35,6 +35,8 @@ struct NotchShellView: View {
             NotchHomeTabView(model: model)
         case .notes:
             NotchNotesTabView(model: model)
+        case .face:
+            NotchFaceTabView(model: model)
         case .clipboard:
             NotchClipboardTabView(model: model)
         case .shelf:

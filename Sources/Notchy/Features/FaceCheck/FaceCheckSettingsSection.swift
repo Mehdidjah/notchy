@@ -189,21 +189,8 @@ struct FaceCheckSettingsSection: View {
 
     private var capturedTotal: Int { controller.poseCounts.values.reduce(0, +) }
 
-    /// Nine cells in the order the head moves in the mirrored preview.
     private var poseGrid: some View {
-        let rows: [[FaceEnrollmentPose]] = [[.upRight, .up, .upLeft], [.right, .centre, .left], [.downRight, .down, .downLeft]]
-        return VStack(spacing: 4) {
-            ForEach(0..<3, id: \.self) { row in
-                HStack(spacing: 4) {
-                    ForEach(rows[row], id: \.self) { pose in
-                        let count = controller.poseCounts[pose] ?? 0
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(count >= controller.samplesPerPose ? Color.green : (count > 0 ? Color.green.opacity(0.45) : Color.secondary.opacity(0.2)))
-                            .frame(width: 22, height: 22)
-                    }
-                }
-            }
-        }
+        FaceEnrollmentGrid(counts: controller.poseCounts, samplesPerPose: controller.samplesPerPose, cell: 22)
     }
 
     // MARK: Test

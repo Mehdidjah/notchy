@@ -8,6 +8,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
     case timer
     case stats
     case notes
+    case face
     case clipboard
 
     var id: Self { self }
@@ -19,6 +20,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .timer: "Timer"
         case .stats: "Stats"
         case .notes: "Notes"
+        case .face: "Face Check"
         case .clipboard: "Clipboard"
         }
     }
@@ -30,6 +32,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .timer: "timer"
         case .stats: "chart.xyaxis.line"
         case .notes: "note.text"
+        case .face: "faceid"
         case .clipboard: "doc.on.clipboard"
         }
     }
@@ -43,6 +46,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     /// The open island widens as more tabs are shown so the icon row never crowds the notch.
     static func minimumOpenWidth(forTabCount count: Int) -> CGFloat {
+        if count >= 7 { return 850 }
         if count >= 6 { return 770 }
         if count >= 5 { return 690 }
         return 640

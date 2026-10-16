@@ -96,9 +96,10 @@ final class AppEnvironment {
             settings.$showShelfTab.map { _ in () }.eraseToAnyPublisher(),
             settings.$showTimerTab.map { _ in () }.eraseToAnyPublisher(),
             settings.$showStatsTab.map { _ in () }.eraseToAnyPublisher(),
-            settings.$showNotesTab.map { _ in () }.eraseToAnyPublisher()
+            settings.$showNotesTab.map { _ in () }.eraseToAnyPublisher(),
+            settings.$showFaceTab.map { _ in () }.eraseToAnyPublisher()
         )
-        .dropFirst(5)
+        .dropFirst(6)
         .receive(on: RunLoop.main)
         .sink { [weak model] in model?.normalizeSelectedTab() }
         .store(in: &cancellables)

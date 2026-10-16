@@ -278,6 +278,7 @@ struct SettingsView: View {
                 Toggle("Timer", isOn: $settings.showTimerTab)
                 Toggle("Stats", isOn: $settings.showStatsTab)
                 Toggle("Notes", isOn: $settings.showNotesTab)
+                Toggle("Face Check", isOn: $settings.showFaceTab)
                 LabeledContent("Clipboard", value: "Always shown")
             }
         }
