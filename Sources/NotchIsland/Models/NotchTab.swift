@@ -34,18 +34,12 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    /// Height of the open island's content box for this tab (header included), before the
-    /// 12-pt bottom inset. Atoll: 200 by default, Timer 250, Notes and Clipboard 240.
-    var openHeight: CGFloat {
-        switch self {
-        case .home: 200
-        case .shelf: 200
-        case .timer: 250
-        case .stats: 200
-        case .notes: 240
-        case .clipboard: 240
-        }
-    }
+    /// Height of the open island's content box (header included), before the 12-pt bottom
+    /// inset. Every tab keeps Home's height so switching tabs never resizes the island; only
+    /// Stats grows, and only for its extra rows of graphs.
+    var openHeight: CGFloat { Self.standardOpenHeight }
+
+    static let standardOpenHeight: CGFloat = 200
 
     /// The open island widens as more tabs are shown so the icon row never crowds the notch.
     static func minimumOpenWidth(forTabCount count: Int) -> CGFloat {
