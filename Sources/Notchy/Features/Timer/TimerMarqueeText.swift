@@ -1,12 +1,15 @@
 import AppKit
+import CoreText
 import SwiftUI
 
 /// Measures text with the same AppKit fonts the views draw with, so widths can be known
 /// before layout (the closed-notch wings are sized from them).
 enum TimerTextMeasurer {
+    /// Measured with Core Text on a line of its own: `NSAttributedString.size()` goes through
+    /// AppKit's shared typesetter, which is not safe to use from two threads at once.
     static func width(of text: String, font: NSFont) -> CGFloat {
-        let measured = NSAttributedString(string: text, attributes: [.font: font]).size().width
-        return ceil(measured)
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
+        return ceil(CTLineGetTypographicBounds(line, nil, nil, nil))
     }
 
     static func systemFont(size: CGFloat, weight: NSFont.Weight) -> NSFont {
