@@ -153,6 +153,9 @@ final class AppEnvironment {
 
         // Volume, brightness and microphone HUDs on the closed notch, and Caps Lock.
         SystemHUDFeature.start()
+
+        // Face Check: the settings page only. The camera and the face model load when it is used.
+        SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection() }
     }
 
     private func stopFeatures() {

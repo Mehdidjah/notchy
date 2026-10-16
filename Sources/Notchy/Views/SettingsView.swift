@@ -6,7 +6,7 @@ import SwiftUI
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general, appearance
     case media, liveActivities, devices
-    case controls, battery
+    case controls, battery, faceCheck
     case timer, calendar, notes
     case clipboard, colorPicker, shelf, downloads, shortcuts
     case stats
@@ -23,6 +23,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .devices: "Devices"
         case .controls: "Controls"
         case .battery: "Battery"
+        case .faceCheck: "Face Check"
         case .timer: "Timer"
         case .calendar: "Calendar"
         case .notes: "Notes"
@@ -46,6 +47,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .devices: "headphones"
         case .controls: "dial.medium.fill"
         case .battery: "battery.100.bolt"
+        case .faceCheck: "faceid"
         case .timer: "timer"
         case .calendar: "calendar"
         case .notes: "note.text"
@@ -69,6 +71,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .devices: Color(red: 0.10, green: 0.11, blue: 0.12)
         case .controls: .indigo
         case .battery: Color(red: 0.202, green: 0.783, blue: 0.348)
+        case .faceCheck: .teal
         case .timer: .red
         case .calendar: .cyan
         case .notes: Color(red: 0.979, green: 0.716, blue: 0.153)
@@ -95,6 +98,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .devices: "bluetooth airpods headphones"
         case .controls: "volume brightness hud osd media keys"
         case .battery: "charging low full power"
+        case .faceCheck: "face camera recognition enrol enroll unlock privacy"
         case .clipboard: "history capture retention sensitive paste"
         case .shortcuts: "keyboard hotkey"
         case .stats: "cpu memory gpu network disk"
@@ -107,7 +111,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general, .appearance: nil
         case .media, .liveActivities, .devices: "Media & Display"
-        case .controls, .battery: "System"
+        case .controls, .battery, .faceCheck: "System"
         case .timer, .calendar, .notes: "Productivity"
         case .clipboard, .colorPicker, .shelf, .downloads, .shortcuts: "Utilities"
         case .stats: "Developer"
