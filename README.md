@@ -1,12 +1,19 @@
 # NotchIsland
 
-A macOS SwiftUI app foundation for turning the MacBook notch into a dynamic,
-interactive status surface.
+A macOS menu-bar app that turns the MacBook notch into a Dynamic Island. The
+island opens into a tabbed panel: Clipboard history today, with Shelf, Timer and
+Stats tabs landing feature by feature. The interaction model (hover swell,
+dwell-to-open, click, two-finger swipe, springs, radii, fullscreen retraction)
+reproduces the behaviour of the open-source app Atoll as original code; see
+[docs/atoll-behaviour-evidence.md](docs/atoll-behaviour-evidence.md) for the
+evidence ledger and [docs/atoll-specs/](docs/atoll-specs/) for the per-subsystem
+specs the replication follows.
 
 ## Requirements
 
-- macOS 14 or newer
-- Xcode 16 or newer with Command Line Tools
+- macOS 14 or newer (a MacBook with a notch for the fused look; other displays
+  get a 150-pt island at menu-bar height)
+- Xcode 16 or newer with Command Line Tools, Swift 6.2 toolchain
 
 ## Build and run
 
@@ -17,11 +24,49 @@ interactive status surface.
 Optional modes:
 
 ```sh
-./script/build_and_run.sh --verify
-./script/build_and_run.sh --debug
-./script/build_and_run.sh --logs
-./script/build_and_run.sh --telemetry
+./script/build_and_run.sh --verify     # build, launch, confirm the process is running
+./script/build_and_run.sh --debug      # run under lldb
+./script/build_and_run.sh --logs       # launch and stream the process log
+./script/build_and_run.sh --telemetry  # launch and stream the com.local.NotchIsland subsystem
+./script/build_and_run.sh --preview    # launch pinned open with sample clips
+swift test                             # unit tests
 ```
 
 The script builds the Swift package, stages `dist/NotchIsland.app`, stops any
-previous instance, and launches the new build.
+previous instance, and launches the new build. The bundle is unsigned, so the
+Accessibility grant used for pasting may need to be renewed after rebuilding.
+
+## What it does
+
+- **Island.** A fixed transparent strip at the top of the notch display hosts a
+  black island drawn by SwiftUI. Clicks outside the island pass through to the
+  app underneath and the island never activates itself. Hover swells the closed
+  notch with a haptic tap and opens it after 0.3 s; a click opens it at once; a
+  two-finger swipe down opens and a swipe up closes; the shelf folds away 0.1 s
+  after the pointer leaves. It stays on all Spaces and over fullscreen apps, and
+  can retract while a fullscreen app is active or hide from screen recordings.
+- **Clipboard tab.** Everything copied in any app is captured locally into a
+  SwiftData store with payloads on disk, classified (text, link, code, colour,
+  image, file, …), checked for secrets, and shown as a card grid. Tap to paste
+  into the app you came from (Accessibility permission) or copy, hover to delete,
+  drag a card straight into another app. A newly captured clip peeks under the
+  notch for 1.5 s.
+- **Other tabs.** Shelf (file drop tray with Quick Look and AirDrop), Timer and
+  Stats follow the Atoll specs and appear as they land. Each can be hidden in
+  Settings.
+- **Windows.** Quick Paste panel, a full Clipboard Library window with grid,
+  list and board views, and a Settings window (General, Capture, Notch, History,
+  Privacy, Permissions).
+
+## Layout
+
+- `Sources/NotchIsland/App` entry point and app delegate
+- `Sources/NotchIsland/Models` value types, state machine, settings, tabs
+- `Sources/NotchIsland/Services` clipboard monitor, normaliser, repository,
+  paste coordinator, fullscreen detector, haptics
+- `Sources/NotchIsland/Stores` the island view model
+- `Sources/NotchIsland/Support` panel controller, geometry, composition root,
+  window controllers, menu bar
+- `Sources/NotchIsland/Views` island shell, tabs, library, quick paste, settings
+- `Sources/NotchIsland/Features/<Feature>` self-contained feature tabs
+- `Tests/NotchIslandTests` Swift Testing suite

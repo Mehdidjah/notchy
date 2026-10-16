@@ -1,5 +1,11 @@
 # NotchIsland Collapsed Notch — Design QA
 
+> **Superseded on 2026-10-15.** The collapsed geometry below (183-pt frame, 5-pt flares,
+> 9-pt corners, near-black then pure black) was replaced by the Atoll-parity silhouette:
+> hardware gap + 4 pt, 6-pt top flares, 14-pt bottom corners, +8 pt hover swell, and a
+> 150-pt island at menu-bar height on displays without a notch. The measurements and the
+> "passed" verdict describe the earlier build only. See `docs/atoll-behaviour-evidence.md`.
+
 ## Comparison target
 
 - Source visual truth: `/Users/a/Desktop/Screenshot 2026-08-03 at 13.34.43.png`
