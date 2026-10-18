@@ -7,6 +7,7 @@ enum HomeCardKind: String, CaseIterable, Sendable {
     case lyrics
     case apps
     case calendar
+    case weather
     case mirror
 }
 
@@ -17,8 +18,8 @@ struct HomeCardSlot: Equatable, Sendable {
 }
 
 /// Lays the Home tab out as one row of cards as tall as the row, 8 pt apart. Fixed cards keep
-/// their width; the player and the lyrics stretch between a minimum and a maximum. When even
-/// the minimum widths overflow, cards are left out in `dropOrder`.
+/// their width; the player, the lyrics and the weather stretch between a minimum and a
+/// maximum. When even the minimum widths overflow, cards are left out in `dropOrder`.
 enum HomeCardLayout {
     static let spacing: CGFloat = 8
     static let cornerRadius: CGFloat = 18
@@ -38,8 +39,9 @@ enum HomeCardLayout {
         case .timer, .calendar: .fixed((height * 0.88).rounded())
         case .mirror: .fixed(height.rounded())
         case .apps: .fixed(HomeAppGridMetrics.width(forHeight: height))
-        case .media: WidthRange(minimum: height * 1.5, ideal: height * 1.85, maximum: height * 2.6)
+        case .media: WidthRange(minimum: height * 1.45, ideal: height * 1.85, maximum: height * 2.6)
         case .lyrics: WidthRange(minimum: height * 1.1, ideal: height * 1.5, maximum: height * 2.4)
+        case .weather: WidthRange(minimum: height * 1.15, ideal: height * 1.9, maximum: height * 2.6)
         }
     }
 
@@ -47,14 +49,14 @@ enum HomeCardLayout {
     /// timer outlasts the other extras; an idle one goes first.
     static func dropOrder(timerRunning: Bool) -> [HomeCardKind] {
         timerRunning
-            ? [.apps, .lyrics, .mirror, .timer, .calendar, .media]
-            : [.apps, .timer, .lyrics, .mirror, .calendar, .media]
+            ? [.apps, .lyrics, .weather, .mirror, .timer, .calendar, .media]
+            : [.apps, .timer, .lyrics, .weather, .mirror, .calendar, .media]
     }
 
     /// Stretchable cards, in the order they give up width to a crowded row.
-    static let shrinkOrder: [HomeCardKind] = [.lyrics, .media]
+    static let shrinkOrder: [HomeCardKind] = [.lyrics, .weather, .media]
     /// Stretchable cards, in the order they take up spare width.
-    static let growOrder: [HomeCardKind] = [.media, .lyrics]
+    static let growOrder: [HomeCardKind] = [.media, .weather, .lyrics]
 
     /// `preferredWidths` caps a stretchable card at the width the user chose, within its range.
     static func plan(
@@ -157,6 +159,27 @@ struct HomeCard<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(HomeCardBackground())
             .clipShape(RoundedRectangle(cornerRadius: HomeCardLayout.cornerRadius, style: .continuous))
+    }
+}
+
+/// A small text button on a faint capsule, for a card's one action.
+struct HomeCapsuleButton: View {
+    let title: String
+    var isDisabled = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(HomeCardPalette.primaryText)
+                .lineLimit(1)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.white.opacity(0.14)))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
     }
 }
 

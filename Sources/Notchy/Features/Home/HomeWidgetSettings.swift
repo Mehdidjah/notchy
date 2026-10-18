@@ -34,6 +34,7 @@ final class HomeWidgetSettings: ObservableObject {
     private enum Key {
         static let timerCard = "home.timerCard"
         static let showsApps = "home.showsApps"
+        static let showsWeather = "home.showsWeather"
     }
 
     @Published var timerCard: TimerCard {
@@ -42,6 +43,9 @@ final class HomeWidgetSettings: ObservableObject {
     @Published var showsApps: Bool {
         didSet { defaults.set(showsApps, forKey: Key.showsApps) }
     }
+    @Published var showsWeather: Bool {
+        didSet { defaults.set(showsWeather, forKey: Key.showsWeather) }
+    }
 
     private let defaults: UserDefaults
 
@@ -49,6 +53,7 @@ final class HomeWidgetSettings: ObservableObject {
         self.defaults = defaults
         timerCard = defaults.string(forKey: Key.timerCard).flatMap(TimerCard.init(rawValue:)) ?? .always
         showsApps = defaults.object(forKey: Key.showsApps) as? Bool ?? true
+        showsWeather = defaults.object(forKey: Key.showsWeather) as? Bool ?? true
     }
 }
 
@@ -56,10 +61,12 @@ final class HomeWidgetSettings: ObservableObject {
 struct HomeSettingsSection: View {
     @ObservedObject var widgets: HomeWidgetSettings
     @ObservedObject var apps: HomeAppShortcutsStore
+    let weather: WeatherSettings
 
-    init(widgets: HomeWidgetSettings = .shared, apps: HomeAppShortcutsStore = .shared) {
+    init(widgets: HomeWidgetSettings = .shared, apps: HomeAppShortcutsStore = .shared, weather: WeatherSettings = .shared) {
         self.widgets = widgets
         self.apps = apps
+        self.weather = weather
     }
 
     var body: some View {
@@ -70,13 +77,19 @@ struct HomeSettingsSection: View {
                 }
             }
             Toggle("App shortcuts", isOn: $widgets.showsApps)
-            Text("The player, calendar and camera mirror follow their own settings. When the island is too narrow for every card, the app shortcuts are left out first.")
+            Toggle("Weather", isOn: $widgets.showsWeather)
+            Text("The player, calendar and camera mirror follow their own settings. When the island is too narrow for every card, the app shortcuts are left out first, then an idle timer.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         if widgets.showsApps {
             Section("App shortcuts") {
                 HomeAppShortcutsSettingsRows(store: apps)
+            }
+        }
+        if widgets.showsWeather {
+            Section("Weather") {
+                WeatherSettingsRows(settings: weather)
             }
         }
     }

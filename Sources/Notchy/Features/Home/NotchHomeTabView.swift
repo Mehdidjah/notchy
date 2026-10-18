@@ -50,6 +50,7 @@ struct NotchHomeTabView: View {
         if layout.showsMirror { kinds.insert(.mirror) }
         if widgets.timerCard.isShown(timerActive: timerActive) { kinds.insert(.timer) }
         if widgets.showsApps { kinds.insert(.apps) }
+        if widgets.showsWeather { kinds.insert(.weather) }
         return kinds
     }
 
@@ -66,6 +67,8 @@ struct NotchHomeTabView: View {
             HomeAppsGrid(height: height)
         case .calendar:
             HomeCalendarCard(model: model)
+        case .weather:
+            HomeWeatherCard(model: model)
         case .mirror:
             HomeMirrorSlot(model: model)
         }

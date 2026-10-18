@@ -234,7 +234,7 @@ private struct MediaCardControls: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
                 button(for: slot)
             }

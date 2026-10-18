@@ -7,7 +7,8 @@ import Testing
 /// with `NOTCHY_HOME_SNAPSHOTS` set to an output folder.
 @MainActor
 struct HomeSnapshotTests {
-    private static let islandWidth: CGFloat = 850
+    /// The seven-tab minimum content width plus the 12-pt open insets.
+    private static let islandWidth: CGFloat = 850 + 24
     private static let headerHeight: CGFloat = 32
     /// The shell's content insets (14 + 12 pt a side) and the Home tab's 8-pt padding.
     private static let rowWidth = islandWidth - 52 - 16
@@ -48,6 +49,11 @@ struct HomeSnapshotTests {
         let apps = HomeAppShortcutsStore(defaults: defaults)
         apps.pin(["Calculator", "Calendar", "Notes", "Maps", "Photos", "Preview"]
             .map { URL(fileURLWithPath: "/System/Applications/\($0).app") })
+        let weatherSettings = WeatherSettings(defaults: defaults, locale: Locale(identifier: "en_GB"))
+        let report = WeatherReport(temperature: 26.8, apparentTemperature: 28.1, code: 2, isDay: false, place: "Lisbon",
+                                   query: weatherSettings.query, fetchedAt: Date())
+        defaults.set(try JSONEncoder().encode(report), forKey: "weather.lastReport")
+        let weather = WeatherStore(settings: weatherSettings, locator: SnapshotLocator(), defaults: defaults)
 
         let slots = HomeCardLayout.plan(Set(HomeCardKind.allCases).subtracting([.lyrics, .mirror]),
                                         width: Self.rowWidth, height: Self.rowHeight, timerRunning: true)
@@ -59,6 +65,7 @@ struct HomeSnapshotTests {
                     case .media: MediaCardView(manager: music, settings: mediaSettings, showsInlineLyrics: false)
                     case .apps: HomeAppsGrid(height: Self.rowHeight, store: apps)
                     case .calendar: HomeCalendarCard(model: model, store: calendar, settings: calendar.settings)
+                    case .weather: HomeWeatherCard(model: model, store: weather)
                     case .lyrics, .mirror: EmptyView()
                     }
                 }
@@ -127,4 +134,16 @@ private final class SilentSound: TimerSoundPlaying {
 private final class SilentNotifier: TimerCompletionNotifying {
     func prepare() {}
     func notifyCompletion(name: String, duration: TimeInterval) {}
+}
+
+@MainActor
+private final class SnapshotLocator: WeatherLocating {
+    let access = WeatherLocationAccess.granted
+    var onAccessChange: (() -> Void)?
+
+    func requestAccess() {}
+
+    func locate() async throws -> WeatherPlace {
+        throw WeatherLocationError.unavailable
+    }
 }

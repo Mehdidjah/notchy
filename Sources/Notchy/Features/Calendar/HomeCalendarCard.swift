@@ -71,18 +71,9 @@ struct HomeCalendarCard: View {
             .font(.system(size: 10.5, weight: .semibold))
             .lineLimit(1)
         } else if !store.hasAnyAccess, store.canRequestAccess {
-            Button {
+            HomeCapsuleButton(title: "Show Events", isDisabled: store.isRequestingAccess) {
                 Task { await store.requestAccess() }
-            } label: {
-                Text("Show Events")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(HomeCardPalette.primaryText)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.white.opacity(0.14)))
             }
-            .buttonStyle(.plain)
-            .disabled(store.isRequestingAccess)
         }
     }
 

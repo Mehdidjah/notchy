@@ -112,6 +112,10 @@ cat >"$INFO_PLIST" <<PLIST
   <string>Notchy draws a live audio visualizer for the music that is playing.</string>
   <key>NSBluetoothAlwaysUsageDescription</key>
   <string>Notchy shows when Bluetooth headphones connect and their battery level.</string>
+  <key>NSLocationUsageDescription</key>
+  <string>Notchy shows the weather where you are on its Home tab.</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>Notchy shows the weather where you are on its Home tab.</string>
 </dict>
 </plist>
 PLIST
