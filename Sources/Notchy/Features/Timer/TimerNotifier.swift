@@ -50,17 +50,11 @@ protocol TimerCompletionNotifying: AnyObject {
 final class TimerUserNotifier: TimerCompletionNotifying {
     static let categoryIdentifier = "timer.finished"
 
-    private let isAvailable: Bool
-    private let presenter = TimerNotificationPresenter()
-    private var hasInstalledDelegate = false
-
-    init() {
-        isAvailable = Bundle.main.bundleIdentifier != nil && Bundle.main.bundleURL.pathExtension == "app"
-    }
+    private let isAvailable = NotificationRouter.isAvailable
 
     func prepare() {
         guard isAvailable else { return }
-        installDelegateIfNeeded()
+        NotificationRouter.shared.install()
         Task.detached(priority: .utility) {
             let center = UNUserNotificationCenter.current()
             let status = await center.notificationSettings().authorizationStatus
@@ -71,7 +65,7 @@ final class TimerUserNotifier: TimerCompletionNotifying {
 
     func notifyCompletion(name: String, duration: TimeInterval) {
         guard isAvailable else { return }
-        installDelegateIfNeeded()
+        NotificationRouter.shared.install()
         let title = name.isEmpty ? "Timer" : name
         let body = "\(TimerFormatting.timeString(duration)) is up."
         let category = Self.categoryIdentifier
@@ -91,26 +85,5 @@ final class TimerUserNotifier: TimerCompletionNotifying {
             )
             try? await center.add(request)
         }
-    }
-
-    /// Without a delegate the system hides banners while the app is frontmost; the
-    /// island is a floating panel, so the user should see the alert either way.
-    private func installDelegateIfNeeded() {
-        guard !hasInstalledDelegate else { return }
-        hasInstalledDelegate = true
-        let center = UNUserNotificationCenter.current()
-        if center.delegate == nil {
-            center.delegate = presenter
-        }
-    }
-}
-
-/// Lets timer banners through while the app is active.
-final class TimerNotificationPresenter: NSObject, UNUserNotificationCenterDelegate, Sendable {
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        [.banner, .list]
     }
 }
