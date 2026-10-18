@@ -105,7 +105,7 @@ extension ClosedLiveActivity {
 struct SneakPeek: Equatable, Identifiable {
     enum Kind: String, Sendable {
         case clipboard, music, timer, reminder, volume, brightness, battery, bluetooth
-        case capsLock, download, focus, colorPicker, generic
+        case capsLock, download, focus, colorPicker, update, generic
     }
 
     var id = UUID()

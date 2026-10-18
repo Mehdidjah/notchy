@@ -112,9 +112,21 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         addItem("Clear Non-Favorites", action: #selector(clearHistory), keyEquivalent: "")
         addItem("Settings…", action: #selector(showSettings), keyEquivalent: ",", modifiers: [.command])
 
-        let updates = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
-        updates.isEnabled = false
-        updates.toolTip = "Available after the Sparkle feed is configured for distribution."
+        let checker = UpdateChecker.shared
+        if let release = checker.availableRelease {
+            let download = NSMenuItem(title: "Download Notchy \(release.version)…", action: #selector(downloadUpdate), keyEquivalent: "")
+            download.target = self
+            download.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)
+            menu.addItem(download)
+        }
+        // Items without an action are disabled by the menu's automatic validation.
+        let canCheck = checker.status != .unavailable && !checker.isChecking
+        let updates = NSMenuItem(
+            title: checker.isChecking ? "Checking for Updates…" : "Check for Updates…",
+            action: canCheck ? #selector(checkForUpdates) : nil,
+            keyEquivalent: ""
+        )
+        updates.target = self
         menu.addItem(updates)
 
         menu.addItem(.separator())
@@ -164,6 +176,19 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     @objc private func cancelQueue() { model.cancelQueue() }
     @objc private func clearHistory() { model.clearHistoryPreservingProtected() }
     @objc private func quit() { NSApp.terminate(nil) }
+
+    @objc private func checkForUpdates() {
+        Self.logger.info("Check for Updates selected")
+        Task {
+            await UpdateChecker.shared.checkNow()
+            UpdatePrompt.presentResult(of: .shared)
+        }
+    }
+
+    @objc private func downloadUpdate() {
+        guard let release = UpdateChecker.shared.availableRelease else { return }
+        UpdateChecker.shared.openDownload(release)
+    }
 
     @objc
     private func pasteRecent(_ sender: NSMenuItem) {

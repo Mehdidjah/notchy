@@ -188,9 +188,14 @@ final class AppEnvironment {
         }
         .store(in: &cancellables)
         SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection() }
+
+        // New releases: a sneak peek and a notification once per version, the menu bar, and About.
+        UpdateChecker.shared.start()
+        SettingsSectionRegistry.shared.register(.about, id: "updates") { UpdateSettingsSection() }
     }
 
     private func stopFeatures() {
+        UpdateChecker.shared.stop()
         FaceCheckController.shared.stopCamera()
         faceCheckWindow?.hide()
         model.activityCenter.unregister(id: FaceCheckController.shared.liveActivity.activityID)
@@ -201,6 +206,8 @@ final class AppEnvironment {
     }
 
     func start() {
+        // Installed at launch so a click on a notification delivered before relaunch still routes.
+        NotificationRouter.shared.install()
         startFeatures()
         model.start()
         clipboardMonitor.start()
