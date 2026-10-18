@@ -26,7 +26,7 @@ struct NotchHomeTabView: View {
                 let showsLyricsCard = slots.contains { $0.kind == .lyrics }
                 HStack(spacing: HomeCardLayout.spacing) {
                     ForEach(slots, id: \.kind) { slot in
-                        card(slot.kind, showsLyricsCard: showsLyricsCard)
+                        card(slot.kind, height: proxy.size.height, showsLyricsCard: showsLyricsCard)
                             .frame(width: slot.width, height: proxy.size.height)
                     }
                 }
@@ -49,11 +49,12 @@ struct NotchHomeTabView: View {
         if layout.showsCalendar { kinds.insert(.calendar) }
         if layout.showsMirror { kinds.insert(.mirror) }
         if widgets.timerCard.isShown(timerActive: timerActive) { kinds.insert(.timer) }
+        if widgets.showsApps { kinds.insert(.apps) }
         return kinds
     }
 
     @ViewBuilder
-    private func card(_ kind: HomeCardKind, showsLyricsCard: Bool) -> some View {
+    private func card(_ kind: HomeCardKind, height: CGFloat, showsLyricsCard: Bool) -> some View {
         switch kind {
         case .timer:
             HomeTimerCard(openTimerTab: model.availableTabs.contains(.timer) ? { model.selectTab(.timer) } : nil)
@@ -61,6 +62,8 @@ struct NotchHomeTabView: View {
             HomeMediaSlot(model: model, showsInlineLyrics: media.enableLyrics && !showsLyricsCard)
         case .lyrics:
             HomeLyricsCard()
+        case .apps:
+            HomeAppsGrid(height: height)
         case .calendar:
             HomeCalendarCard(model: model)
         case .mirror:

@@ -5,6 +5,7 @@ enum HomeCardKind: String, CaseIterable, Sendable {
     case timer
     case media
     case lyrics
+    case apps
     case calendar
     case mirror
 }
@@ -36,6 +37,7 @@ enum HomeCardLayout {
         switch kind {
         case .timer, .calendar: .fixed((height * 0.88).rounded())
         case .mirror: .fixed(height.rounded())
+        case .apps: .fixed(HomeAppGridMetrics.width(forHeight: height))
         case .media: WidthRange(minimum: height * 1.5, ideal: height * 1.85, maximum: height * 2.6)
         case .lyrics: WidthRange(minimum: height * 1.1, ideal: height * 1.5, maximum: height * 2.4)
         }
@@ -45,8 +47,8 @@ enum HomeCardLayout {
     /// timer outlasts the other extras; an idle one goes first.
     static func dropOrder(timerRunning: Bool) -> [HomeCardKind] {
         timerRunning
-            ? [.lyrics, .mirror, .timer, .calendar, .media]
-            : [.timer, .lyrics, .mirror, .calendar, .media]
+            ? [.apps, .lyrics, .mirror, .timer, .calendar, .media]
+            : [.apps, .timer, .lyrics, .mirror, .calendar, .media]
     }
 
     /// Stretchable cards, in the order they give up width to a crowded row.

@@ -151,6 +151,7 @@ final class AppEnvironment {
 
         // Home: the music player and its closed-notch activity, the calendar, and Home's own cards.
         SettingsSectionRegistry.shared.register(.home, id: "home") { HomeSettingsSection() }
+        HomeAppShortcutsStore.shared.start()
         MediaFeature.start()
         SettingsSectionRegistry.shared.register(.media, id: "media") { MediaSettingsSection() }
         CalendarFeature.start()
@@ -201,6 +202,7 @@ final class AppEnvironment {
         faceCheckWindow?.hide()
         model.activityCenter.unregister(id: FaceCheckController.shared.liveActivity.activityID)
         SystemHUDFeature.stop()
+        HomeAppShortcutsStore.shared.stop()
         MediaFeature.stop()
         CalendarFeature.stop()
         TimerFeature.stop()

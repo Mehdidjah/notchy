@@ -45,6 +45,9 @@ struct HomeSnapshotTests {
         model.openPinned()
         let calendar = CalendarStore(settings: CalendarSettings(defaults: defaults))
         let mediaSettings = MediaSettings(defaults: defaults)
+        let apps = HomeAppShortcutsStore(defaults: defaults)
+        apps.pin(["Calculator", "Calendar", "Notes", "Maps", "Photos", "Preview"]
+            .map { URL(fileURLWithPath: "/System/Applications/\($0).app") })
 
         let slots = HomeCardLayout.plan(Set(HomeCardKind.allCases).subtracting([.lyrics, .mirror]),
                                         width: Self.rowWidth, height: Self.rowHeight, timerRunning: true)
@@ -54,6 +57,7 @@ struct HomeSnapshotTests {
                     switch slot.kind {
                     case .timer: HomeTimerCard(manager: timer, settings: timerSettings)
                     case .media: MediaCardView(manager: music, settings: mediaSettings, showsInlineLyrics: false)
+                    case .apps: HomeAppsGrid(height: Self.rowHeight, store: apps)
                     case .calendar: HomeCalendarCard(model: model, store: calendar, settings: calendar.settings)
                     case .lyrics, .mirror: EmptyView()
                     }
@@ -79,9 +83,21 @@ struct HomeSnapshotTests {
 
         let renderer = ImageRenderer(content: island)
         renderer.scale = 2
-        let image = try #require(renderer.cgImage)
+        let rendered = try #require(renderer.cgImage)
+        let image = try #require(Self.standardRGB(rendered))
         let data = try #require(NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]))
         try data.write(to: output.appendingPathComponent("home.png"))
+    }
+
+    /// App icons can make the renderer produce extended-range pixels; viewers read the PNG
+    /// correctly only once it is matched to 8-bit sRGB.
+    private static func standardRGB(_ image: CGImage) -> CGImage? {
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: space,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return context.makeImage()
     }
 
     /// A stand-in cover: a deep blue gradient crossed by lighter bands.
