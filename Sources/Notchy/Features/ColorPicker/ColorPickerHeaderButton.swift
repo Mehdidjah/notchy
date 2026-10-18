@@ -1,9 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// The eyedropper in the island header: a 30-pt black capsule like its neighbours. A click
-/// samples a colour from the screen; a right-click, control-click or half-second press opens
-/// the recent-colours popover. Renders nothing while the feature or the button is switched off.
+/// The eyedropper in the island header: a round chip like its neighbours. A click samples a
+/// colour from the screen; a right-click, control-click or half-second press opens the
+/// recent-colours popover. Renders nothing while the feature or the button is switched off.
 struct ColorPickerHeaderButton: View {
     @ObservedObject private var service: ColorPickerService
     @ObservedObject private var settings: ColorPickerSettings
@@ -21,18 +21,8 @@ struct ColorPickerHeaderButton: View {
     }
 
     private var capsule: some View {
-        Capsule()
-            .fill(.black)
-            .frame(width: 30, height: 30)
-            .overlay {
-                Image(systemName: "eyedropper")
-                    .foregroundStyle(.white)
-                    .font(.system(size: 14.3, weight: .medium))
-                    .frame(width: 20, height: 20)
-                    .opacity(service.isPicking ? 0.55 : 1)
-                    .animation(.easeInOut(duration: 0.2), value: service.isPicking)
-            }
-            .contentShape(Capsule())
+        NotchChipFace(symbol: "eyedropper", isDimmed: service.isPicking)
+            .animation(.easeInOut(duration: 0.2), value: service.isPicking)
             .overlay {
                 ColorPickerPressCatcher(
                     onClick: { service.pick() },

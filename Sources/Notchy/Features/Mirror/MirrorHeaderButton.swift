@@ -1,11 +1,9 @@
 import SwiftUI
 
-/// The mirror button in the island header: a 30-pt black capsule with a 14.5-pt `web.camera`
-/// glyph. A click turns the camera mirror on or off, switching to Home first so the mirror is
-/// on screen. Renders nothing while the mirror is switched off in Settings.
+/// The mirror button in the island header: a round chip with a `web.camera` glyph. A click
+/// turns the camera mirror on or off, switching to Home first so the mirror is on screen.
+/// Renders nothing while the mirror is switched off in Settings.
 struct MirrorHeaderButton: View {
-    static let glyphSize: CGFloat = 14.5
-
     @ObservedObject var model: NotchViewModel
     @ObservedObject private var controller: WebcamController
     @ObservedObject private var settings: MirrorSettings
@@ -25,16 +23,7 @@ struct MirrorHeaderButton: View {
 
     private var button: some View {
         Button(action: press) {
-            Capsule()
-                .fill(.black)
-                .frame(width: 30, height: 30)
-                .overlay {
-                    Image(systemName: "web.camera")
-                        .foregroundStyle(.white)
-                        .font(.system(size: Self.glyphSize, weight: .medium))
-                        .frame(width: 20, height: 20)
-                }
-                .contentShape(Capsule())
+            NotchChipFace(symbol: "web.camera", isSelected: controller.isPreviewRequested)
         }
         .buttonStyle(.plain)
         .onDisappear { controller.headerDidDisappear() }

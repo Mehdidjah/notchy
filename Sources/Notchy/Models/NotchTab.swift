@@ -33,7 +33,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
         case .stats: "chart.xyaxis.line"
         case .notes: "note.text"
         case .face: "faceid"
-        case .clipboard: "doc.on.clipboard"
+        case .clipboard: "doc.on.clipboard.fill"
         }
     }
 
