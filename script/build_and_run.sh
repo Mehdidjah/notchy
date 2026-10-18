@@ -7,7 +7,15 @@ BUNDLE_ID="com.local.Notchy"
 MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DIST_DIR="$ROOT_DIR/dist"
+# script/release.sh builds into its own folder, as a universal binary, without stopping a
+# running copy.
+DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
+UNIVERSAL="${UNIVERSAL:-0}"
+KEEP_RUNNING="${KEEP_RUNNING:-0}"
+APP_VERSION="${APP_VERSION:-$(tr -d '[:space:]' <"$ROOT_DIR/VERSION")}"
+BUILD_NUMBER="${BUILD_NUMBER:-$(git -C "$ROOT_DIR" rev-list --count HEAD 2>/dev/null || echo 1)}"
+# Public GitHub repository (owner/name) whose releases the app checks for updates.
+UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-Mehdidjah/notchy-releases}"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
@@ -21,12 +29,18 @@ case "$MODE" in
   *) CONFIGURATION="release" ;;
 esac
 
-pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-# The app was called NotchIsland; stop an old copy so it releases the clipboard store.
-pkill -x NotchIsland >/dev/null 2>&1 || true
+if [[ "$KEEP_RUNNING" != 1 ]]; then
+  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  # The app was called NotchIsland; stop an old copy so it releases the clipboard store.
+  pkill -x NotchIsland >/dev/null 2>&1 || true
+fi
 
-swift build --package-path "$ROOT_DIR" -c "$CONFIGURATION"
-BUILD_BINARY="$(swift build --package-path "$ROOT_DIR" -c "$CONFIGURATION" --show-bin-path)/$APP_NAME"
+BUILD_ARGS=(--package-path "$ROOT_DIR" -c "$CONFIGURATION")
+if [[ "$UNIVERSAL" == 1 ]]; then
+  BUILD_ARGS+=(--arch arm64 --arch x86_64)
+fi
+swift build "${BUILD_ARGS[@]}"
+BUILD_BINARY="$(swift build "${BUILD_ARGS[@]}" --show-bin-path)/$APP_NAME"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS"
@@ -62,6 +76,14 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundleDisplayName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$APP_VERSION</string>
+  <key>CFBundleVersion</key>
+  <string>$BUILD_NUMBER</string>
+  <key>NotchyUpdateRepository</key>
+  <string>$UPDATE_REPOSITORY</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.utilities</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
