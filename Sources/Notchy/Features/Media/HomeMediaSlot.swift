@@ -1,26 +1,18 @@
 import SwiftUI
 
-/// Home-tab media player slot. Keep this type name and its
+/// Home-tab media player card. Keep this type name and its
 /// initialiser: the Home tab creates it.
 ///
-/// Beside the calendar the player shows the current lyric line under the artist; with the
-/// calendar off and lyrics on, a lyrics panel sits to the right of the player.
+/// The current lyric line shows under the title when lyrics are on and no lyrics card sits
+/// beside the player.
 struct HomeMediaSlot: View {
     @ObservedObject var model: NotchViewModel
-    @ObservedObject private var settings = MediaSettings.shared
-    @ObservedObject private var layout = HomeLayoutState.shared
+    var showsInlineLyrics = false
 
     var body: some View {
-        Group {
-            if settings.enableLyrics && !layout.showsCalendar {
-                MediaSideLyricsLayout(settings: settings)
-            } else {
-                MediaPlayerView(showsInlineLyrics: settings.enableLyrics && layout.showsCalendar)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .environment(\.mediaHoldOpen, holdOpenAction)
-        .onAppear { MusicManager.shared.forceRefresh() }
+        MediaCardView(manager: .shared, settings: .shared, showsInlineLyrics: showsInlineLyrics)
+            .environment(\.mediaHoldOpen, holdOpenAction)
+            .onAppear { MusicManager.shared.forceRefresh() }
     }
 
     /// Popovers opened from the player keep the island open while they show.
@@ -36,229 +28,162 @@ struct HomeMediaSlot: View {
     }
 }
 
-/// Artwork on the left, song info, slider and controls on the right.
-struct MediaPlayerView: View {
-    var showsInlineLyrics: Bool
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            MediaAlbumArtView(manager: .shared, settings: .shared)
-            MediaControlsView(manager: .shared, settings: .shared, showsInlineLyrics: showsInlineLyrics)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-/// Player plus the side lyrics panel: the player keeps at
-/// least 380 pt, the panel is `lyricsPanelWidth` wide and shifted by `lyricsPanelOffset`.
-/// The island should widen to fit; until the host does (`MediaFeature.requiredHomeExtraWidth`)
-/// the panel takes what is left, and below 140 pt the inline lyric line is used instead.
-private struct MediaSideLyricsLayout: View {
-    @ObservedObject var settings: MediaSettings
-
-    static let minimumPlayerWidth: CGFloat = 380
-    static let spacing: CGFloat = 20
-    static let minimumPanelWidth: CGFloat = 140
-
-    var body: some View {
-        GeometryReader { proxy in
-            let offset = CGFloat(settings.lyricsPanelOffset)
-            let available = proxy.size.width - Self.minimumPlayerWidth - Self.spacing - abs(offset)
-            let panelWidth = min(CGFloat(settings.lyricsPanelWidth), available)
-            if panelWidth >= Self.minimumPanelWidth {
-                HStack(alignment: .top, spacing: Self.spacing) {
-                    MediaPlayerView(showsInlineLyrics: false)
-                        .frame(minWidth: Self.minimumPlayerWidth, maxWidth: .infinity, alignment: .leading)
-                        .layoutPriority(1)
-                    MediaLyricsSidePanel(manager: .shared, settings: settings)
-                        .frame(width: panelWidth, alignment: .topLeading)
-                        .padding(.leading, max(0, -offset))
-                        .offset(x: offset)
-                }
-            } else {
-                MediaPlayerView(showsInlineLyrics: true)
-            }
-        }
-    }
-}
-
-// MARK: - Artwork
-
-/// The open artwork: an aspect-fit square as tall as the player, 13-pt continuous corners,
-/// a blurred colour glow behind it while playing, a 3D parallax tilt on hover, the source
-/// app's icon at the bottom-right, and shrunk to 85 % under a dark veil when paused.
-struct MediaAlbumArtView: View {
-    @ObservedObject var manager: MusicManager
-    @ObservedObject var settings: MediaSettings
-
-    /// The source-app badge is inserted once the island is open, popping it in 0.3 s later.
-    @State private var showsBadge = false
-
-    private var cornerRadius: CGFloat {
-        let base: CGFloat = settings.cornerRadiusScaling ? 13 : 4
-        return manager.isArtworkWide ? base / 3 : base
-    }
-
-    var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            if settings.lightingEffect {
-                glow
-            }
-            ZStack {
-                Button {
-                    manager.openMusicApp()
-                } label: {
-                    ZStack(alignment: .bottomTrailing) {
-                        artwork
-                        appIconBadge
-                    }
-                    .mediaArtworkFlip(angle: manager.flipAngle)
-                    .mediaParallax(intensity: settings.parallaxIntensity)
-                    .padding(.bottom, -5)
-                }
-                .buttonStyle(.plain)
-                .scaleEffect(manager.isPlaying ? 1 : 0.85)
-                .accessibilityHint("Opens \(manager.activeSource?.displayName ?? "Music")")
-
-                Rectangle()
-                    .aspectRatio(1, contentMode: .fit)
-                    .foregroundStyle(Color.black)
-                    .opacity(manager.isPlaying ? 0 : 0.8)
-                    .blur(radius: 50)
-                    .allowsHitTesting(false)
-            }
-        }
-        .onAppear {
-            withAnimation(.bouncy.delay(0.3)) { showsBadge = true }
-        }
-        .onDisappear { showsBadge = false }
-    }
-
-    private var glow: some View {
-        GeometryReader { proxy in
-            Color.clear
-                .background(
-                    Image(nsImage: manager.albumArtGlowTexture)
-                        .resizable()
-                        .aspectRatio(nil, contentMode: .fill)
-                )
-                .mask(
-                    RadialGradient(
-                        gradient: Gradient(colors: [.white, .white.opacity(0.7), .clear]),
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: proxy.size.width * 0.65
-                    )
-                )
-                .scaleEffect(x: 1.3, y: 1.4)
-                .rotationEffect(.degrees(92))
-                .opacity(manager.isPlaying ? 0.5 : 0)
-                .shadow(color: manager.avgColor.color.opacity(0.16), radius: 14)
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .allowsHitTesting(false)
-    }
-
-    private var artwork: some View {
-        Color.clear
-            .aspectRatio(1, contentMode: .fit)
-            .overlay {
-                Image(nsImage: manager.albumArt)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            }
-            .mediaMatchedArtwork()
-            .clipped()
-            .accessibilityLabel("Album art")
-    }
-
-    @ViewBuilder
-    private var appIconBadge: some View {
-        if showsBadge, !manager.usingAppIconForArtwork {
-            MediaAppIcon(bundleIdentifier: manager.bundleIdentifier ?? MediaSourceKind.appleMusic.bundleIdentifier)
-                .frame(width: 36, height: 36)
-                .offset(x: 10, y: 10)
-                .transition(.scale.combined(with: .opacity).animation(.bouncy.delay(0.3)))
-                .zIndex(2)
-        }
-    }
-}
-
-// MARK: - Controls
-
-/// Title, artist (tinted), optional lyric line, the progress slider and the control row.
-struct MediaControlsView: View {
+/// The player as a card: the cover fills it under a dark gradient, with a thumbnail, the
+/// artist and the album along the top, a favourite button (or the source app's icon) at the
+/// top right, and the title, a thin progress bar and the transport controls along the bottom.
+/// Without a cover the card keeps its grey face, tinted by the artwork colour.
+struct MediaCardView: View {
     @ObservedObject var manager: MusicManager
     @ObservedObject var settings: MediaSettings
     var showsInlineLyrics: Bool
 
     @ObservedObject private var hud = MediaOpenHUDState.shared
-    @State private var sliderValue: Double = MusicManager.shared.estimatedPlaybackPosition()
+    @State private var sliderValue: Double = 0
     @State private var dragging = false
     @State private var lastDragged: Date = .distantPast
 
+    private static let padding = EdgeInsets(top: 10, leading: 12, bottom: 9, trailing: 12)
+
+    private var hasCover: Bool {
+        manager.albumArt !== MusicManager.defaultArtwork && !manager.usingAppIconForArtwork
+    }
+
     var body: some View {
-        VStack(alignment: .leading) {
-            songInfoAndSlider
-            if hud.isActive {
-                MediaControlHUDRow(state: hud)
-            } else {
-                playbackControls
+        GeometryReader { proxy in
+            let contentWidth = max(0, proxy.size.width - Self.padding.leading - Self.padding.trailing)
+            ZStack {
+                background(size: proxy.size)
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                    Spacer(minLength: 2)
+                    titleBlock(width: contentWidth)
+                    progress
+                        .padding(.top, 3)
+                    Group {
+                        if hud.isActive {
+                            MediaControlHUDRow(state: hud)
+                        } else {
+                            MediaCardControls(manager: manager, settings: settings)
+                        }
+                    }
+                    .frame(height: 34)
+                    .padding(.top, 3)
+                }
+                .padding(Self.padding)
             }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipShape(RoundedRectangle(cornerRadius: HomeCardLayout.cornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var tintedColor: Color {
-        manager.avgColor.ensuringMinimumBrightness(0.6).color
-    }
+    // MARK: Background
 
-    private var artistColor: Color {
-        settings.playerColorTinting ? tintedColor : .gray
-    }
-
-    private var sliderTint: Color {
-        switch settings.sliderColor {
-        case .white: .white
-        case .albumArt: tintedColor
-        case .accent: .accentColor
-        }
-    }
-
-    private var songInfoAndSlider: some View {
-        GeometryReader { proxy in
-            VStack(alignment: .leading, spacing: 4) {
-                songInfo(width: proxy.size.width)
-                    .zIndex(1)
-                slider
-                    .zIndex(0)
+    private func background(size: CGSize) -> some View {
+        ZStack {
+            HomeCardBackground()
+            if hasCover {
+                Image(nsImage: manager.albumArt)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                LinearGradient(
+                    stops: [
+                        .init(color: .black.opacity(0.45), location: 0),
+                        .init(color: .black.opacity(0.08), location: 0.32),
+                        .init(color: .black.opacity(0.45), location: 0.62),
+                        .init(color: .black.opacity(0.8), location: 1)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            } else {
+                LinearGradient(
+                    colors: [manager.avgColor.color.opacity(0.22), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             }
+            Color.black
+                .opacity(manager.isPlaying ? 0 : 0.3)
+                .animation(.smooth(duration: 0.3), value: manager.isPlaying)
         }
-        .padding(.top, 10)
-        .padding(.leading, 5)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .allowsHitTesting(false)
     }
 
-    private func songInfo(width: CGFloat) -> some View {
+    // MARK: Header
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Button { manager.openMusicApp() } label: { thumbnail }
+                .accessibilityLabel("Open \(manager.activeSource?.displayName ?? "Music")")
+            VStack(alignment: .leading, spacing: 0) {
+                Text(manager.artistName)
+                    .font(.system(size: 12.5, weight: .bold))
+                    .foregroundStyle(.white)
+                Text(albumLine)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
+            .lineLimit(1)
+            Spacer(minLength: 4)
+            headerAccessory
+        }
+    }
+
+    private var albumLine: String {
+        let album = manager.album.trimmingCharacters(in: .whitespacesAndNewlines)
+        return album.isEmpty ? manager.activeSource?.displayName ?? "" : album
+    }
+
+    private var thumbnail: some View {
+        Image(nsImage: manager.albumArt)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: 30, height: 30)
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5)
+            }
+            .mediaArtworkFlip(angle: manager.flipAngle)
+            .mediaMatchedArtwork()
+    }
+
+    @ViewBuilder
+    private var headerAccessory: some View {
+        if manager.canFavorite {
+            let favorited = manager.isCurrentTrackFavorited == true
+            HomeRoundButton(
+                symbol: favorited ? "heart.fill" : "heart",
+                tint: favorited ? HomeCardPalette.pink : nil,
+                diameter: 24,
+                glyphSize: 10.5,
+                help: favorited ? "Remove from Favorites" : "Favorite"
+            ) { manager.toggleFavorite() }
+            .opacity(manager.isCurrentTrackFavorited == nil ? 0.45 : 1)
+            .disabled(manager.isCurrentTrackFavorited == nil)
+        } else {
+            MediaAppIcon(bundleIdentifier: manager.bundleIdentifier ?? MediaSourceKind.appleMusic.bundleIdentifier)
+                .frame(width: 22, height: 22)
+                .allowsHitTesting(false)
+        }
+    }
+
+    // MARK: Title and progress
+
+    private func titleBlock(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             MediaTitleMarquee(
                 text: manager.songTitle,
                 isExplicit: manager.isCurrentTrackExplicit,
-                font: .headline,
-                nsFont: .headline,
+                font: .title3.bold(),
+                nsFont: .title3,
                 textColor: .white,
                 frameWidth: width,
                 badgeHeight: 14
-            )
-            MediaMarqueeText(
-                text: manager.artistName,
-                font: .headline.weight(.medium),
-                nsFont: .headline,
-                textColor: artistColor,
-                frameWidth: width
             )
             if showsInlineLyrics {
                 MediaInlineLyricLine(manager: manager, width: width)
@@ -270,8 +195,9 @@ struct MediaControlsView: View {
         !manager.isPlaying || manager.isLiveStream || manager.playbackRate <= 0
     }
 
-    private var slider: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: isTimelinePaused)) { timeline in
+    /// Ticks once a second: the bar moves under a point per second on a card this wide.
+    private var progress: some View {
+        TimelineView(.animation(minimumInterval: 1, paused: isTimelinePaused)) { timeline in
             MediaMusicSlider(
                 sliderValue: $sliderValue,
                 dragging: $dragging,
@@ -281,127 +207,94 @@ struct MediaControlsView: View {
                 timestampDate: manager.timestampDate,
                 isPlaying: manager.isPlaying,
                 isLiveStream: manager.isLiveStream,
-                tint: sliderTint,
-                labelColor: artistColor,
+                tint: .white,
+                labelColor: .white.opacity(0.8),
                 position: { manager.estimatedPlaybackPosition(at: $0) },
-                onSeek: { manager.seek(to: $0) }
+                onSeek: { manager.seek(to: $0) },
+                restingTrackHeight: 4,
+                draggingTrackHeight: 8,
+                labelsAboveTrack: true,
+                showsRemainingTime: true,
+                labelFontSize: 10
             )
-            .padding(.top, 5)
-            .frame(height: 36)
         }
+        .frame(height: 22)
+    }
+}
+
+/// The card's transport row: the player's chosen control slots as round buttons, play/pause
+/// larger in the middle. Favouriting lives in the card's header, so its slot is skipped.
+private struct MediaCardControls: View {
+    @ObservedObject var manager: MusicManager
+    @ObservedObject var settings: MediaSettings
+
+    private var slots: [MediaControlSlot] {
+        settings.displayedSlots(canFavorite: manager.canFavorite, isAppleMusicActive: manager.isAppleMusicActive)
+            .filter { $0 != .none && $0 != .likeTrack }
     }
 
-    private var playbackControls: some View {
-        HStack(spacing: 8) {
-            ForEach(Array(displayedSlots.enumerated()), id: \.offset) { _, slot in
-                slotView(slot)
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(Array(slots.enumerated()), id: \.offset) { _, slot in
+                button(for: slot)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    private var displayedSlots: [MediaControlSlot] {
-        settings.displayedSlots(canFavorite: manager.canFavorite, isAppleMusicActive: manager.isAppleMusicActive)
-    }
-
-    private var repeatIcon: String {
-        manager.repeatMode == .one ? "repeat.1" : "repeat"
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder
-    private func slotView(_ slot: MediaControlSlot) -> some View {
+    private func button(for slot: MediaControlSlot) -> some View {
         switch slot {
-        case .none:
-            Spacer(minLength: 0)
         case .playPause:
-            MediaHoverButton(
-                icon: manager.isPlaying ? (manager.isLiveStream ? "stop.fill" : "pause.fill") : "play.fill",
-                size: .large,
-                accessibilityTitle: manager.isPlaying ? "Pause" : "Play"
-            ) {
-                manager.togglePlay()
-            }
+            HomeRoundButton(
+                symbol: manager.isPlaying ? (manager.isLiveStream ? "stop.fill" : "pause.fill") : "play.fill",
+                diameter: 34,
+                glyphSize: 14,
+                help: manager.isPlaying ? "Pause" : "Play"
+            ) { manager.togglePlay() }
         case .trackBackward:
-            MediaHoverButton(
-                icon: "backward.fill",
-                skipDirection: .backward,
-                externalTrigger: pulseToken(direction: .backward, behavior: .track),
-                accessibilityTitle: "Previous track"
-            ) {
-                manager.previousTrack()
-            }
+            round("backward.fill", help: "Previous track") { manager.previousTrack() }
         case .trackForward:
-            MediaHoverButton(
-                icon: "forward.fill",
-                skipDirection: .forward,
-                externalTrigger: pulseToken(direction: .forward, behavior: .track),
-                accessibilityTitle: "Next track"
-            ) {
-                manager.nextTrack()
-            }
+            round("forward.fill", help: "Next track") { manager.nextTrack() }
         case .seekBackward:
-            MediaHoverButton(
-                icon: "gobackward.10",
-                pressEffect: .wiggle(clockwise: false),
-                externalTrigger: pulseToken(direction: .backward, behavior: .tenSecond),
-                externalEffect: .wiggle(clockwise: false),
-                accessibilityTitle: "Back 10 seconds"
-            ) {
-                manager.seek(by: -MusicManager.seekInterval)
-            }
+            round("gobackward.10", help: "Back 10 seconds") { manager.seek(by: -MusicManager.seekInterval) }
         case .seekForward:
-            MediaHoverButton(
-                icon: "goforward.10",
-                pressEffect: .wiggle(clockwise: true),
-                externalTrigger: pulseToken(direction: .forward, behavior: .tenSecond),
-                externalEffect: .wiggle(clockwise: true),
-                accessibilityTitle: "Forward 10 seconds"
-            ) {
-                manager.seek(by: MusicManager.seekInterval)
-            }
+            round("goforward.10", help: "Forward 10 seconds") { manager.seek(by: MusicManager.seekInterval) }
         case .shuffle:
-            MediaHoverButton(
-                icon: "shuffle",
-                iconColor: manager.isShuffled ? manager.brandAccentColor : .white,
-                accessibilityTitle: "Shuffle"
-            ) {
+            round("shuffle", tint: manager.isShuffled ? manager.brandAccentColor : nil, help: "Shuffle") {
                 manager.toggleShuffle()
             }
         case .repeatMode:
-            MediaHoverButton(
-                icon: repeatIcon,
-                iconColor: manager.repeatMode == .off ? .white : manager.brandAccentColor,
-                accessibilityTitle: "Repeat"
-            ) {
-                manager.toggleRepeat()
-            }
+            round(manager.repeatMode == .one ? "repeat.1" : "repeat",
+                  tint: manager.repeatMode == .off ? nil : manager.brandAccentColor,
+                  help: "Repeat") { manager.toggleRepeat() }
+        case .lyrics:
+            round(settings.enableLyrics ? "quote.bubble.fill" : "quote.bubble",
+                  tint: settings.enableLyrics ? manager.brandAccentColor : nil,
+                  help: "Lyrics") { settings.enableLyrics.toggle() }
         case .mediaOutput:
             MediaOutputPickerButton()
+                .scaleEffect(0.85)
+                .frame(width: 28, height: 28)
         case .airPlay:
             MediaAirPlayPickerButton(manager: manager)
-        case .lyrics:
-            MediaHoverButton(
-                icon: settings.enableLyrics ? "quote.bubble.fill" : "quote.bubble",
-                iconColor: settings.enableLyrics ? manager.brandAccentColor : .white,
-                accessibilityTitle: "Lyrics"
-            ) {
-                settings.enableLyrics.toggle()
-            }
-        case .likeTrack:
-            MediaHoverButton(
-                icon: manager.isCurrentTrackFavorited == true ? "heart.fill" : "heart",
-                iconColor: manager.isCurrentTrackFavorited == true ? manager.brandAccentColor : .white,
-                accessibilityTitle: "Favorite"
-            ) {
-                manager.toggleFavorite()
-            }
-            .opacity(manager.isCurrentTrackFavorited == nil ? 0.4 : 1)
-            .disabled(manager.isCurrentTrackFavorited == nil)
+                .scaleEffect(0.85)
+                .frame(width: 28, height: 28)
+        case .none, .likeTrack:
+            EmptyView()
         }
     }
 
-    private func pulseToken(direction: MusicManager.SkipDirection, behavior: MediaSkipBehavior) -> Int? {
-        guard let pulse = manager.skipPulse, pulse.direction == direction, pulse.behavior == behavior else { return nil }
-        return pulse.token
+    private func round(_ symbol: String, tint: Color? = nil, help: String, action: @escaping () -> Void) -> some View {
+        HomeRoundButton(symbol: symbol, tint: tint, diameter: 28, glyphSize: 11, help: help, action: action)
+    }
+}
+
+/// The synced lyrics beside the player, on a card of their own.
+struct HomeLyricsCard: View {
+    var body: some View {
+        HomeCard(padding: EdgeInsets(top: 10, leading: 8, bottom: 6, trailing: 8)) {
+            MediaLyricsSidePanel(manager: .shared, settings: .shared)
+        }
     }
 }

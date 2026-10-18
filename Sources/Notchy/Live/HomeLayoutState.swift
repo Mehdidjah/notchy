@@ -1,9 +1,8 @@
 import Combine
 import SwiftUI
 
-/// What the Home tab shows. Feature modules flip these flags; the Home tab lays itself out
-/// with the player on the left, the compact calendar beside it, the camera mirror
-/// on the right, or the standalone calendar when no player is shown.
+/// What the Home tab shows. Feature modules flip these flags; the Home tab lays the shown
+/// features out as a row of cards beside its own (`HomeWidgetSettings`).
 @MainActor
 final class HomeLayoutState: ObservableObject {
     static let shared = HomeLayoutState()
@@ -14,7 +13,7 @@ final class HomeLayoutState: ObservableObject {
     @Published var showsCalendar = false
     /// Set by the mirror feature: the camera mirror is enabled.
     @Published var showsMirror = false
-    /// Extra height the Home tab needs, for example an inline lyrics line (+18).
+    /// Extra height the Home tab asks for. No Home feature uses it: every tab keeps Home's height.
     @Published var extraHeight: CGFloat = 0
 
     init() {}

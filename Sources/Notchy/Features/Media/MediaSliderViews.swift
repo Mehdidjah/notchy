@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// The open player's progress slider with elapsed and total time under it.
+/// A progress slider with the elapsed time on the left and the total (or remaining) time on
+/// the right, under the track or above it.
 ///
-/// Driven by a 30-fps `TimelineView` in the parent: each tick re-derives the position from
-/// the playback anchor without animation, unless the user is dragging or has just let go
-/// (until a reading newer than the drag arrives).
+/// Driven by a `TimelineView` in the parent: each tick re-derives the position from the
+/// playback anchor without animation, unless the user is dragging or has just let go (until a
+/// reading newer than the drag arrives).
 struct MediaMusicSlider: View {
     @Binding var sliderValue: Double
     @Binding var dragging: Bool
@@ -21,6 +22,10 @@ struct MediaMusicSlider: View {
 
     var restingTrackHeight: CGFloat = 8
     var draggingTrackHeight: CGFloat = 14
+    var labelsAboveTrack = false
+    /// The right label counts down ("-0:32") instead of showing the track length.
+    var showsRemainingTime = false
+    var labelFontSize: CGFloat = 11
 
     private var hasUsableDuration: Bool { MediaPlaybackMath.isUsableDuration(duration) }
     private var frameHeight: CGFloat { max(restingTrackHeight, draggingTrackHeight) }
@@ -28,20 +33,15 @@ struct MediaMusicSlider: View {
     var body: some View {
         Group {
             if isLiveStream {
-                MediaLiveStreamIndicator(tint: tint)
+                MediaLiveStreamIndicator(tint: tint, labelSize: labelFontSize + 1)
                     .frame(maxWidth: .infinity)
                     .frame(height: frameHeight)
             } else {
-                VStack(spacing: 6) {
+                VStack(spacing: labelsAboveTrack ? 2 : 6) {
+                    if labelsAboveTrack { labels }
                     track
                         .frame(height: frameHeight)
-                    HStack {
-                        Text(MediaPlaybackMath.timeString(sliderValue))
-                        Spacer()
-                        Text(hasUsableDuration ? MediaPlaybackMath.timeString(duration) : MediaPlaybackMath.unknownTime)
-                    }
-                    .font(.system(size: 11, weight: .medium).monospacedDigit())
-                    .foregroundStyle(labelColor)
+                    if !labelsAboveTrack { labels }
                 }
             }
         }
@@ -59,6 +59,22 @@ struct MediaMusicSlider: View {
         .onChange(of: isLiveStream) { _, live in
             if live { sliderValue = 0 }
         }
+    }
+
+    private var labels: some View {
+        HStack {
+            Text(MediaPlaybackMath.timeString(sliderValue))
+            Spacer()
+            Text(trailingLabel)
+        }
+        .font(.system(size: labelFontSize, weight: .medium).monospacedDigit())
+        .foregroundStyle(labelColor)
+    }
+
+    private var trailingLabel: String {
+        guard hasUsableDuration else { return MediaPlaybackMath.unknownTime }
+        guard showsRemainingTime else { return MediaPlaybackMath.timeString(duration) }
+        return "-" + MediaPlaybackMath.timeString(max(0, duration - sliderValue))
     }
 
     @ViewBuilder

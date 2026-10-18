@@ -90,28 +90,20 @@ struct MediaSettingsSection: View {
                 }
             }
             caption(layout.showsCalendar
-                ? "Lyrics sit on one line under the artist name, since the calendar is using the rest of the notch. Turn the calendar off to give them a full panel beside the player."
-                : "Lyrics get their own panel beside the player. Turn the calendar on to move them under the artist name instead.")
+                ? "Lyrics sit on one line under the song title, since the calendar is using the rest of the row. Turn the calendar off to give them a card beside the player."
+                : "Lyrics get their own card beside the player when the island has room for it, and one line under the song title otherwise. Turn the calendar on to keep them under the title.")
             if !settings.showStandardMediaControls {
                 caption("Enable Dynamic Island media controls to use lyrics.")
             }
             if settings.enableLyrics && !layout.showsCalendar && settings.showStandardMediaControls {
                 Slider(value: $settings.lyricsPanelWidth, in: 180 ... 420, step: 10) {
                     HStack {
-                        Text("Side lyrics width")
+                        Text("Lyrics card width")
                         Spacer()
-                        Text("\(Int(settings.lyricsPanelWidth)) px").foregroundStyle(.secondary)
+                        Text("\(Int(settings.lyricsPanelWidth)) pt").foregroundStyle(.secondary)
                     }
                 }
-                Slider(value: $settings.lyricsPanelOffset, in: -100 ... 100, step: 1) {
-                    HStack {
-                        Text("Side lyrics horizontal offset")
-                        Spacer()
-                        Text("\(settings.lyricsPanelOffset >= 0 ? "+" : "")\(Int(settings.lyricsPanelOffset)) px")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                caption("These controls apply when the calendar is disabled.")
+                caption("The card narrows when the other Home cards need the room.")
             }
             Slider(value: $settings.parallaxIntensity, in: 0 ... 12, step: 1) {
                 HStack {

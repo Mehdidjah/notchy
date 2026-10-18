@@ -4,7 +4,7 @@ import SwiftUI
 /// Settings panes in sidebar order and grouping. Each pane has a gradient tile tint and an
 /// SF Symbol.
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, appearance
+    case general, appearance, home
     case media, liveActivities, devices
     case controls, battery, faceCheck
     case timer, calendar, notes
@@ -18,6 +18,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "General"
         case .appearance: "Appearance"
+        case .home: "Home"
         case .media: "Media"
         case .liveActivities: "Live Activities"
         case .devices: "Devices"
@@ -42,6 +43,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gear"
         case .appearance: "paintpalette"
+        case .home: "house.fill"
         case .media: "play.laptopcomputer"
         case .liveActivities: "waveform.path.ecg"
         case .devices: "headphones"
@@ -66,6 +68,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .blue
         case .appearance: .purple
+        case .home: .orange
         case .media: .green
         case .liveActivities: .pink
         case .devices: Color(red: 0.10, green: 0.11, blue: 0.12)
@@ -93,6 +96,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "hover dwell close delay gestures swipe haptics tabs fullscreen launch login"
         case .appearance: "width shadow screen recording capture peek sneak"
+        case .home: "cards widgets timer date"
         case .media: "music spotify player lyrics visualizer artwork"
         case .liveActivities: "focus privacy camera microphone caps lock download"
         case .devices: "bluetooth airpods headphones"
@@ -109,7 +113,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// Sidebar group headings; nil means no heading.
     var group: String? {
         switch self {
-        case .general, .appearance: nil
+        case .general, .appearance, .home: nil
         case .media, .liveActivities, .devices: "Media & Display"
         case .controls, .battery, .faceCheck: "System"
         case .timer, .calendar, .notes: "Productivity"

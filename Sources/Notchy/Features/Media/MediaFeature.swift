@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 
 /// Entry point of the media feature: starts the music manager, registers the closed-notch
-/// music activity and keeps the Home tab's player flag and lyric height in step.
+/// music activity and keeps the Home tab's player flag in step.
 ///
 /// Host hooks (read-only, all main-actor):
 /// - `claimsClosedClick`: a click on the closed notch toggles playback rather than opening it.
@@ -13,13 +13,7 @@ import SwiftUI
 enum MediaFeature {
     private static var activity: MusicLiveActivity?
     private static var cancellables = Set<AnyCancellable>()
-    /// The extra Home height this feature last asked for, so it never clears another
-    /// feature's request.
-    private static var appliedExtraHeight: CGFloat = 0
     private static let sideLyricsWidth = CurrentValueSubject<CGFloat, Never>(0)
-
-    /// Height of the inline lyric line under the artist (12-pt text plus its 2-pt gap).
-    static let inlineLyricsExtraHeight: CGFloat = 18
 
     /// Side-lyrics budget: the player's 380 pt, the panel, 20 pt between columns,
     /// the panel's offset and the camera mirror's 220 pt (+20) when shown.
@@ -76,10 +70,6 @@ enum MediaFeature {
         interaction.setClosedWings(nil)
         let layout = HomeLayoutState.shared
         if layout.showsMediaPlayer { layout.showsMediaPlayer = false }
-        if appliedExtraHeight != 0 {
-            layout.extraHeight = max(0, layout.extraHeight - appliedExtraHeight)
-            appliedExtraHeight = 0
-        }
         if sideLyricsWidth.value != 0 { sideLyricsWidth.send(0) }
     }
 
@@ -105,7 +95,7 @@ enum MediaFeature {
     // MARK: - Layout
 
     /// The player shows when media controls are on and either auto-hide is off or a
-    /// session is active; the inline lyric line needs 18 pt more beside the calendar.
+    /// session is active.
     static func shouldShowPlayer(settings: MediaSettings, hasActiveSession: Bool) -> Bool {
         settings.showStandardMediaControls && (!settings.autoHideInactivePlayer || hasActiveSession)
     }
@@ -133,12 +123,6 @@ enum MediaFeature {
         let showsPlayer = shouldShowPlayer(settings: settings, hasActiveSession: manager.hasActiveSession)
         if layout.showsMediaPlayer != showsPlayer {
             layout.showsMediaPlayer = showsPlayer
-        }
-
-        let wantedExtra = showsPlayer && settings.enableLyrics && layout.showsCalendar ? inlineLyricsExtraHeight : 0
-        if wantedExtra != appliedExtraHeight {
-            layout.extraHeight = max(0, layout.extraHeight - appliedExtraHeight + wantedExtra)
-            appliedExtraHeight = wantedExtra
         }
 
         let width = sideLyricsRequiredOpenWidth(

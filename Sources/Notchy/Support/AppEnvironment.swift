@@ -149,7 +149,8 @@ final class AppEnvironment {
         // Shelf: count indicator on the closed notch, drop-to-open, settings.
         ShelfFeature.start(userSettings: settings, activityCenter: model.activityCenter)
 
-        // Home: the music player and its closed-notch activity, and the calendar.
+        // Home: the music player and its closed-notch activity, the calendar, and Home's own cards.
+        SettingsSectionRegistry.shared.register(.home, id: "home") { HomeSettingsSection() }
         MediaFeature.start()
         SettingsSectionRegistry.shared.register(.media, id: "media") { MediaSettingsSection() }
         CalendarFeature.start()
