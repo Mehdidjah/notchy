@@ -3,10 +3,9 @@ import Foundation
 
 /// Onboarding preferences, stored under "onboarding." keys in UserDefaults.
 ///
-/// A single `firstLaunch` flag (default true) could both show the onboarding window and
-/// play the notch "hello", with the hello clearing it 3.5 s after it appears. Notchy
-/// splits it in two so the window keeps coming back until the user reaches the last page,
-/// while the hello still plays exactly once.
+/// Two flags: `completed` is set when the user reaches the last page of the onboarding
+/// window, and `helloShown` once the first-launch "hello" has played in the notch, so the
+/// hello plays exactly once.
 @MainActor
 final class OnboardingSettings: ObservableObject {
     static let shared = OnboardingSettings()
@@ -64,7 +63,7 @@ final class OnboardingSettings: ObservableObject {
             .flatMap(OnboardingMusicSource.init(rawValue:)) ?? .defaultSource
     }
 
-    /// Whether the onboarding window should open at launch.
+    /// The user has not reached the last page of the onboarding window yet.
     var needsOnboarding: Bool { !completed }
 
     func markCompleted(at date: Date = Date()) {
@@ -72,7 +71,8 @@ final class OnboardingSettings: ObservableObject {
         completed = true
     }
 
-    /// Forgets that onboarding ran, so the window and the hello come back at the next launch.
+    /// Forgets that onboarding ran: the hello plays again at the next launch and the window
+    /// counts as not finished.
     func resetForNextLaunch() {
         completed = false
         completedAt = nil

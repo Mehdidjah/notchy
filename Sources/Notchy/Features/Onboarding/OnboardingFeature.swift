@@ -1,9 +1,11 @@
 import AppKit
 
-/// Entry point for onboarding: the first-launch window, the welcome chime and the notch hello.
+/// Entry point for onboarding: the notch hello with its welcome chime at first launch, and the
+/// onboarding window, which opens only when asked for with `showOnboardingAgain()`.
 ///
 /// The host wires the hooks before calling `start()`:
 /// - `openIsland` / `closeIsland` open the island held open for the hello and close it again;
+///   `openIsland` returns false when the island cannot open;
 /// - `openSettings` opens the Settings window ("Customize in Settings");
 /// - `currentFeatureChoices` / `applyFeatureChoices` read and write the feature switches;
 /// - `currentMusicSource` / `applyMusicSource` read and save the music source;
@@ -11,7 +13,7 @@ import AppKit
 ///   window asks when it opens (a confirmation dialog). Leave it nil to skip the question.
 @MainActor
 enum OnboardingFeature {
-    static var openIsland: (() -> Void)?
+    static var openIsland: (() -> Bool)?
     static var closeIsland: (() -> Void)?
     static var openSettings: (() -> Void)?
     static var currentFeatureChoices: (() -> OnboardingFeatureChoices)?
@@ -28,20 +30,21 @@ enum OnboardingFeature {
 
         let settings = OnboardingSettings.shared
         let hello = OnboardingHelloController.shared
-        hello.openIsland = { OnboardingFeature.openIsland?() }
+        let isFirstLaunch = !settings.helloShown
+        var chimePending = isFirstLaunch && settings.playsWelcomeSound
+        hello.openIsland = {
+            guard OnboardingFeature.openIsland?() == true else { return false }
+            if chimePending {
+                chimePending = false
+                OnboardingWelcomeSound.play()
+            }
+            return true
+        }
         hello.closeIsland = { OnboardingFeature.closeIsland?() }
         hello.onFinished = { OnboardingSettings.shared.helloShown = true }
 
-        let isFirstLaunch = !settings.helloShown
         if isFirstLaunch {
             hello.present()
-        }
-        if settings.needsOnboarding {
-            // Next turn of the run loop, after the island window exists (main.async).
-            Task { @MainActor in OnboardingWindowController.showIfNeeded() }
-        }
-        if isFirstLaunch, settings.playsWelcomeSound {
-            OnboardingWelcomeSound.play()
         }
     }
 

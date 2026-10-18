@@ -5,6 +5,7 @@ struct NotchRootView: View {
     @ObservedObject private var settings: UserSettings
     @ObservedObject private var activityCenter: IslandActivityCenter
     @ObservedObject private var homeLayout = HomeLayoutState.shared
+    @ObservedObject private var hello = OnboardingHelloController.shared
     @State private var openSizeRevision = 0
     @State private var lastActivityID: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -60,7 +61,10 @@ struct NotchRootView: View {
         return ZStack(alignment: .top) {
             shape.fill(Color.black)
 
-            if isOpen {
+            if isOpen, hello.isPresenting {
+                OnboardingHelloStage(controller: hello)
+                    .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+            } else if isOpen {
                 NotchShellView(model: model)
                     .blur(radius: closeSwipe > 0.3 ? min(closeSwipe, 8) : 0)
                     .opacity(closeSwipe > 0.3 ? 0.8 : 1)

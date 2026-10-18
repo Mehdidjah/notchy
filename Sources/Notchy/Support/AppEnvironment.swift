@@ -194,9 +194,21 @@ final class AppEnvironment {
         // New releases: a sneak peek and a notification once per version, the menu bar, and About.
         UpdateChecker.shared.start()
         SettingsSectionRegistry.shared.register(.about, id: "updates") { UpdateSettingsSection() }
+
+        // First launch: the island opens pinned and writes "hello" in place of its tabs.
+        OnboardingFeature.openIsland = { [weak model, weak panelController] in
+            panelController?.openPinned()
+            return model?.state.showsShelfContent ?? false
+        }
+        OnboardingFeature.closeIsland = { [weak model] in
+            if model?.state == .pinnedOpen { model?.escape() }
+        }
+        // Tab-cycling measurements must not use up the first-launch hello.
+        if !PerfTabCycler.isRequested { OnboardingFeature.start() }
     }
 
     private func stopFeatures() {
+        OnboardingFeature.stop()
         UpdateChecker.shared.stop()
         FaceCheckController.shared.stopCamera()
         faceCheckWindow?.hide()

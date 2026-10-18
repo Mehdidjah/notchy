@@ -2,9 +2,10 @@ import Combine
 import Foundation
 
 /// Runs the first-launch hello: one second after launch the island opens and shows the
-/// glowing "hello" in place of its tabs; 3.5 s after the hello appears the island closes and
-/// the hello is marked as shown. While it is up the island is held open (auto-close is
-/// blocked during first launch).
+/// glowing "hello" in place of its header and tabs; 3.5 s after the hello appears the island
+/// closes and the hello is marked as shown. While it is up the island is held open (auto-close
+/// is blocked during first launch). When the island cannot open, the hello waits for the next
+/// launch.
 @MainActor
 final class OnboardingHelloController: ObservableObject {
     static let shared = OnboardingHelloController()
@@ -21,8 +22,9 @@ final class OnboardingHelloController: ObservableObject {
     /// Bumped on each presentation so an already visible hello restarts its stroke.
     @Published private(set) var replayCount = 0
 
-    /// Opens the island and holds it open. Wired by `OnboardingFeature`.
-    var openIsland: (() -> Void)?
+    /// Opens the island and holds it open; false when it cannot open now (switched off or
+    /// retracted for a fullscreen app). Wired by `OnboardingFeature`.
+    var openIsland: (() -> Bool)?
     /// Closes the island again. Wired by `OnboardingFeature`.
     var closeIsland: (() -> Void)?
     /// Called once the hello has played and the island was asked to close.
@@ -49,7 +51,10 @@ final class OnboardingHelloController: ObservableObject {
             let stageAlreadyVisible = self.isPresenting
             self.replayCount += 1
             self.isPresenting = true
-            self.openIsland?()
+            guard self.openIsland?() == true else {
+                self.isPresenting = false
+                return
+            }
             if stageAlreadyVisible { self.helloDidAppear() }
         }
     }

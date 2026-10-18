@@ -201,7 +201,10 @@ struct OnboardingTests {
         var opened = 0
         var closed = 0
         var finished = 0
-        hello.openIsland = { opened += 1 }
+        hello.openIsland = {
+            opened += 1
+            return true
+        }
         hello.closeIsland = { closed += 1 }
         hello.onFinished = { finished += 1 }
 
@@ -226,6 +229,7 @@ struct OnboardingTests {
     func replayingAVisibleHelloStillClosesIt() async {
         let hello = OnboardingHelloController(sleeper: { _ in })
         var closed = 0
+        hello.openIsland = { true }
         hello.closeIsland = { closed += 1 }
         hello.present()
         await settle { hello.isPresenting }
@@ -241,12 +245,37 @@ struct OnboardingTests {
     func cancellingTheHelloNeverOpensTheIsland() async {
         let hello = OnboardingHelloController(sleeper: { _ in await Task.yield() })
         var opened = 0
-        hello.openIsland = { opened += 1 }
+        hello.openIsland = {
+            opened += 1
+            return true
+        }
         hello.present()
         hello.cancel()
         for _ in 0..<20 { await Task.yield() }
         #expect(opened == 0)
         #expect(!hello.isPresenting)
+    }
+
+    @Test
+    func aHelloTheIslandCannotShowWaitsForTheNextLaunch() async {
+        let hello = OnboardingHelloController(sleeper: { _ in })
+        var opened = 0
+        var closed = 0
+        var finished = 0
+        hello.openIsland = {
+            opened += 1
+            return false
+        }
+        hello.closeIsland = { closed += 1 }
+        hello.onFinished = { finished += 1 }
+
+        hello.present()
+        await settle { opened == 1 }
+        hello.helloDidAppear()
+        for _ in 0..<20 { await Task.yield() }
+        #expect(!hello.isPresenting)
+        #expect(closed == 0)
+        #expect(finished == 0, "the hello is not marked as shown")
     }
 
     @Test

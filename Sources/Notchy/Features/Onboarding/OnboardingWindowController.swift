@@ -24,12 +24,6 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     var isVisible: Bool { window?.isVisible ?? false }
 
-    /// Shows the onboarding when it has not been completed yet.
-    static func showIfNeeded() {
-        guard OnboardingSettings.shared.needsOnboarding else { return }
-        shared.show()
-    }
-
     /// Shows the onboarding window, starting from the welcome page unless it is already open.
     func show() {
         if window == nil || !isVisible {
