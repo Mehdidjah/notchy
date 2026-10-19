@@ -39,6 +39,12 @@ enum NotchSilhouette {
     static let closedBottomRadius: CGFloat = 14
     static let openTopFlare: CGFloat = 19
     static let openBottomRadius: CGFloat = 24
+    /// The open content is clipped to a rectangle this far inside the silhouette's sides and
+    /// bottom. Its corners then stay inside the rounded bottom corners at every radius from the
+    /// closed 14 pt to the open 24 pt, and it stays clear of the content, which sits 7 pt in from
+    /// the sides and 12 pt up from the bottom.
+    static let openContentSideInset: CGFloat = 6
+    static let openContentBottomInset: CGFloat = 9
     static let peekBottomRadius: CGFloat = 18
     /// Extra width and height the collapsed notch gains while the pointer rests on it.
     static let hoverSwell: CGFloat = 8

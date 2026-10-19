@@ -49,53 +49,82 @@ struct NotchRootView: View {
         let faceActivity = showsActivity ? activityCenter.activeActivity as? FaceCheckLiveActivity : nil
         let faceExpanded = faceActivity.map { $0.phase != .preparing && $0.phase != .hidden } ?? false
         let detachedFace = faceActivity != nil && !model.notchGeometry.isHardwareNotch
+        let topFlare = isOpen ? NotchSilhouette.openTopFlare : NotchSilhouette.closedTopFlare
         let shape = detachedFace
             ? AnyShape(RoundedRectangle(cornerRadius: faceExpanded ? 48 : 12, style: .continuous))
             : AnyShape(NotchShape(
-                topFlareRadius: faceExpanded ? 16 : (isOpen ? NotchSilhouette.openTopFlare : NotchSilhouette.closedTopFlare),
+                topFlareRadius: faceExpanded ? 16 : topFlare,
                 bottomCornerRadius: faceExpanded ? 60 : (isOpen ? NotchSilhouette.openBottomRadius : NotchSilhouette.closedBottomRadius)
             ))
         let showsShadow = settings.showShadow && (isOpen || model.isHovering || isPeeking || faceActivity != nil)
         let closeSwipe = max(0, -model.gestureProgress)
 
-        return ZStack(alignment: .top) {
-            shape.fill(Color.black)
+        // The open size of the selected tab, whatever the state. The open content is laid out
+        // once at this size and revealed as the silhouette grows, so no card is laid out again
+        // on each frame of the opening.
+        let openSize = NotchGeometryResolver.metrics(
+            state: .pinnedOpen,
+            geometry: model.notchGeometry,
+            preferredExpandedWidth: settings.openNotchWidth,
+            tab: model.selectedTab,
+            tabCount: model.availableTabs.count,
+            extraOpenHeight: model.extraOpenHeight
+        ).renderedSize
 
-            if isOpen, hello.isPresenting {
-                OnboardingHelloStage(controller: hello)
+        return ZStack(alignment: .top) {
+            ZStack(alignment: .top) {
+                shape.fill(Color.black)
+
+                if !isOpen {
+                    ClosedIslandContent(
+                        model: model,
+                        activityCenter: activityCenter,
+                        layout: activityLayout,
+                        sneakPeek: isPeeking ? model.currentSneakPeek : nil
+                    )
                     .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
-            } else if isOpen {
-                NotchShellView(model: model)
-                    .blur(radius: closeSwipe > 0.3 ? min(closeSwipe, 8) : 0)
-                    .opacity(closeSwipe > 0.3 ? 0.8 : 1)
-                    .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
-            } else {
-                ClosedIslandContent(
-                    model: model,
-                    activityCenter: activityCenter,
-                    layout: activityLayout,
-                    sneakPeek: isPeeking ? model.currentSneakPeek : nil
-                )
-                .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                }
             }
-        }
-        .frame(
-            width: metrics.renderedSize.width,
-            height: metrics.renderedSize.height,
-            alignment: .top
-        )
-        .clipShape(shape)
-        .contentShape(shape)
-        .background(alignment: .top) {
-            // The shadow belongs to the silhouette only, so the island's content is never
-            // re-rasterised to cast it.
-            if showsShadow {
-                shape
-                    .fill(Color.black)
-                    .shadow(color: .black.opacity(NotchSilhouette.shadowOpacity), radius: NotchSilhouette.shadowRadius)
+            .frame(
+                width: metrics.renderedSize.width,
+                height: metrics.renderedSize.height,
+                alignment: .top
+            )
+            .clipShape(shape)
+            .contentShape(shape)
+            .background(alignment: .top) {
+                // The shadow belongs to the silhouette only, so the island's content is never
+                // re-rasterised to cast it.
+                if showsShadow {
+                    shape
+                        .fill(Color.black)
+                        .shadow(color: .black.opacity(NotchSilhouette.shadowOpacity), radius: NotchSilhouette.shadowRadius)
+                }
             }
+            .offset(y: detachedFace ? 3 : 0)
+
+            // The open content is clipped to a plain rectangle inside the silhouette, not to the
+            // notch shape: a mask in that shape changes on every frame of the opening and makes
+            // the render server redraw all of the content off screen each time.
+            ZStack(alignment: .top) {
+                if isOpen, hello.isPresenting {
+                    OnboardingHelloStage(controller: hello)
+                        .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                } else if isOpen {
+                    NotchShellView(model: model)
+                        .blur(radius: closeSwipe > 0.3 ? min(closeSwipe, 8) : 0)
+                        .opacity(closeSwipe > 0.3 ? 0.8 : 1)
+                        .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                }
+            }
+            .frame(width: openSize.width, height: openSize.height, alignment: .top)
+            .frame(
+                width: max(0, metrics.renderedSize.width - 2 * (topFlare + NotchSilhouette.openContentSideInset)),
+                height: max(0, metrics.renderedSize.height - NotchSilhouette.openContentBottomInset),
+                alignment: .top
+            )
+            .clipped()
         }
-        .offset(y: detachedFace ? 3 : 0)
         .opacity(isVisible || model.state.isCollapsed ? 1 : 0.001)
         .animation(hoverAnimation, value: model.isHovering)
         .animation(isOpen ? openAnimation : closeAnimation, value: model.state)
