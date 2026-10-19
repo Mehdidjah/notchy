@@ -1,9 +1,11 @@
 import AppKit
+import os
 import QuartzCore
 
 /// Developer aid for measuring tab-switch smoothness: launched with `--perf-cycle-tabs`, the
 /// app opens the island pinned, steps through every tab a few times while a display link
-/// times every frame, then measures the face animation and quits. Does nothing without the argument.
+/// times every frame, closes and reopens the island on Home, then measures the face animation
+/// and quits. Does nothing without the argument.
 @MainActor
 enum PerfTabCycler {
     static let argument = "--perf-cycle-tabs"
@@ -12,6 +14,9 @@ enum PerfTabCycler {
     /// Frames are measured for this long after each switch (the slide lasts 0.3 s).
     static let measureWindow: TimeInterval = 0.6
     static let rounds = 3
+    /// Close-and-reopen cycles; each spring settles within 0.7 s.
+    static let islandRounds = 5
+    static let islandWindow: TimeInterval = 0.7
 
     static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains(argument) }
 
@@ -37,15 +42,46 @@ enum PerfTabCycler {
                     samples[tab, default: []].append(window)
                 }
             }
+            let media = MusicManager.shared
+            let mediaContext = "PERF media playing=\(media.isPlaying ? 1 : 0) player=\(HomeLayoutState.shared.showsMediaPlayer ? 1 : 0)"
+            let islandSamples = await measureOpenAndClose(model: model, recorder: recorder)
             let faceSamples = await measureFaceActivity(model: model, recorder: recorder)
             recorder.stop()
             print(report(samples, refresh: recorder.nominalInterval))
+            print(mediaContext)
+            for name in islandSamples.keys.sorted() {
+                print(summary(name: "island-\(name)", windows: islandSamples[name] ?? []))
+                print("PERF island-\(name)-each " + (islandSamples[name] ?? []).map {
+                    String(format: "%d/%d/%.0f", $0.hitchCount, $0.droppedFrames, $0.firstFrameDelay * 1000)
+                }.joined(separator: " "))
+            }
             for name in faceSamples.keys.sorted() {
                 print(summary(name: "face-\(name)", windows: faceSamples[name] ?? []))
             }
             fflush(stdout)
             NSApp.terminate(nil)
         }
+    }
+
+    /// Closes the island from Home and opens it again, timing each animation.
+    private static func measureOpenAndClose(model: NotchViewModel, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
+        model.selectTab(.home)
+        try? await Task.sleep(for: stepInterval)
+        var samples: [String: [FrameRecorder.Window]] = [:]
+        let signposter = OSSignposter(subsystem: "com.local.Notchy", category: .pointsOfInterest)
+        for _ in 0..<islandRounds {
+            var start = CACurrentMediaTime()
+            signposter.emitEvent("close")
+            model.escape()
+            try? await Task.sleep(for: .seconds(1))
+            samples["close", default: []].append(recorder.window(from: start, length: islandWindow))
+            start = CACurrentMediaTime()
+            signposter.emitEvent("open")
+            model.openPinned()
+            try? await Task.sleep(for: .seconds(1))
+            samples["open", default: []].append(recorder.window(from: start, length: islandWindow))
+        }
+        return samples
     }
 
     /// Exercises presentation only: no camera, face comparison, or authorization request.
@@ -132,7 +168,12 @@ private final class FrameRecorder: NSObject {
         link = nil
     }
 
+    private let signposter = OSSignposter(subsystem: "com.local.Notchy", category: .pointsOfInterest)
+
     @objc private func tick(_ link: CADisplayLink) {
+        if let last = timestamps.last, link.timestamp - last > nominalInterval * 1.5 {
+            signposter.emitEvent("hitch", "\(Int((link.timestamp - last) * 1000))")
+        }
         timestamps.append(link.timestamp)
         let interval = link.targetTimestamp - link.timestamp
         if interval > 0.001 { nominalInterval = interval }
