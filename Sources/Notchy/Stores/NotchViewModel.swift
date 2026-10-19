@@ -56,8 +56,8 @@ final class NotchViewModel: ObservableObject {
 
     /// How long a newly captured clip stays on the collapsed notch before it folds away.
     var peekDuration: Duration = .milliseconds(NotchInteractionDefaults.peekDurationMilliseconds)
-    /// How long the close spring takes before the island is considered idle again.
-    var closeAnimationDuration: Duration = .milliseconds(450)
+    /// How long `.closing` lasts before `.idle`; the close animation in `NotchRootView` takes as long.
+    var closeAnimationDuration: Duration = .milliseconds(500)
 
     let settings: UserSettings
     private let repository: any ClipRepository

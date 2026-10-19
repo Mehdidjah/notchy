@@ -109,12 +109,12 @@ struct NotchRootView: View {
             ZStack(alignment: .top) {
                 if isOpen, hello.isPresenting {
                     OnboardingHelloStage(controller: hello)
-                        .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                        .transition(openContentTransition)
                 } else if isOpen {
                     NotchShellView(model: model)
                         .blur(radius: closeSwipe > 0.3 ? min(closeSwipe, 8) : 0)
                         .opacity(closeSwipe > 0.3 ? 0.8 : 1)
-                        .transition(.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)))
+                        .transition(openContentTransition)
                 }
             }
             .frame(width: openSize.width, height: openSize.height, alignment: .top)
@@ -144,13 +144,24 @@ struct NotchRootView: View {
         return .bouncy.speed(1.2)
     }
 
-    /// Opening settles with a critically damped spring; closing uses a slightly longer one.
+    /// Opening settles with a critically damped spring.
     private var openAnimation: Animation {
         reduceMotion ? .easeInOut(duration: 0.12) : .spring(response: 0.42, dampingFraction: 1.0, blendDuration: 0)
     }
 
+    /// Closing glides shut over half a second, easing in and out, so the island never snaps
+    /// closed. `NotchViewModel.closeAnimationDuration` matches it.
     private var closeAnimation: Animation {
-        reduceMotion ? .easeInOut(duration: 0.12) : .spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
+        reduceMotion ? .easeInOut(duration: 0.12) : .easeInOut(duration: 0.5)
+    }
+
+    /// The open content blurs in quickly and blurs away over 0.3 s, so on closing it fades
+    /// while the island shrinks instead of vanishing at once.
+    private var openContentTransition: some Transition {
+        AsymmetricTransition(
+            insertion: BlurReplaceTransition.blurReplace.animation(.interactiveSpring(dampingFraction: 1.2)),
+            removal: BlurReplaceTransition.blurReplace.animation(reduceMotion ? .easeInOut(duration: 0.12) : .easeOut(duration: 0.3))
+        )
     }
 
     private var gestureAnimation: Animation {
