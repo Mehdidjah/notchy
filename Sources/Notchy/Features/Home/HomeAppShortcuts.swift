@@ -141,14 +141,18 @@ final class HomeAppShortcutsStore: ObservableObject {
     }
 }
 
-/// Icons read once per app bundle.
+/// App icons read once per bundle and drawn into a bitmap, so the grid never renders the
+/// workspace's vector icons while the island animates.
 @MainActor
 enum HomeAppIconCache {
     private static var icons: [String: NSImage] = [:]
+    /// 64 pt at 2x: more than a tile's icon needs at the standard Home height, hover zoom included.
+    static let pixelSide = 128
 
     static func icon(forPath path: String) -> NSImage {
         if let icon = icons[path] { return icon }
-        let icon = NSWorkspace.shared.icon(forFile: path)
+        let source = NSWorkspace.shared.icon(forFile: path)
+        let icon = IconRasterizer.rasterized(source, pixelSide: pixelSide) ?? source
         icons[path] = icon
         return icon
     }

@@ -111,17 +111,7 @@ enum MediaAppIconCache {
         if let cached = icons[bundleIdentifier] { return cached }
         guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else { return nil }
         let source = NSWorkspace.shared.icon(forFile: url.path)
-        guard let bitmap = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: pixelSide, pixelsHigh: pixelSide, bitsPerSample: 8,
-            samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-            bytesPerRow: 0, bitsPerPixel: 0
-        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else { return source }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        source.draw(in: NSRect(x: 0, y: 0, width: pixelSide, height: pixelSide))
-        NSGraphicsContext.restoreGraphicsState()
-        let image = NSImage(size: NSSize(width: pixelSide / 2, height: pixelSide / 2))
-        image.addRepresentation(bitmap)
+        guard let image = IconRasterizer.rasterized(source, pixelSide: pixelSide) else { return source }
         icons[bundleIdentifier] = image
         return image
     }
