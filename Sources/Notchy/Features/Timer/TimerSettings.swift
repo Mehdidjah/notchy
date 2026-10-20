@@ -54,6 +54,7 @@ final class TimerSettings: ObservableObject {
         static let solidColor = "timer.solidColor"
         static let showsPresetsInTab = "timer.showsPresetsInTab"
         static let customDuration = "timer.customDuration"
+        static let tabMode = "timer.tabMode"
     }
 
     /// System alert sounds that ship with macOS and can be played by name.
@@ -100,6 +101,10 @@ final class TimerSettings: ObservableObject {
     @Published var customDuration: TimeInterval {
         didSet { defaults.set(customDuration, forKey: Key.customDuration) }
     }
+    /// The mode the Timer tab shows while no timer runs.
+    @Published var tabMode: TimerTabMode {
+        didSet { defaults.set(tabMode.rawValue, forKey: Key.tabMode) }
+    }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -120,6 +125,7 @@ final class TimerSettings: ObservableObject {
         } ?? .systemBlue
         showsPresetsInTab = defaults.object(forKey: Key.showsPresetsInTab) as? Bool ?? true
         customDuration = max(0, defaults.object(forKey: Key.customDuration) as? Double ?? Self.defaultCustomDuration)
+        tabMode = TimerTabMode(rawValue: defaults.string(forKey: Key.tabMode) ?? "") ?? .focus
     }
 
     func preset(withID id: UUID?) -> TimerPreset? {
