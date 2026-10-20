@@ -42,13 +42,13 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
     /// Stats grows, and only for its extra rows of graphs.
     var openHeight: CGFloat { Self.standardOpenHeight }
 
-    static let standardOpenHeight: CGFloat = 200
+    static let standardOpenHeight: CGFloat = 180
 
     /// The open island widens as more tabs are shown so the icon row never crowds the notch.
     static func minimumOpenWidth(forTabCount count: Int) -> CGFloat {
-        if count >= 7 { return 850 }
-        if count >= 6 { return 770 }
-        if count >= 5 { return 690 }
+        if count >= 7 { return 760 }
+        if count >= 6 { return 700 }
+        if count >= 5 { return 660 }
         return 640
     }
 

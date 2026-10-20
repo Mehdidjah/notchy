@@ -405,14 +405,14 @@ struct NotchViewModelTests {
     func openSizesFollowTabsAndTabCount() {
         let geometry = Self.macBookGeometry
         let home = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: .home, tabCount: 4)
-        #expect(home.renderedSize == CGSize(width: 664, height: 212))
+        #expect(home.renderedSize == CGSize(width: 664, height: 192))
         let timer = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: .timer, tabCount: 6)
-        #expect(timer.renderedSize == CGSize(width: 794, height: 212))
-        #expect(NotchTab.minimumOpenWidth(forTabCount: 7) == 850, "seven tab icons need a wider island")
+        #expect(timer.renderedSize == CGSize(width: 724, height: 192))
+        #expect(NotchTab.minimumOpenWidth(forTabCount: 7) == 760, "seven tab icons need a wider island")
         // Every tab keeps Home's height, so switching tabs never resizes the island.
         for tab in NotchTab.allCases {
             let metrics = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: tab, tabCount: 6)
-            #expect(metrics.renderedSize.height == 212, "\(tab)")
+            #expect(metrics.renderedSize.height == 192, "\(tab)")
         }
     }
 

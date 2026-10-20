@@ -59,7 +59,7 @@ struct NotchFaceTabView: View {
                     }
                 }
             }
-            .frame(width: 200, height: 136)
+            .frame(width: 184, height: 124)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             if let chip = controller.chip, controller.cameraState == .on {

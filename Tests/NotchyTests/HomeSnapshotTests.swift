@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct HomeSnapshotTests {
     /// The seven-tab minimum content width plus the 12-pt open insets.
-    private static let islandWidth: CGFloat = 850 + 24
+    private static let islandWidth: CGFloat = NotchTab.minimumOpenWidth(forTabCount: 7) + 24
     private static let headerHeight: CGFloat = 32
     /// The shell's content insets (14 + 12 pt a side) and the Home tab's 8-pt padding.
     private static let rowWidth = islandWidth - 52 - 16
