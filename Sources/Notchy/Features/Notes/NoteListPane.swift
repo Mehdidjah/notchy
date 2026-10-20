@@ -21,13 +21,13 @@ struct NoteListPane: View {
 
     var body: some View {
         let notes = visibleNotes
-        VStack(spacing: 0) {
+        VStack(spacing: 0.island) {
             header
 
             if isSearchExpanded {
                 searchAndFilterRow
                     .transition(.move(edge: .top).combined(with: .opacity))
-                    .padding(.bottom, 7)
+                    .padding(.bottom, 10.island)
             }
 
             if notes.isEmpty {
@@ -53,12 +53,12 @@ struct NoteListPane: View {
     private var header: some View {
         HStack {
             Text("Notes")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(.system(size: 16.island, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
 
             if settings.appleNotesSyncEnabled {
                 Image(systemName: sync.isSyncing ? "arrow.triangle.2.circlepath" : "apple.logo")
-                    .font(.system(size: 7.5, weight: .semibold))
+                    .font(.system(size: 11.island, weight: .semibold))
                     .foregroundStyle(sync.isSyncing ? Color.yellow : Color.white.opacity(0.45))
                     .rotationEffect(.degrees(sync.isSyncing ? 360 : 0))
                     .animation(
@@ -87,11 +87,11 @@ struct NoteListPane: View {
                     withAnimation(Self.paneSpring) { isSearchExpanded.toggle() }
                 } label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 10, weight: isSearchExpanded ? .bold : .medium))
+                        .font(.system(size: 14.island, weight: isSearchExpanded ? .bold : .medium))
                         .symbolVariant(isSearchExpanded ? .circle.fill : .none)
-                        .frame(width: 11, height: 11)
+                        .frame(width: 16.island, height: 16.island)
                         .foregroundStyle(isSearchExpanded ? Color.blue : Color.white.opacity(0.6))
-                        .padding(3.5)
+                        .padding(5.island)
                         .background(Color.white.opacity(0.1))
                         .clipShape(Circle())
                 }
@@ -116,8 +116,8 @@ struct NoteListPane: View {
                 controller.createNote()
             }
         }
-        .padding(.horizontal, 11)
-        .padding(.top, 5.5)
+        .padding(.horizontal, 16.island)
+        .padding(.top, 8.island)
         .padding(.bottom, isSearchExpanded ? 4 : 2)
     }
 
@@ -132,9 +132,9 @@ struct NoteListPane: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: weight))
-                .frame(width: 11, height: 11)
+                .frame(width: 16.island, height: 16.island)
                 .foregroundStyle(tint)
-                .padding(3.5)
+                .padding(5.island)
                 .background(Color.white.opacity(0.1))
                 .clipShape(Circle())
         }
@@ -146,45 +146,45 @@ struct NoteListPane: View {
     // MARK: - Search and colour filter
 
     private var searchAndFilterRow: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6.island) {
             if settings.searchEnabled && !store.isEmpty {
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 7))
+                        .font(.system(size: 10.island))
                         .foregroundStyle(.secondary)
                     TextField("Search notes...", text: $searchText)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 8.5))
+                        .font(.system(size: 12.island))
                         .foregroundStyle(.white)
                     if !searchText.isEmpty {
                         Button {
                             searchText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 7))
+                                .font(.system(size: 10.island))
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Clear search")
                     }
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 10.island)
+                .padding(.vertical, 4.island)
                 .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 5.5))
-                .padding(.horizontal, 11)
+                .clipShape(RoundedRectangle(cornerRadius: 8.island))
+                .padding(.horizontal, 16.island)
             }
 
             if settings.colorFilteringEnabled && !store.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6.island) {
                         Button {
                             colorFilter = nil
                         } label: {
                             Text("All")
-                                .font(.system(size: 7, weight: .medium))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
+                                .font(.system(size: 10.island, weight: .medium))
+                                .padding(.horizontal, 6.island)
+                                .padding(.vertical, 3.island)
                                 .background(colorFilter == nil ? Color.blue.opacity(0.3) : Color.white.opacity(0.1))
                                 .clipShape(Capsule())
                         }
@@ -193,7 +193,7 @@ struct NoteListPane: View {
                         ForEach(NoteItem.palette.indices, id: \.self) { index in
                             Circle()
                                 .fill(NoteItem.palette[index])
-                                .frame(width: 10, height: 10)
+                                .frame(width: 14.island, height: 14.island)
                                 .overlay(
                                     Circle()
                                         .stroke(Color.white, lineWidth: colorFilter == index ? 2 : 0)
@@ -208,7 +208,7 @@ struct NoteListPane: View {
                                 .accessibilityAddTraits(colorFilter == index ? [.isButton, .isSelected] : .isButton)
                         }
                     }
-                    .padding(.horizontal, 11)
+                    .padding(.horizontal, 16.island)
                 }
             }
         }
@@ -220,15 +220,15 @@ struct NoteListPane: View {
         let isSearching = !searchText.isEmpty
         return VStack {
             Spacer()
-            HStack(spacing: 5.5) {
+            HStack(spacing: 8.island) {
                 Image(systemName: isSearching ? "magnifyingglass" : "note.text")
-                    .font(.system(size: 11))
+                    .font(.system(size: 16.island))
                     .foregroundStyle(.secondary.opacity(0.4))
                 Text(isSearching ? "No results found" : "No notes yet")
-                    .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                    .font(.system(size: 12.island, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary.opacity(0.8))
             }
-            .padding(.top, 7)
+            .padding(.top, 10.island)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -237,11 +237,11 @@ struct NoteListPane: View {
     private func grid(_ notes: [NoteItem]) -> some View {
         let isCompact = notes.count > 3
         let columns = isCompact
-            ? [GridItem(.flexible(), spacing: 5.5), GridItem(.flexible(), spacing: 5.5)]
+            ? [GridItem(.flexible(), spacing: 8.island), GridItem(.flexible(), spacing: 8.island)]
             : [GridItem(.flexible())]
         return ZStack {
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 5.5) {
+                LazyVGrid(columns: columns, spacing: 8.island) {
                     ForEach(notes) { note in
                         NoteRowView(
                             note: note,
@@ -256,17 +256,17 @@ struct NoteListPane: View {
                         .onTapGesture { controller.open(note) }
                     }
                 }
-                .padding(.horizontal, 11)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 16.island)
+                .padding(.bottom, 20.island)
             }
 
             LinearGradient(colors: [Color.black.opacity(0.65), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 11)
+                .frame(height: 16.island)
                 .frame(maxHeight: .infinity, alignment: .top)
                 .allowsHitTesting(false)
 
             LinearGradient(colors: [.clear, Color.black.opacity(0.65)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 11)
+                .frame(height: 16.island)
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .allowsHitTesting(false)
         }

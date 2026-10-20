@@ -12,7 +12,7 @@ struct NoteEditorPane: View {
     private var accent: Color { NoteItem.color(at: controller.colorIndex) }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 0.island) {
             toolbar
             titleRow
             Divider()
@@ -37,11 +37,11 @@ struct NoteEditorPane: View {
             Button {
                 controller.back()
             } label: {
-                HStack(spacing: 3) {
+                HStack(spacing: 4.island) {
                     Image(systemName: "chevron.left")
                     Text("Notes")
                 }
-                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                .font(.system(size: 15.island, weight: .medium, design: .rounded))
                 .foregroundStyle(.white)
                 .contentShape(Rectangle())
             }
@@ -54,19 +54,19 @@ struct NoteEditorPane: View {
                 controller.done()
             } label: {
                 Text("Done")
-                    .font(.system(size: 10.5, weight: .bold, design: .rounded))
+                    .font(.system(size: 15.island, weight: .bold, design: .rounded))
                     .foregroundStyle(accent)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(11)
+        .padding(16.island)
     }
 
     private var titleRow: some View {
-        HStack(alignment: .center, spacing: 8.5) {
+        HStack(alignment: .center, spacing: 12.island) {
             TextField("Title", text: $controller.title)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 17.island, weight: .bold, design: .rounded))
                 .textFieldStyle(.plain)
                 .foregroundStyle(.white)
                 .onSubmit { isBodyFocused = true }
@@ -74,11 +74,11 @@ struct NoteEditorPane: View {
             Spacer()
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5.5) {
+                HStack(spacing: 8.island) {
                     ForEach(NoteItem.palette.indices, id: \.self) { index in
                         Circle()
                             .fill(NoteItem.palette[index])
-                            .frame(width: 11, height: 11)
+                            .frame(width: 16.island, height: 16.island)
                             .overlay(
                                 Circle()
                                     .stroke(Color.white, lineWidth: controller.colorIndex == index ? 2 : 0)
@@ -93,34 +93,34 @@ struct NoteEditorPane: View {
                             .accessibilityAddTraits(controller.colorIndex == index ? [.isButton, .isSelected] : .isButton)
                     }
                 }
-                .padding(.vertical, 3)
-                .padding(.horizontal, 3)
+                .padding(.vertical, 4.island)
+                .padding(.horizontal, 4.island)
             }
-            .frame(maxWidth: 112)
+            .frame(maxWidth: 160.island)
         }
-        .padding(.leading, 11)
-        .padding(.trailing, 3)
-        .padding(.bottom, 5.5)
+        .padding(.leading, 16.island)
+        .padding(.trailing, 4.island)
+        .padding(.bottom, 8.island)
     }
 
     private var bodyEditor: some View {
         ZStack(alignment: .topLeading) {
             if controller.content.isEmpty {
                 Text("Start typing...")
-                    .font(.system(size: 9, design: .rounded))
+                    .font(.system(size: 13.island, design: .rounded))
                     .foregroundStyle(.white.opacity(0.5))
-                    .padding(.top, 7)
-                    .padding(.leading, 8.5)
+                    .padding(.top, 10.island)
+                    .padding(.leading, 12.island)
                     .allowsHitTesting(false)
             }
 
             TextEditor(text: $controller.content)
-                .font(.system(size: 9, design: .rounded))
+                .font(.system(size: 13.island, design: .rounded))
                 .foregroundStyle(.white)
                 .lineSpacing(4)
                 .scrollContentBackground(.hidden)
-                .padding(5.5)
-                .padding(.bottom, 14)
+                .padding(8.island)
+                .padding(.bottom, 20.island)
                 .padding(.trailing, controller.image != nil ? 75 : 0)
                 .focused($isBodyFocused)
                 .frame(maxHeight: .infinity)
@@ -136,12 +136,12 @@ struct NoteEditorPane: View {
                     HStack {
                         Spacer()
                         Text("\(controller.content.count) chars")
-                            .font(.system(size: 7, weight: .medium, design: .monospaced))
+                            .font(.system(size: 10.island, weight: .medium, design: .monospaced))
                             .foregroundStyle(.secondary.opacity(0.5))
-                            .padding(3)
+                            .padding(4.island)
                             .background(Color.black.opacity(0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                            .padding(5.5)
+                            .clipShape(RoundedRectangle(cornerRadius: 4.island))
+                            .padding(8.island)
                     }
                 }
                 .allowsHitTesting(false)
@@ -158,24 +158,24 @@ struct NoteEditorPane: View {
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 38.5, height: 38.5)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
-                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                        .frame(width: 55.island, height: 55.island)
+                        .clipShape(RoundedRectangle(cornerRadius: 10.island))
+                        .overlay(RoundedRectangle(cornerRadius: 10.island).stroke(Color.white.opacity(0.2), lineWidth: 1))
                         .shadow(color: .black.opacity(0.5), radius: 5, x: 0, y: 2)
 
                     Button {
                         withAnimation { controller.setImage(nil) }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10))
+                            .font(.system(size: 14.island))
                             .foregroundStyle(.white.opacity(0.9), .black.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                     .offset(x: 4, y: -4)
                     .accessibilityLabel("Remove Picture")
                 }
-                .padding(8.5)
-                .padding(.bottom, 14)
+                .padding(12.island)
+                .padding(.bottom, 20.island)
             }
         }
     }

@@ -45,7 +45,7 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
     /// The open island's content is laid out at its design size and drawn at this scale, so
     /// every widget keeps its proportions in the compact island. The header is not scaled: it
     /// has to cover the hardware notch.
-    static let contentScale: CGFloat = 0.7
+    static let contentScale: CGFloat = 0.805
     /// The content height (below a 32-pt header) the tabs are designed for.
     static let designContentHeight: CGFloat = 148
     /// 32-pt header plus the design content height at `contentScale`.
@@ -53,14 +53,18 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
 
     /// The open island widens as more tabs are shown so the icon row never crowds the notch.
     static func minimumOpenWidth(forTabCount count: Int) -> CGFloat {
-        if count >= 7 { return 532 }
-        if count >= 6 { return 490 }
-        if count >= 5 { return 462 }
-        return 448
+        let design: CGFloat
+        if count >= 7 { design = 760 } else if count >= 6 { design = 700 } else if count >= 5 { design = 660 } else { design = 640 }
+        return atContentScale(design)
     }
 
-    static let maximumOpenWidth: CGFloat = 630
-    static let defaultOpenWidth: CGFloat = 448
+    /// Widths are designed at full size and drawn at `contentScale`, like the content.
+    static let maximumOpenWidth: CGFloat = atContentScale(900)
+    static let defaultOpenWidth: CGFloat = atContentScale(640)
+
+    static func atContentScale(_ designWidth: CGFloat) -> CGFloat {
+        (designWidth * contentScale).rounded()
+    }
     /// Horizontal inset added on each side of the content box while open.
     static let openHorizontalInset: CGFloat = 12
     /// Inset added below the content box while open.

@@ -20,7 +20,7 @@ struct NotchShelfTabView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8.5) {
+        HStack(spacing: 12.island) {
             ShelfShareDropZone(store: store, settings: settings, hub: hub)
             shelfPanel
         }
@@ -35,15 +35,15 @@ struct NotchShelfTabView: View {
     // MARK: Panel
 
     private var shelfPanel: some View {
-        RoundedRectangle(cornerRadius: 11)
+        RoundedRectangle(cornerRadius: 16.island)
             .stroke(
                 isPanelTargeted ? Color.accentColor.opacity(0.9) : Color.white.opacity(0.1),
                 style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [10])
             )
-            .overlay { panelContent.padding(11) }
+            .overlay { panelContent.padding(16.island) }
             .overlay(alignment: .topTrailing) {
                 if !store.isEmpty {
-                    toolbar.padding(4)
+                    toolbar.padding(6.island)
                 }
             }
             .background(ShelfAnchorView(anchor: panelAnchor))
@@ -63,7 +63,7 @@ struct NotchShelfTabView: View {
     @ViewBuilder
     private var panelContent: some View {
         if store.isEmpty {
-            VStack(spacing: 7) {
+            VStack(spacing: 10.island) {
                 Image(systemName: "tray.and.arrow.down.fill")
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.white, .gray)
@@ -91,7 +91,7 @@ struct NotchShelfTabView: View {
     }
 
     private var toolbar: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6.island) {
             toolbarButton(
                 "square.and.arrow.up",
                 help: store.hasSelection ? "Share selected items" : "Share all items"
@@ -112,9 +112,9 @@ struct NotchShelfTabView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 7.5, weight: .semibold))
+                .font(.system(size: 11.island, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 15.5, height: 15.5)
+                .frame(width: 22.island, height: 22.island)
                 .background(Color.white.opacity(0.1))
                 .clipShape(Circle())
         }

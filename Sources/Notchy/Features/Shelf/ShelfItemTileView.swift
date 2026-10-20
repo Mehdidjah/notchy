@@ -16,7 +16,7 @@ struct ShelfItemTileView: View {
 
     var body: some View {
         ZStack {
-            VStack(alignment: .center, spacing: 1.5) {
+            VStack(alignment: .center, spacing: 2.island) {
                 Image(nsImage: thumbnail ?? ShelfThumbnailCache.symbolCard(systemName: item.kind.symbolName))
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -24,7 +24,7 @@ struct ShelfItemTileView: View {
                     .clipShape(RoundedRectangle(cornerRadius: ShelfTileMetrics.cornerRadius))
                     .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
                 Text(item.displayName)
-                    .font(.system(size: 8.5, weight: .medium))
+                    .font(.system(size: 12.island, weight: .medium))
                     .foregroundStyle(.white)
                     .lineLimit(2)
                     .truncationMode(.middle)
@@ -75,7 +75,7 @@ struct ShelfItemTileView: View {
                 .frame(width: ShelfTileMetrics.removeButtonSize, height: ShelfTileMetrics.removeButtonSize)
                 .overlay(
                     Image(systemName: "xmark")
-                        .font(.system(size: 5.5, weight: .bold))
+                        .font(.system(size: 8.island, weight: .bold))
                         .foregroundStyle(.black)
                 )
                 .shadow(color: .black.opacity(0.4), radius: 2)

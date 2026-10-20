@@ -24,3 +24,13 @@ extension View {
         modifier(IslandScaledContent(scale: scale))
     }
 }
+
+/// Design sizes for tabs that can't be drawn through `IslandScaledContent` (they embed AppKit
+/// views): `13.island` is 13 design points at the content scale.
+extension Int {
+    var island: CGFloat { CGFloat(self) * NotchTab.contentScale }
+}
+
+extension Double {
+    var island: CGFloat { CGFloat(self) * NotchTab.contentScale }
+}

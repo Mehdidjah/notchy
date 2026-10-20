@@ -3,8 +3,8 @@ import SwiftUI
 /// The island header's round buttons: a dark grey disc with a white glyph, lighter while
 /// hovered and lighter still while selected. Tab icons and the buttons on the right share it.
 enum NotchChipStyle {
-    static let diameter: CGFloat = 16
-    static let spacing: CGFloat = 4
+    static let diameter: CGFloat = 18
+    static let spacing: CGFloat = 5
     static let fill = Color(white: 0.17)
     static let hoverFill = Color(white: 0.24)
     static let selectedFill = Color(white: 0.38)
@@ -13,10 +13,10 @@ enum NotchChipStyle {
     /// Point sizes that make mixed symbols read as one size inside the disc.
     static func glyphSize(for symbol: String) -> CGFloat {
         switch symbol {
-        case "gearshape", "timer", "faceid", "web.camera": 7.5
-        case "list.clipboard", "doc.on.clipboard.fill", "note.text", "eyedropper": 7.2
-        case "chart.xyaxis.line", "tray.fill": 6.8
-        default: 7.2
+        case "gearshape", "timer", "faceid", "web.camera": 8.5
+        case "list.clipboard", "doc.on.clipboard.fill", "note.text", "eyedropper": 8
+        case "chart.xyaxis.line", "tray.fill": 7.6
+        default: 8
         }
     }
 }

@@ -21,13 +21,13 @@ struct NoteRowView: View {
 
     var body: some View {
         HStack(spacing: isCompact ? 8 : 12) {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 3.island)
                 .fill(note.color)
                 .frame(width: isCompact ? 3 : 4)
                 .padding(.vertical, isCompact ? 4 : 2)
 
             VStack(alignment: .leading, spacing: isCompact ? 1 : 4) {
-                HStack(spacing: 3) {
+                HStack(spacing: 4.island) {
                     if note.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: isCompact ? 7 : 8))
@@ -54,14 +54,14 @@ struct NoteRowView: View {
         .padding(isCompact ? 8 : 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 8.5)
+            RoundedRectangle(cornerRadius: 12.island)
                 .fill(Color.white.opacity(isHovered ? 0.12 : 0.08))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8.5)
+                    RoundedRectangle(cornerRadius: 12.island)
                         .stroke(note.color.opacity(0.2), lineWidth: 1)
                 )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 8.5))
+        .clipShape(RoundedRectangle(cornerRadius: 12.island))
         .overlay(alignment: .trailing) { trailingAccessories }
         .onHover { hovering in
             withAnimation(Self.hoverAnimation) { isHovered = hovering }
@@ -72,7 +72,7 @@ struct NoteRowView: View {
     }
 
     private var trailingAccessories: some View {
-        HStack(spacing: 5.5) {
+        HStack(spacing: 8.island) {
             if isHovered {
                 actionPill
                     .transition(.asymmetric(
@@ -81,7 +81,7 @@ struct NoteRowView: View {
                     ))
             } else if !isCompact {
                 Text(NoteOrdering.timeAgo(from: note.creationDate))
-                    .font(.system(size: 7))
+                    .font(.system(size: 10.island))
                     .foregroundStyle(.secondary.opacity(0.6))
             }
 
@@ -90,8 +90,8 @@ struct NoteRowView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: isCompact ? 32 : 50, height: isCompact ? 32 : 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                    .clipShape(RoundedRectangle(cornerRadius: 6.island))
+                    .overlay(RoundedRectangle(cornerRadius: 6.island).stroke(Color.white.opacity(0.2), lineWidth: 1))
                     .shadow(color: .black.opacity(0.3), radius: 3, x: 0, y: 1)
                     .padding(.trailing, isCompact ? 4 : 8)
                     .accessibilityHidden(true)
@@ -126,7 +126,7 @@ struct NoteRowView: View {
                 .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
                 .shadow(color: .black.opacity(0.3), radius: 3)
         )
-        .padding(.vertical, 3)
+        .padding(.vertical, 4.island)
     }
 
     private func pillButton(_ symbol: String, tint: Color, label: String, action: @escaping () -> Void) -> some View {
