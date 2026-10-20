@@ -149,15 +149,14 @@ struct TimerLiveActivityLayout: Equatable, Sendable {
 
     @MainActor
     static func inputs(contentHeight: CGFloat, manager: TimerManager, settings: TimerSettings) -> Inputs {
-        let finishedOrOver = manager.isFinished || manager.isOvertime
-        return Inputs(
+        Inputs(
             contentHeight: contentHeight,
             name: manager.name,
             countdownText: manager.formattedRemainingTime,
             isFinished: manager.isFinished,
             isOvertime: manager.isOvertime,
             showsCountdown: settings.showsCountdown,
-            showsLabel: settings.showsLabel || manager.showsTransientLabel || finishedOrOver,
+            showsLabel: settings.showsLabel,
             showsProgress: settings.showsProgress,
             progressStyle: settings.progressStyle,
             showsControls: settings.inlineControlsEnabled && manager.allowsManualInteraction

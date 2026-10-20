@@ -363,28 +363,6 @@ struct TimerManagerTests {
     }
 
     @Test
-    func closedNotchLabelFlashesOnStartAndHoldsOnceFinished() async {
-        let harness = Harness()
-        defer { harness.tearDown() }
-        let manager = harness.manager
-        manager.transientLabelDuration = .milliseconds(60)
-
-        manager.start(duration: 5, name: "Tea")
-        #expect(manager.showsTransientLabel)
-        try? await Task.sleep(for: .milliseconds(200))
-        #expect(!manager.showsTransientLabel, "the name folds away after the flash")
-
-        harness.advance(5)
-        #expect(manager.isFinished)
-        #expect(manager.showsTransientLabel, "a finished run keeps its name visible")
-        try? await Task.sleep(for: .milliseconds(200))
-        #expect(manager.showsTransientLabel)
-
-        manager.stop()
-        #expect(!manager.showsTransientLabel)
-    }
-
-    @Test
     func restoreDefaultsDetectionIgnoresIdentifiers() {
         let (defaults, suite) = makeDefaults()
         defer { defaults.removePersistentDomain(forName: suite) }
@@ -626,12 +604,16 @@ struct TimerLiveActivityLayoutTests {
 
         manager.start(duration: 60)
         #expect(TimerLiveActivityView.isPresentable(manager: manager, settings: settings))
-        let flashing = try! #require(TimerLiveActivityLayout.current(collapsedHeight: 32, isHovering: false, manager: manager, settings: settings))
-        #expect(flashing.showsLabel, "the name flashes right after a start")
-        #expect(flashing.showsInfoSection)
+        let running = try! #require(TimerLiveActivityLayout.current(collapsedHeight: 32, isHovering: false, manager: manager, settings: settings))
+        #expect(!running.showsLabel, "just the icon and countdown unless the name is turned on")
+        #expect(!running.showsInfoSection)
         let extra = TimerLiveActivityLayout.extraCollapsedWidth(collapsedHeight: 32, isHovering: false, manager: manager, settings: settings)
-        #expect(extra == flashing.totalWingWidth)
+        #expect(extra == running.totalWingWidth)
         #expect(extra > 100)
+
+        settings.showsLabel = true
+        let named = try! #require(TimerLiveActivityLayout.current(collapsedHeight: 32, isHovering: false, manager: manager, settings: settings))
+        #expect(named.showsLabel, "the name shows when the setting is on")
 
         settings.liveActivityEnabled = false
         #expect(!TimerLiveActivityView.isPresentable(manager: manager, settings: settings))

@@ -28,21 +28,12 @@ final class TimerManager: ObservableObject {
     @Published private(set) var activePresetID: UUID?
     @Published private(set) var source: Source = .none
     @Published private(set) var startedAt: Date?
-    /// The closed notch shows the timer's name briefly after a start, and for good once
-    /// the run has finished. Kept here rather than in the view so the island's width can
-    /// be computed before the view renders.
-    @Published private(set) var showsTransientLabel = false
-
-    /// How long the name stays on the closed notch after a start.
-    var transientLabelDuration: Duration = .seconds(4)
-
     let settings: TimerSettings
     private let sound: any TimerSoundPlaying
     private let notifier: any TimerCompletionNotifying
     private let clock: @Sendable () -> Date
     private var countdown: TimerCountdownClock?
     private var tickTask: Task<Void, Never>?
-    private var transientLabelTask: Task<Void, Never>?
     /// Identifies the current run so delayed work from an earlier run cannot touch a
     /// timer started in the meantime.
     private(set) var sessionID: UUID?
@@ -137,7 +128,6 @@ final class TimerManager: ObservableObject {
         withAnimation(.smooth) {
             isActive = true
         }
-        flashLabel()
         if settings.notificationsEnabled {
             notifier.prepare()
         }
@@ -167,14 +157,11 @@ final class TimerManager: ObservableObject {
     func stop() {
         tickTask?.cancel()
         tickTask = nil
-        transientLabelTask?.cancel()
-        transientLabelTask = nil
         sound.stop()
         sessionID = nil
         countdown = nil
         withAnimation(.smooth) {
             isActive = false
-            showsTransientLabel = false
         }
         name = "Timer"
         totalDuration = 0
@@ -201,7 +188,6 @@ final class TimerManager: ObservableObject {
         elapsedTime = countdown.elapsed(at: now)
         if crossedZero {
             isFinished = true
-            holdLabel()
             if settings.soundEnabled {
                 sound.play(named: settings.soundName, looping: true)
             }
@@ -212,26 +198,6 @@ final class TimerManager: ObservableObject {
         if remaining < 0, !isOvertime {
             isOvertime = true
         }
-    }
-
-    // MARK: - Closed-notch label
-
-    private func flashLabel() {
-        transientLabelTask?.cancel()
-        withAnimation(.smooth) { showsTransientLabel = true }
-        let duration = transientLabelDuration
-        transientLabelTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: duration)
-            guard !Task.isCancelled, let self else { return }
-            withAnimation(.smooth) { self.showsTransientLabel = false }
-        }
-    }
-
-    /// Once the run has finished the name stays until the timer is stopped.
-    private func holdLabel() {
-        transientLabelTask?.cancel()
-        transientLabelTask = nil
-        withAnimation(.smooth) { showsTransientLabel = true }
     }
 
     private func scheduleTicks() {
