@@ -7,7 +7,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general, appearance, home
     case media, liveActivities, devices
     case controls, battery, faceCheck
-    case timer, calendar, notes
+    case timer, calendar, notes, claude
     case clipboard, colorPicker, shelf, downloads, shortcuts
     case stats
     case permissions, about
@@ -28,6 +28,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .timer: "Timer"
         case .calendar: "Calendar"
         case .notes: "Notes"
+        case .claude: "Claude"
         case .clipboard: "Clipboard"
         case .colorPicker: "Color Picker"
         case .shelf: "Shelf"
@@ -53,6 +54,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .timer: "timer"
         case .calendar: "calendar"
         case .notes: "note.text"
+        case .claude: "asterisk"
         case .clipboard: "clipboard"
         case .colorPicker: "eyedropper"
         case .shelf: "books.vertical"
@@ -78,6 +80,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .timer: .red
         case .calendar: .cyan
         case .notes: Color(red: 0.979, green: 0.716, blue: 0.153)
+        case .claude: ClaudeMark.orange
         case .clipboard: .mint
         case .colorPicker: .accentColor
         case .shelf: .brown
@@ -103,6 +106,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .controls: "volume brightness hud osd media keys"
         case .battery: "charging low full power"
         case .faceCheck: "face camera recognition enrol enroll unlock privacy"
+        case .claude: "ai chat sessions model anthropic claude code"
         case .clipboard: "history capture retention sensitive paste"
         case .shortcuts: "keyboard hotkey"
         case .stats: "cpu memory gpu network disk"
@@ -116,7 +120,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general, .appearance, .home: nil
         case .media, .liveActivities, .devices: "Media & Display"
         case .controls, .battery, .faceCheck: "System"
-        case .timer, .calendar, .notes: "Productivity"
+        case .timer, .calendar, .notes, .claude: "Productivity"
         case .clipboard, .colorPicker, .shelf, .downloads, .shortcuts: "Utilities"
         case .stats: "Developer"
         case .permissions, .about: "Info"
@@ -283,6 +287,7 @@ struct SettingsView: View {
                 Toggle("Stats", isOn: $settings.showStatsTab)
                 Toggle("Notes", isOn: $settings.showNotesTab)
                 Toggle("Face Check", isOn: $settings.showFaceTab)
+                Toggle("AI tools", isOn: $settings.showClaudeTab)
                 LabeledContent("Clipboard", value: "Always shown")
             }
         }

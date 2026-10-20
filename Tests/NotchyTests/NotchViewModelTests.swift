@@ -370,7 +370,7 @@ struct NotchViewModelTests {
         let model = NotchViewModel(haptics: HapticSpy(), settings: settings)
         model.closeAnimationDuration = .milliseconds(20)
         #expect(model.selectedTab == .home)
-        #expect(model.availableTabs == [.home, .shelf, .timer, .stats, .notes, .face, .clipboard])
+        #expect(model.availableTabs == [.home, .shelf, .timer, .stats, .notes, .face, .claude, .clipboard])
 
         model.openFromClick()
         model.selectTab(.clipboard)
@@ -410,6 +410,7 @@ struct NotchViewModelTests {
         let timer = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: preferred, tab: .timer, tabCount: 6)
         #expect(timer.renderedSize == CGSize(width: 588, height: 163))
         #expect(NotchTab.minimumOpenWidth(forTabCount: 7) == 612, "seven tab icons need a wider island")
+        #expect(NotchTab.minimumOpenWidth(forTabCount: 8) == 660, "and eight wider still")
         #expect(NotchTab.standardOpenHeight == 151, "a 32-pt header over 119 pt of content")
         // Every tab keeps Home's height, so switching tabs never resizes the island.
         for tab in NotchTab.allCases {

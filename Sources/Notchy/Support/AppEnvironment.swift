@@ -100,9 +100,10 @@ final class AppEnvironment {
             settings.$showTimerTab.map { _ in () }.eraseToAnyPublisher(),
             settings.$showStatsTab.map { _ in () }.eraseToAnyPublisher(),
             settings.$showNotesTab.map { _ in () }.eraseToAnyPublisher(),
-            settings.$showFaceTab.map { _ in () }.eraseToAnyPublisher()
+            settings.$showFaceTab.map { _ in () }.eraseToAnyPublisher(),
+            settings.$showClaudeTab.map { _ in () }.eraseToAnyPublisher()
         )
-        .dropFirst(6)
+        .dropFirst(7)
         .receive(on: RunLoop.main)
         .sink { [weak model] in model?.normalizeSelectedTab() }
         .store(in: &cancellables)
@@ -114,7 +115,10 @@ final class AppEnvironment {
     /// Wires feature modules that have landed into the island, header and settings.
     private func startFeatures() {
         TimerFeature.start()
-        model.liveActivityTabProvider = { TimerManager.shared.isActive ? .timer : nil }
+        model.liveActivityTabProvider = { [weak model] in
+            if let tab = ClaudeFeature.liveActivityTab(activeActivityID: model?.activityCenter.activeActivityID) { return tab }
+            return TimerManager.shared.isActive ? .timer : nil
+        }
 
         let colorPicker = ColorPickerService.shared
         colorPicker.hapticsEnabled = { [weak settings] in settings?.hapticsEnabled ?? true }
@@ -190,6 +194,7 @@ final class AppEnvironment {
         }
         .store(in: &cancellables)
         SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection() }
+        ClaudeFeature.start(userSettings: settings, model: model)
 
         // New releases: a sneak peek and a notification once per version, the menu bar, and About.
         UpdateChecker.shared.start()
@@ -213,6 +218,7 @@ final class AppEnvironment {
         FaceCheckController.shared.stopCamera()
         faceCheckWindow?.hide()
         model.activityCenter.unregister(id: FaceCheckController.shared.liveActivity.activityID)
+        ClaudeFeature.stop(model: model)
         SystemHUDFeature.stop()
         HomeAppShortcutsStore.shared.stop()
         MediaFeature.stop()

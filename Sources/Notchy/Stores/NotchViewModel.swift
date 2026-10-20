@@ -169,6 +169,7 @@ final class NotchViewModel: ObservableObject {
         if settings.showStatsTab { tabs.append(.stats) }
         if settings.showNotesTab { tabs.append(.notes) }
         if settings.showFaceTab { tabs.append(.face) }
+        if settings.showClaudeTab { tabs.append(.claude) }
         tabs.append(.clipboard)
         return tabs
     }

@@ -76,6 +76,7 @@ final class UserSettings: ObservableObject {
         static let showHomeTab = "tabs.home"
         static let showNotesTab = "tabs.notes"
         static let showFaceTab = "tabs.face"
+        static let showClaudeTab = "tabs.claude"
         static let openLastTab = "tabs.openLastTab"
         static let showShelfTab = "tabs.shelf"
         static let showTimerTab = "tabs.timer"
@@ -132,6 +133,7 @@ final class UserSettings: ObservableObject {
     @Published var showHomeTab: Bool { didSet { defaults.set(showHomeTab, forKey: Key.showHomeTab) } }
     @Published var showNotesTab: Bool { didSet { defaults.set(showNotesTab, forKey: Key.showNotesTab) } }
     @Published var showFaceTab: Bool { didSet { defaults.set(showFaceTab, forKey: Key.showFaceTab) } }
+    @Published var showClaudeTab: Bool { didSet { defaults.set(showClaudeTab, forKey: Key.showClaudeTab) } }
     /// Reopen on the last tab instead of Home (default off).
     @Published var openLastTab: Bool { didSet { defaults.set(openLastTab, forKey: Key.openLastTab) } }
     @Published var showShelfTab: Bool { didSet { defaults.set(showShelfTab, forKey: Key.showShelfTab) } }
@@ -195,6 +197,7 @@ final class UserSettings: ObservableObject {
         showHomeTab = defaults.object(forKey: Key.showHomeTab) as? Bool ?? true
         showNotesTab = defaults.object(forKey: Key.showNotesTab) as? Bool ?? true
         showFaceTab = defaults.object(forKey: Key.showFaceTab) as? Bool ?? true
+        showClaudeTab = defaults.object(forKey: Key.showClaudeTab) as? Bool ?? true
         openLastTab = defaults.bool(forKey: Key.openLastTab)
         showShelfTab = defaults.object(forKey: Key.showShelfTab) as? Bool ?? true
         showTimerTab = defaults.object(forKey: Key.showTimerTab) as? Bool ?? true

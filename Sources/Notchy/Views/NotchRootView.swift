@@ -269,10 +269,15 @@ private struct SneakPeekRow: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: peek.systemImage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(peek.tint ?? .gray)
-                .contentTransition(.symbolEffect(.replace))
+            if peek.kind == .claude {
+                ClaudeCodeLogo()
+                    .frame(width: 16, height: 10)
+            } else {
+                Image(systemName: peek.systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(peek.tint ?? .gray)
+                    .contentTransition(.symbolEffect(.replace))
+            }
             if let level = peek.level {
                 LevelBar(level: level, tint: peek.tint ?? .white)
                     .frame(height: 6)
