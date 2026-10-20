@@ -194,9 +194,13 @@ struct TimerFocusRing: View {
             let radius = (side - lineWidth) / 2
             let angle = Angle.degrees(progress * 360 - 90)
             ZStack {
+                // Inset by half the line so the stroke's centre line, and therefore the arc's
+                // end, sits exactly at `radius`, where the dot is drawn.
                 Circle()
+                    .inset(by: lineWidth / 2)
                     .stroke(Color.white.opacity(0.1), lineWidth: lineWidth)
                 Circle()
+                    .inset(by: lineWidth / 2)
                     .trim(from: 0, to: progress)
                     .stroke(accent, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
