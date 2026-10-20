@@ -78,7 +78,8 @@ final class TimerSettings: ObservableObject {
     @Published var liveActivityEnabled: Bool {
         didSet { defaults.set(liveActivityEnabled, forKey: Key.liveActivityEnabled) }
     }
-    /// Pause and stop buttons on the closed notch.
+    /// Pause and stop buttons on the closed notch. Off by default: they widen the closed island,
+    /// and the Timer tab already has the controls.
     @Published var inlineControlsEnabled: Bool {
         didSet { defaults.set(inlineControlsEnabled, forKey: Key.inlineControlsEnabled) }
     }
@@ -114,7 +115,7 @@ final class TimerSettings: ObservableObject {
         soundName = Self.availableSounds.contains(storedSound) ? storedSound : Self.defaultSoundName
         notificationsEnabled = defaults.object(forKey: Key.notificationsEnabled) as? Bool ?? true
         liveActivityEnabled = defaults.object(forKey: Key.liveActivityEnabled) as? Bool ?? true
-        inlineControlsEnabled = defaults.object(forKey: Key.inlineControlsEnabled) as? Bool ?? true
+        inlineControlsEnabled = defaults.object(forKey: Key.inlineControlsEnabled) as? Bool ?? false
         showsCountdown = defaults.object(forKey: Key.showsCountdown) as? Bool ?? true
         showsLabel = defaults.object(forKey: Key.showsLabel) as? Bool ?? false
         showsProgress = defaults.object(forKey: Key.showsProgress) as? Bool ?? true

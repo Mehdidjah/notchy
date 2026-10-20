@@ -437,7 +437,7 @@ struct TimerSettingsTests {
         #expect(settings.soundName == "Glass")
         #expect(settings.notificationsEnabled)
         #expect(settings.liveActivityEnabled)
-        #expect(settings.inlineControlsEnabled)
+        #expect(!settings.inlineControlsEnabled, "the closed notch stays narrow unless asked")
         #expect(settings.showsCountdown)
         #expect(!settings.showsLabel)
         #expect(settings.showsProgress)
