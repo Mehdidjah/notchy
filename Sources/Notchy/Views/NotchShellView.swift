@@ -30,21 +30,23 @@ struct NotchShellView: View {
 
     @ViewBuilder
     private var tabContent: some View {
+        // Pure SwiftUI tabs are drawn at the compact content scale; tabs with embedded AppKit
+        // views (Notes' editor, Face Check's camera, Shelf's tiles) size themselves instead.
         switch model.selectedTab {
         case .home:
-            NotchHomeTabView(model: model)
+            NotchHomeTabView(model: model).islandScaled()
         case .notes:
             NotchNotesTabView(model: model)
         case .face:
             NotchFaceTabView(model: model)
         case .clipboard:
-            NotchClipboardTabView(model: model)
+            NotchClipboardTabView(model: model).islandScaled()
         case .shelf:
             NotchShelfTabView(model: model)
         case .timer:
-            NotchTimerTabView(model: model)
+            NotchTimerTabView(model: model).islandScaled()
         case .stats:
-            NotchStatsTabView(model: model)
+            NotchStatsTabView(model: model).islandScaled()
         }
     }
 

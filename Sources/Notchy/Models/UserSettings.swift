@@ -61,7 +61,10 @@ final class UserSettings: ObservableObject {
         static let hoverDelayMilliseconds = "notch.hoverDelayMilliseconds"
         static let closeDelayMilliseconds = "notch.closeDelayMilliseconds"
         static let hoverTimingVersion = "notch.hoverTimingVersion"
-        static let openNotchWidth = "notch.openWidth"
+        /// The open width at the compact scale. The previous key held widths 30 % larger; a
+        /// value found only there is read once and scaled (never rewritten).
+        static let openNotchWidth = "notch.openWidth.compact"
+        static let legacyOpenNotchWidth = "notch.openWidth"
         static let openOnHover = "notch.openOnHover"
         static let hapticsEnabled = "notch.hapticsEnabled"
         static let gesturesEnabled = "notch.gesturesEnabled"
@@ -171,9 +174,11 @@ final class UserSettings: ObservableObject {
             ? max(0, defaults.object(forKey: Key.closeDelayMilliseconds) as? Int
                 ?? NotchInteractionDefaults.closeDelayMilliseconds)
             : NotchInteractionDefaults.closeDelayMilliseconds
+        let storedWidth = defaults.object(forKey: Key.openNotchWidth) as? Double
+            ?? (defaults.object(forKey: Key.legacyOpenNotchWidth) as? Double).map { $0 * Double(NotchTab.contentScale) }
         openNotchWidth = min(
             NotchTab.maximumOpenWidth,
-            max(NotchTab.defaultOpenWidth, defaults.object(forKey: Key.openNotchWidth) as? Double ?? NotchTab.defaultOpenWidth)
+            max(NotchTab.defaultOpenWidth, storedWidth ?? NotchTab.defaultOpenWidth)
         )
         openOnHover = defaults.object(forKey: Key.openOnHover) as? Bool ?? true
         hapticsEnabled = defaults.object(forKey: Key.hapticsEnabled) as? Bool ?? true

@@ -10,9 +10,13 @@ struct HomeSnapshotTests {
     /// The seven-tab minimum content width plus the 12-pt open insets.
     private static let islandWidth: CGFloat = NotchTab.minimumOpenWidth(forTabCount: 7) + 24
     private static let headerHeight: CGFloat = 32
-    /// The shell's content insets (14 + 12 pt a side) and the Home tab's 8-pt padding.
-    private static let rowWidth = islandWidth - 52 - 16
-    private static let rowHeight = NotchTab.standardOpenHeight - headerHeight - 16
+    /// The shell's content insets (14 + 12 pt a side); the tab is laid out at the design size
+    /// (the compact size divided by the content scale) and drawn at the content scale.
+    private static let contentWidth = islandWidth - 52
+    private static let contentHeight = NotchTab.standardOpenHeight - headerHeight
+    /// The Home tab's 8-pt padding, at design size.
+    private static let rowWidth = contentWidth / NotchTab.contentScale - 16
+    private static let rowHeight = contentHeight / NotchTab.contentScale - 16
 
     @Test func rendersTheOpenHomeTab() async throws {
         guard let path = ProcessInfo.processInfo.environment["NOTCHY_HOME_SNAPSHOTS"] else { return }
@@ -78,6 +82,9 @@ struct HomeSnapshotTests {
             NotchHeaderView(model: model)
                 .frame(height: Self.headerHeight)
             row.padding(8)
+                .frame(width: Self.contentWidth / NotchTab.contentScale, height: Self.contentHeight / NotchTab.contentScale)
+                .scaleEffect(NotchTab.contentScale, anchor: .topLeading)
+                .frame(width: Self.contentWidth, height: Self.contentHeight, alignment: .topLeading)
         }
         .padding(.horizontal, 26)
         .padding(.bottom, 12)

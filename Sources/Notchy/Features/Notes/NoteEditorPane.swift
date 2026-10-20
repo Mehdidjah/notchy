@@ -37,11 +37,11 @@ struct NoteEditorPane: View {
             Button {
                 controller.back()
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     Image(systemName: "chevron.left")
                     Text("Notes")
                 }
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .font(.system(size: 10.5, weight: .medium, design: .rounded))
                 .foregroundStyle(.white)
                 .contentShape(Rectangle())
             }
@@ -54,19 +54,19 @@ struct NoteEditorPane: View {
                 controller.done()
             } label: {
                 Text("Done")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.system(size: 10.5, weight: .bold, design: .rounded))
                     .foregroundStyle(accent)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
-        .padding(16)
+        .padding(11)
     }
 
     private var titleRow: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 8.5) {
             TextField("Title", text: $controller.title)
-                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
                 .textFieldStyle(.plain)
                 .foregroundStyle(.white)
                 .onSubmit { isBodyFocused = true }
@@ -74,11 +74,11 @@ struct NoteEditorPane: View {
             Spacer()
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 5.5) {
                     ForEach(NoteItem.palette.indices, id: \.self) { index in
                         Circle()
                             .fill(NoteItem.palette[index])
-                            .frame(width: 16, height: 16)
+                            .frame(width: 11, height: 11)
                             .overlay(
                                 Circle()
                                     .stroke(Color.white, lineWidth: controller.colorIndex == index ? 2 : 0)
@@ -93,34 +93,34 @@ struct NoteEditorPane: View {
                             .accessibilityAddTraits(controller.colorIndex == index ? [.isButton, .isSelected] : .isButton)
                     }
                 }
-                .padding(.vertical, 4)
-                .padding(.horizontal, 4)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 3)
             }
-            .frame(maxWidth: 160)
+            .frame(maxWidth: 112)
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 4)
-        .padding(.bottom, 8)
+        .padding(.leading, 11)
+        .padding(.trailing, 3)
+        .padding(.bottom, 5.5)
     }
 
     private var bodyEditor: some View {
         ZStack(alignment: .topLeading) {
             if controller.content.isEmpty {
                 Text("Start typing...")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 9, design: .rounded))
                     .foregroundStyle(.white.opacity(0.5))
-                    .padding(.top, 10)
-                    .padding(.leading, 12)
+                    .padding(.top, 7)
+                    .padding(.leading, 8.5)
                     .allowsHitTesting(false)
             }
 
             TextEditor(text: $controller.content)
-                .font(.system(size: 13, design: .rounded))
+                .font(.system(size: 9, design: .rounded))
                 .foregroundStyle(.white)
                 .lineSpacing(4)
                 .scrollContentBackground(.hidden)
-                .padding(8)
-                .padding(.bottom, 20)
+                .padding(5.5)
+                .padding(.bottom, 14)
                 .padding(.trailing, controller.image != nil ? 75 : 0)
                 .focused($isBodyFocused)
                 .frame(maxHeight: .infinity)
@@ -136,12 +136,12 @@ struct NoteEditorPane: View {
                     HStack {
                         Spacer()
                         Text("\(controller.content.count) chars")
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .font(.system(size: 7, weight: .medium, design: .monospaced))
                             .foregroundStyle(.secondary.opacity(0.5))
-                            .padding(4)
+                            .padding(3)
                             .background(Color.black.opacity(0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                            .padding(8)
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .padding(5.5)
                     }
                 }
                 .allowsHitTesting(false)
@@ -158,24 +158,24 @@ struct NoteEditorPane: View {
                     Image(nsImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 55, height: 55)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.2), lineWidth: 1))
+                        .frame(width: 38.5, height: 38.5)
+                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                        .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.white.opacity(0.2), lineWidth: 1))
                         .shadow(color: .black.opacity(0.5), radius: 5, x: 0, y: 2)
 
                     Button {
                         withAnimation { controller.setImage(nil) }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
+                            .font(.system(size: 10))
                             .foregroundStyle(.white.opacity(0.9), .black.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                     .offset(x: 4, y: -4)
                     .accessibilityLabel("Remove Picture")
                 }
-                .padding(12)
-                .padding(.bottom, 20)
+                .padding(8.5)
+                .padding(.bottom, 14)
             }
         }
     }

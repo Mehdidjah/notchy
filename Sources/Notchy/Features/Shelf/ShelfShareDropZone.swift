@@ -18,7 +18,7 @@ struct ShelfShareDropZone: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 8.5)
                 .fill(
                     LinearGradient(
                         colors: [Color.black.opacity(0.35), Color.black.opacity(0.20)],
@@ -27,7 +27,7 @@ struct ShelfShareDropZone: View {
                     )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 8.5)
                         .stroke(
                             isTargeted ? Color.accentColor.opacity(0.9) : Color.white.opacity(0.1),
                             style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [10])
@@ -35,13 +35,13 @@ struct ShelfShareDropZone: View {
                 )
                 .shadow(color: Color.black.opacity(0.6), radius: 6, x: 0, y: 2)
 
-            VStack(spacing: 5) {
+            VStack(spacing: 3.5) {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(isTargeted ? 0.11 : 0.09))
-                        .frame(width: 55, height: 55)
+                        .frame(width: 38.5, height: 38.5)
                     targetIcon
-                        .frame(width: 34, height: 34)
+                        .frame(width: 24, height: 24)
                         .foregroundStyle(isTargeted ? Color.accentColor : Color.gray)
                         .scaleEffect(isTargeted ? 1.06 : 1.0)
                         .animation(.spring(response: 0.36, dampingFraction: 0.7), value: isTargeted)
@@ -52,20 +52,20 @@ struct ShelfShareDropZone: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-            .padding(18)
+            .padding(12.5)
 
             VStack {
                 HStack {
                     Spacer()
                     targetSwitch
-                        .padding(.trailing, 8)
-                        .padding(.top, 8)
+                        .padding(.trailing, 5.5)
+                        .padding(.top, 5.5)
                 }
                 Spacer()
             }
 
             if isProcessing {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 8.5)
                     .fill(.black.opacity(0.3))
                     .overlay(
                         ProgressView()
@@ -76,7 +76,7 @@ struct ShelfShareDropZone: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(RoundedRectangle(cornerRadius: 8.5))
         .background(ShelfAnchorView(anchor: anchor))
         .onDrop(of: ShelfDropImporter.acceptedTypes, isTargeted: $isTargeted) { providers in
             shareDropped(providers)
@@ -114,11 +114,11 @@ struct ShelfShareDropZone: View {
             .pickerStyle(.inline)
         } label: {
             Image(systemName: "switch.2")
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: 14, height: 14)
-                .padding(8)
+                .font(.system(size: 9, weight: .medium))
+                .frame(width: 10, height: 10)
+                .padding(5.5)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 5.5)
                         .fill(isSwitchHovered ? Color.white.opacity(0.12) : Color.clear)
                 )
                 .foregroundStyle(isSwitchHovered ? Color.accentColor : Color.gray)

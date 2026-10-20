@@ -42,18 +42,25 @@ enum NotchTab: String, CaseIterable, Codable, Identifiable, Sendable {
     /// Stats grows, and only for its extra rows of graphs.
     var openHeight: CGFloat { Self.standardOpenHeight }
 
-    static let standardOpenHeight: CGFloat = 180
+    /// The open island's content is laid out at its design size and drawn at this scale, so
+    /// every widget keeps its proportions in the compact island. The header is not scaled: it
+    /// has to cover the hardware notch.
+    static let contentScale: CGFloat = 0.7
+    /// The content height (below a 32-pt header) the tabs are designed for.
+    static let designContentHeight: CGFloat = 148
+    /// 32-pt header plus the design content height at `contentScale`.
+    static let standardOpenHeight: CGFloat = 32 + (designContentHeight * contentScale).rounded()
 
     /// The open island widens as more tabs are shown so the icon row never crowds the notch.
     static func minimumOpenWidth(forTabCount count: Int) -> CGFloat {
-        if count >= 7 { return 760 }
-        if count >= 6 { return 700 }
-        if count >= 5 { return 660 }
-        return 640
+        if count >= 7 { return 532 }
+        if count >= 6 { return 490 }
+        if count >= 5 { return 462 }
+        return 448
     }
 
-    static let maximumOpenWidth: CGFloat = 900
-    static let defaultOpenWidth: CGFloat = 640
+    static let maximumOpenWidth: CGFloat = 630
+    static let defaultOpenWidth: CGFloat = 448
     /// Horizontal inset added on each side of the content box while open.
     static let openHorizontalInset: CGFloat = 12
     /// Inset added below the content box while open.

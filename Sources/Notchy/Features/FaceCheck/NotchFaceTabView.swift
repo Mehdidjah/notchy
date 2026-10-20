@@ -14,21 +14,21 @@ struct NotchFaceTabView: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .top, spacing: 11) {
             cameraView
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 7) {
                 header
                 actions
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if controller.activity == .enrolling {
-                FaceEnrollmentGrid(counts: controller.poseCounts, samplesPerPose: controller.samplesPerPose, cell: 18)
-                    .padding(.top, 4)
+                FaceEnrollmentGrid(counts: controller.poseCounts, samplesPerPose: controller.samplesPerPose, cell: 12.5)
+                    .padding(.top, 3)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 5.5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {
             controller.loadIdentities()
@@ -54,40 +54,40 @@ struct NotchFaceTabView: View {
                 } else {
                     Color.white.opacity(0.06).overlay {
                         Image(systemName: controller.cameraState == .denied ? "video.slash" : "faceid")
-                            .font(.system(size: 30))
+                            .font(.system(size: 21))
                             .foregroundStyle(.white.opacity(0.4))
                     }
                 }
             }
-            .frame(width: 184, height: 124)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .frame(width: 136, height: 92)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             if let chip = controller.chip, controller.cameraState == .on {
                 Image(decorative: chip, scale: 1)
                     .resizable()
                     .interpolation(.high)
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(.white.opacity(0.4), lineWidth: 1))
-                    .padding(6)
+                    .frame(width: 31, height: 31)
+                    .clipShape(RoundedRectangle(cornerRadius: 5.5, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 5.5, style: .continuous).stroke(.white.opacity(0.4), lineWidth: 1))
+                    .padding(4)
                     .help("What the face model sees")
             }
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 2) {
             Text("Face Check")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 10.5, weight: .semibold))
                 .foregroundStyle(.white)
             Text(statusLine)
-                .font(.system(size: 12))
+                .font(.system(size: 8.5))
                 .foregroundStyle(.white.opacity(0.65))
                 .lineLimit(2)
             if let distance = controller.liveDistance {
                 let limit = controller.preset.maximumDistance
                 Text("Distance \(String(format: "%.2f", distance)) / \(String(format: "%.2f", limit))")
-                    .font(.system(size: 11).monospacedDigit())
+                    .font(.system(size: 7.5).monospacedDigit())
                     .foregroundStyle(distance <= limit ? .green : .orange)
             }
         }
@@ -97,7 +97,7 @@ struct NotchFaceTabView: View {
     private var actions: some View {
         switch controller.activity {
         case .enrolling:
-            HStack(spacing: 8) {
+            HStack(spacing: 5.5) {
                 IslandActionButton(title: "Finish now", systemImage: "checkmark", prominent: true) { controller.finishEnrolment() }
                     .disabled(!controller.canFinishEnrolmentEarly)
                 IslandActionButton(title: "Cancel", systemImage: "xmark") { controller.cancelEnrolment() }
@@ -105,9 +105,9 @@ struct NotchFaceTabView: View {
         case .testing:
             IslandActionButton(title: "Cancel check", systemImage: "xmark") { controller.cancelVerification() }
         case .saving:
-            Text("Saving your face…").font(.system(size: 12)).foregroundStyle(.secondary)
+            Text("Saving your face…").font(.system(size: 8.5)).foregroundStyle(.secondary)
         case .watching:
-            HStack(spacing: 8) {
+            HStack(spacing: 5.5) {
                 if controller.identities.isEmpty {
                     IslandActionButton(title: "Scan my face", systemImage: "faceid", prominent: true) {
                         controller.startEnrolment(name: "Me")
@@ -127,13 +127,13 @@ struct NotchFaceTabView: View {
                 }
             }
             if let outcome = controller.testOutcome {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     Image(systemName: outcome.matched ? "checkmark.circle.fill" : "xmark.circle.fill")
                         .foregroundStyle(outcome.matched ? .green : .orange)
                     Text(outcome.matched ? "It's \(outcome.name ?? "you")" : "Not recognized")
                         .foregroundStyle(.white)
                 }
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 8.5, weight: .medium))
             }
         }
     }
@@ -164,10 +164,10 @@ private struct IslandActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(prominent ? Color.black : Color.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 8.5)
+                .padding(.vertical, 4)
                 .background(Capsule().fill(prominent ? Color.white : Color.white.opacity(0.14)))
                 .opacity(isEnabled ? 1 : 0.4)
         }
@@ -188,9 +188,9 @@ struct FaceEnrollmentGrid: View {
     ]
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             ForEach(0..<3, id: \.self) { row in
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     ForEach(Self.rows[row], id: \.self) { pose in
                         let count = counts[pose] ?? 0
                         RoundedRectangle(cornerRadius: cell / 5)

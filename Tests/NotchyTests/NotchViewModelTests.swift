@@ -404,16 +404,31 @@ struct NotchViewModelTests {
     @Test
     func openSizesFollowTabsAndTabCount() {
         let geometry = Self.macBookGeometry
-        let home = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: .home, tabCount: 4)
-        #expect(home.renderedSize == CGSize(width: 664, height: 192))
-        let timer = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: .timer, tabCount: 6)
-        #expect(timer.renderedSize == CGSize(width: 724, height: 192))
-        #expect(NotchTab.minimumOpenWidth(forTabCount: 7) == 760, "seven tab icons need a wider island")
+        let preferred = NotchTab.defaultOpenWidth
+        let home = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: preferred, tab: .home, tabCount: 4)
+        #expect(home.renderedSize == CGSize(width: 472, height: 148))
+        let timer = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: preferred, tab: .timer, tabCount: 6)
+        #expect(timer.renderedSize == CGSize(width: 514, height: 148))
+        #expect(NotchTab.minimumOpenWidth(forTabCount: 7) == 532, "seven tab icons need a wider island")
+        #expect(NotchTab.standardOpenHeight == 136, "a 32-pt header over 104 pt of content")
         // Every tab keeps Home's height, so switching tabs never resizes the island.
         for tab in NotchTab.allCases {
-            let metrics = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: 640, tab: tab, tabCount: 6)
-            #expect(metrics.renderedSize.height == 192, "\(tab)")
+            let metrics = NotchGeometryResolver.metrics(state: .expanded, geometry: geometry, preferredExpandedWidth: preferred, tab: tab, tabCount: 6)
+            #expect(metrics.renderedSize.height == 148, "\(tab)")
         }
+    }
+
+    @Test
+    func aWidthSavedAtTheLargerScaleIsReadScaled() {
+        let suite = "NotchViewModelTests.width.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(800.0, forKey: "notch.openWidth")
+        #expect(UserSettings(defaults: defaults).openNotchWidth == 560)
+        #expect(defaults.object(forKey: "notch.openWidth") as? Double == 800, "the old value is only read")
+
+        defaults.set(500.0, forKey: "notch.openWidth.compact")
+        #expect(UserSettings(defaults: defaults).openNotchWidth == 500, "a compact value wins")
     }
 
     private static let macBookGeometry = NotchGeometry(

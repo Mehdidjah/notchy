@@ -179,8 +179,9 @@ final class NotchViewModel: ObservableObject {
 
     func extraOpenHeight(for tab: NotchTab) -> CGFloat {
         // Home's extra row (the inline lyric line) applies to every tab, so the island keeps
-        // Home's size whichever tab is shown.
-        HomeLayoutState.shared.extraHeight + (extraOpenHeightProvider?(tab) ?? 0)
+        // Home's size whichever tab is shown. Extras are design-size heights, drawn at the
+        // content scale like everything else.
+        (HomeLayoutState.shared.extraHeight + (extraOpenHeightProvider?(tab) ?? 0)) * NotchTab.contentScale
     }
 
     var extraOpenHeight: CGFloat { extraOpenHeight(for: selectedTab) }
