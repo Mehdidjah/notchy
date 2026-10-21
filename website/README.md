@@ -2,6 +2,10 @@
 
 A responsive Svelte 5 + Vite website for Notchy. All UI state is implemented in Svelte components, with locally served fonts and original generated landscape imagery.
 
+Production: https://notchy-gamma.vercel.app/
+
+Vercel project `notchy` in `mehdis-projects-27649ab6` is connected to `Mehdidjah/notchy`, with production deployments from `main`, `website` as the Git root, Node.js 24, `npm ci`, `npm run build`, and `dist` output.
+
 ## Run
 
 ```sh
@@ -66,7 +70,7 @@ The existing stable download integration is preserved:
 
 The metadata request has a seven-second timeout and an explicit unavailable state. It never invents a version, size, date or price. It does not replace the configured download destination based on an API response.
 
-**Release availability:** during verification on 2026-10-21, the public latest-release API and stable download returned 404. The repository must have a publicly accessible published release with an asset named `Notchy.dmg` before the public download works. Publishing a release is separate from deploying the website.
+**Release availability:** [v1.0.0](https://github.com/Mehdidjah/notchy-releases/releases/tag/v1.0.0) was published on 2026-10-21 with a universal `Notchy.dmg` for Apple silicon and Intel, requiring macOS 14 or later. The public latest-release API and stable download both return HTTP 200. The 19,765,455-byte asset matches the verified GitHub Actions build from committed source `04c06a4e05f275c073622871baa4280141880f61` (build 85). Future releases must retain the fixed asset name `Notchy.dmg`.
 
 Keep the first-launch guidance until the app is notarized. The current build explains Privacy & Security → Open Anyway and notes that permission grants may need to be renewed after updates.
 
@@ -76,4 +80,8 @@ Deploy the production `dist/` folder, not the Svelte source folder.
 
 For Vercel, set **Root Directory** to `website`, **Build Command** to `npm run build`, and **Output Directory** to `dist`. The local `vercel.json` contains these build settings. For another static host, use the same build command and output directory.
 
-Once a production domain is selected, make the `og:image` URL in `index.html` absolute and add the site's canonical URL. No domain is invented in this project. Existing in-page anchors are retained: `#top`, `#features`, `#live`, `#privacy`, `#download`, `#install`, `#faq`.
+The canonical and Open Graph URLs in `index.html` point to the production domain above. Update them if that domain changes. Existing in-page anchors are retained: `#top`, `#features`, `#live`, `#privacy`, `#download`, `#install`, `#faq`.
+
+### Installer build fallback
+
+The manual GitHub Actions workflow `Build macOS installer` (`.github/workflows/build-macos-release.yml`) packages an exact `source_ref` on a macOS runner with Xcode 26.3. It uses the existing release script, verifies both CPU architectures, the signature, required resources and DMG integrity, and saves `Notchy.dmg`, `SHA256SUMS.txt`, and build provenance as a private workflow artifact. It does not publish automatically or require a release token. The optional interactive Finder window layout is skipped in CI. Artifacts are retained even if a later verification check fails, so inspect the run conclusion and publish only an artifact from a successful run to the public release repository under the fixed asset name `Notchy.dmg`.

@@ -29,6 +29,14 @@ test('renders release metadata, fixed download and section anchors without horiz
   page
 }) => {
   const errors = await open(page);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    'https://notchy-gamma.vercel.app/'
+  );
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    'https://notchy-gamma.vercel.app/assets/img/social-card.jpg'
+  );
   await expect(page.locator('.release-version')).toHaveText('Version 2.4.0');
   await expect(page.locator('.download-meta')).toContainText('Notchy-test.dmg · 13 MB · Universal');
   await expect(page.locator(`a[href="${dmg}"]`)).toHaveCount(6);
