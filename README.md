@@ -42,6 +42,46 @@ icon with Xcode 26's `actool` and falls back to the flat one without it.
 `script/release.sh` also gives the disk image's volume the icon (with Xcode's
 `SetFile`).
 
+## Releases
+
+Notchy is distributed as a disk image, `Notchy.dmg`, published as a GitHub
+release in the public repository `Mehdidjah/notchy-releases` (set
+`UPDATE_REPOSITORY` to use another). Create that repository once:
+
+```sh
+gh repo create Mehdidjah/notchy-releases --public --add-readme
+```
+
+To release a version, raise `VERSION`, commit, and publish:
+
+```sh
+./script/release.sh            # build dist/release/Notchy-<version>.dmg to try first
+./script/release.sh --publish  # tag v<version> and upload it as the latest release
+```
+
+The image opens on a window with the app, an arrow and the Applications
+folder. Finder lays that window out, so the first run asks to let the terminal
+control Finder.
+
+A website's download button can always link to
+
+```text
+https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg
+```
+
+which serves the newest release, and can read the newest version number from
+`https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest`
+(`tag_name`). Installed copies check the same release every 30 minutes and,
+once per version, show an update peek under the notch and a notification that
+downloads the new image when clicked; the menu bar and Settings → About offer
+the download too.
+
+Without a Developer ID, the app is ad-hoc signed: on first launch macOS says it
+can't verify Notchy, and users allow it in System Settings → Privacy & Security
+→ Open Anyway; it also asks for its permissions again after each update. With
+an Apple Developer account, set `SIGN_IDENTITY` and `NOTARY_PROFILE` to sign
+and notarize the image so it opens without that step.
+
 ## What it does
 
 - **Island.** A fixed transparent strip at the top of the notch display hosts a
