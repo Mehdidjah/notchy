@@ -215,8 +215,9 @@ struct ClaudeSessionIndexTests {
         try FileManager.default.setAttributes([.modificationDate: modified], ofItemAtPath: url.path)
     }
 
-    private func writeLive(pid: Int32, sessionID: String, cwd: String, status: String) throws {
-        let record = #"{"pid":\#(pid),"sessionId":"\#(sessionID)","cwd":"\#(cwd)","status":"\#(status)","updatedAt":1792507750806}"#
+    private func writeLive(pid: Int32, sessionID: String, cwd: String, status: String, updatedAt: Date = Date()) throws {
+        let millis = Int(updatedAt.timeIntervalSince1970 * 1000)
+        let record = #"{"pid":\#(pid),"sessionId":"\#(sessionID)","cwd":"\#(cwd)","status":"\#(status)","updatedAt":\#(millis)}"#
         try record.write(to: root.appendingPathComponent("sessions/\(pid).json"), atomically: true, encoding: .utf8)
         // Keys beside the records must never be read.
         try "secret".write(to: root.appendingPathComponent("sessions/\(pid).abc.key"), atomically: true, encoding: .utf8)

@@ -1,12 +1,13 @@
 import Combine
 import SwiftUI
 
-/// Claude on the closed notch: Claude Code's mark on the left, and on the right three dots
-/// while Claude works or a green dot while a session waits for the user (a number when there
-/// are several). When a session should be compacted soon or a plan limit is running out, the
-/// right side shows that instead: a ring and its percentage, orange, or red once it's urgent.
-/// While Claude works it comes after music and before the timer; a session that is only open
-/// sits at the back of the chain, so it never hides anything else.
+/// Claude on the closed notch: Claude Code's mark on the left, hopping while Claude works, and
+/// on the right how full the context of the session the user is in is: a ring and its
+/// percentage, orange once it's time to compact and red when Claude Code is about to compact on
+/// its own. A plan limit that is about to stop every session takes the ring's place. A session
+/// that hasn't replied yet shows three dots while Claude works, a green dot while it waits, or
+/// how many sessions are open. While Claude works it comes after music and before the timer; a
+/// session that is only open sits at the back of the chain, so it never hides anything else.
 @MainActor
 final class ClaudeClosedActivity: ClosedLiveActivity {
     static let id = "claude"
@@ -44,7 +45,7 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     }
 
     /// Re-evaluates the chain only when what it depends on changes: whether Claude shows,
-    /// whether it is working (its priority), and whether an alert widens the right wing. The
+    /// whether it is working (its priority), and whether the ring widens the right wing. The
     /// wing views follow the monitor and the alerts themselves.
     var activityDidChange: AnyPublisher<Void, Never> {
         monitor.$snapshot.combineLatest(settings.$closedNotch, attention.$alerts)
@@ -52,7 +53,7 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
                 VisibilityKey(
                     isVisible: Self.isVisible(snapshot: snapshot, mode: mode),
                     isWorking: snapshot.isWorking,
-                    showsAlert: !alerts.isEmpty
+                    showsGauge: Self.gauge(snapshot: snapshot, alerts: alerts, contextWarning: 1) != nil
                 )
             }
             .removeDuplicates()
@@ -63,16 +64,32 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     private struct VisibilityKey: Equatable {
         let isVisible: Bool
         let isWorking: Bool
-        let showsAlert: Bool
+        let showsGauge: Bool
     }
 
-    /// Room for the ring and "100%" while an alert shows.
+    /// What the ring shows: a plan limit about to stop every session, or else the context of
+    /// the session the user is in. Nil while that session hasn't replied yet.
+    static func gauge(snapshot: ClaudeLiveSnapshot, alerts: [ClaudeAlert], contextWarning: Double) -> ClaudeClosedGauge? {
+        if let limit = alerts.first(where: { $0.level == .critical && $0.sessionID == nil }) {
+            return .limit(limit)
+        }
+        guard let focus = snapshot.focus, let context = focus.context else { return nil }
+        return .context(
+            context,
+            level: context.level(warningAt: contextWarning),
+            project: focus.cwd.map { URL(fileURLWithPath: $0).lastPathComponent }
+        )
+    }
+
+    /// Room for the ring and "100%" while it shows.
     func rightWingWidth(in context: ClosedActivityContext) -> CGFloat {
-        guard attention.top != nil else { return context.wingBaseWidth }
-        return Self.alertWingWidth(height: context.contentHeight) + max(0, context.gestureProgress) / 2
+        guard Self.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil else {
+            return context.wingBaseWidth
+        }
+        return Self.gaugeWingWidth(height: context.contentHeight) + max(0, context.gestureProgress) / 2
     }
 
-    static func alertWingWidth(height: CGFloat) -> CGFloat {
+    static func gaugeWingWidth(height: CGFloat) -> CGFloat {
         (height * 0.6).rounded() + 34
     }
 
@@ -81,7 +98,7 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     }
 
     func rightWing(in context: ClosedActivityContext) -> AnyView {
-        AnyView(ClaudeClosedStatusWing(monitor: monitor, attention: attention, height: context.contentHeight))
+        AnyView(ClaudeClosedStatusWing(monitor: monitor, attention: attention, settings: settings, height: context.contentHeight))
     }
 
     @discardableResult func handleTap() -> Bool {
@@ -114,18 +131,67 @@ private struct ClaudeClosedLogoWing: View {
     }
 }
 
-/// Three dots while Claude works, a green dot while a session waits; a number for several.
-/// An alert takes their place.
+/// What the closed notch's ring shows.
+enum ClaudeClosedGauge: Equatable {
+    /// How full the context of the session the user is in is.
+    case context(ClaudeContextUsage, level: ClaudeUsageLevel, project: String?)
+    /// A plan limit about to stop every session.
+    case limit(ClaudeAlert)
+
+    var fraction: Double {
+        switch self {
+        case .context(let context, _, _): context.fraction
+        case .limit(let alert): alert.fraction
+        }
+    }
+
+    var percent: Int {
+        switch self {
+        case .context(let context, _, _): context.percent
+        case .limit(let alert): alert.percent
+        }
+    }
+
+    var level: ClaudeUsageLevel {
+        switch self {
+        case .context(_, let level, _): level
+        case .limit(let alert): alert.level
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .context(_, let level, let project):
+            let advice = switch level {
+            case .normal: ""
+            case .warning: ", compact it soon"
+            case .critical: ", Claude Code is about to compact it"
+            }
+            return "Context \(percent) percent full in \(project ?? "this session")\(advice)"
+        case .limit(let alert):
+            return "\(alert.subject == .limit(.session) ? "Session" : "Weekly") limit \(percent) percent used"
+        }
+    }
+}
+
+/// The ring for the session the user is in. Until that session has replied: three dots while
+/// Claude works, a green dot while it waits, or how many sessions are open.
 private struct ClaudeClosedStatusWing: View {
     @ObservedObject var monitor: ClaudeLiveMonitor
     @ObservedObject var attention: ClaudeAttention
+    @ObservedObject var settings: ClaudeSettings
     let height: CGFloat
 
     var body: some View {
         let snapshot = monitor.snapshot
+        let gauge = ClaudeClosedActivity.gauge(
+            snapshot: snapshot,
+            alerts: attention.alerts,
+            contextWarning: Double(settings.contextWarningPercent) / 100
+        )
         Group {
-            if let alert = attention.top {
-                ClaudeAlertGauge(alert: alert, height: height)
+            if let gauge {
+                ClaudeClosedGaugeView(gauge: gauge, height: height)
             } else if snapshot.isWorking {
                 if snapshot.workingCount > 1 {
                     count(snapshot.workingCount, color: ClaudeMark.orange)
@@ -142,9 +208,9 @@ private struct ClaudeClosedStatusWing: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .animation(.smooth(duration: 0.2), value: snapshot.isWorking)
-        .animation(.smooth(duration: 0.2), value: attention.top?.subject)
+        .animation(.smooth(duration: 0.2), value: gauge == nil)
         .accessibilityElement()
-        .accessibilityLabel(attention.top.map(ClaudeAlertGauge.label) ?? label(snapshot))
+        .accessibilityLabel(gauge?.accessibilityLabel ?? label(snapshot))
     }
 
     private func count(_ value: Int, color: Color) -> some View {
@@ -185,24 +251,29 @@ private struct ClaudeWorkingDots: View {
     }
 }
 
-/// A ring filled to the alert's percentage, with the number beside it.
-private struct ClaudeAlertGauge: View {
-    let alert: ClaudeAlert
+/// A ring filled to the percentage, with the number beside it: white, orange once it's worth
+/// acting on, red when it's urgent.
+private struct ClaudeClosedGaugeView: View {
+    let gauge: ClaudeClosedGauge
     let height: CGFloat
 
     var body: some View {
-        let color = alert.level == .critical ? Color.red : Color.orange
+        let color: Color = switch gauge.level {
+        case .normal: Color.white.opacity(0.85)
+        case .warning: .orange
+        case .critical: .red
+        }
         let ring = (height * 0.6).rounded()
         HStack(spacing: 3) {
             ZStack {
                 Circle().stroke(Color.white.opacity(0.18), lineWidth: 2)
                 Circle()
-                    .trim(from: 0, to: alert.fraction)
+                    .trim(from: 0, to: gauge.fraction)
                     .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
             .frame(width: ring, height: ring)
-            Text("\(alert.percent)%")
+            Text("\(gauge.percent)%")
                 .font(.system(size: max(8, height * 0.55), weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(color)
@@ -210,14 +281,6 @@ private struct ClaudeAlertGauge: View {
                 .fixedSize()
                 .contentTransition(.numericText())
         }
-    }
-
-    static func label(_ alert: ClaudeAlert) -> String {
-        switch alert.subject {
-        case .context:
-            "Context \(alert.percent) percent full in \(alert.project ?? "a session"), compact it soon"
-        case .limit(let kind):
-            "\(kind == .session ? "Session" : "Weekly") limit \(alert.percent) percent used"
-        }
+        .animation(.smooth(duration: 0.3), value: gauge.percent)
     }
 }

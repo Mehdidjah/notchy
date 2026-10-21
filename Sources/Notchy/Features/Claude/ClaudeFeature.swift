@@ -18,12 +18,12 @@ enum ClaudeFeature {
         let activity = ClaudeClosedActivity(monitor: monitor, settings: settings, attention: attention)
         activity.onTap = { [weak model] in
             guard let model else { return }
-            if let sessionID = attention.top?.sessionID {
-                // The session that needs compacting.
+            if let focus = monitor.snapshot.focus {
+                // The session whose context the ring shows.
                 showTab(in: model, section: .sessions)
-                ClaudeSessionsModel.shared.focus(sessionID: sessionID)
+                ClaudeSessionsModel.shared.focus(sessionID: focus.sessionID)
             } else {
-                showTab(in: model, section: monitor.snapshot.chatIsReplying && attention.top == nil ? .chat : .sessions)
+                showTab(in: model, section: monitor.snapshot.chatIsReplying ? .chat : .sessions)
             }
         }
         self.activity = activity
@@ -125,7 +125,7 @@ struct ClaudeSettingsSection: View {
                 }
             }
             Toggle("Say when Claude finishes", isOn: $settings.announcesFinish)
-            Text("Claude Code's mark hops while Claude works; a green dot means a session is waiting for you. Click it to see your sessions.")
+            Text("Claude Code's mark hops while Claude works. Beside it, a ring shows how full the context of the session you're in is: the one Claude is working in, or else the one you used last. Click it to see your sessions.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

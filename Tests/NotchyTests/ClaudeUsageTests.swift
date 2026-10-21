@@ -412,7 +412,45 @@ struct ClaudeAlertTests {
         #expect(attention.top?.level == .critical)
     }
 
-    @Test func theClosedNotchMakesRoomForAnAlert() {
+    @Test func theRingFollowsTheSessionTheUserIsIn() {
+        func session(_ id: String, _ status: ClaudeLiveSession.Status, tokens: Int?, at seconds: Double) -> ClaudeLiveSession {
+            ClaudeLiveSession(
+                pid: 1, sessionID: id, cwd: "/Users/me/\(id)", status: status, name: nil,
+                updatedAt: Date(timeIntervalSince1970: seconds),
+                context: tokens.map { ClaudeContextUsage(tokens: $0, window: 1_000_000, model: nil) }
+            )
+        }
+        let older = session("older", .idle, tokens: 900_000, at: 10)
+        let recent = session("recent", .idle, tokens: 330_000, at: 50)
+        let busy = session("busy", .busy, tokens: 100_000, at: 5)
+
+        let waiting = ClaudeLiveSnapshot(waiting: [older, recent])
+        #expect(waiting.focus?.sessionID == "recent", "the one used last")
+        #expect(ClaudeLiveSnapshot(working: [busy], waiting: [older, recent]).focus?.sessionID == "busy", "the one Claude works in")
+
+        let gauge = ClaudeClosedActivity.gauge(snapshot: waiting, alerts: [], contextWarning: 0.8)
+        #expect(gauge == .context(recent.context!, level: .normal, project: "recent"))
+        #expect(gauge?.percent == 34)
+
+        // Another session's alert doesn't take the ring; it comes as a note.
+        let other = ClaudeAlert(subject: .context(sessionID: "older"), level: .warning, fraction: 0.93, project: "older")
+        #expect(ClaudeClosedActivity.gauge(snapshot: waiting, alerts: [other], contextWarning: 0.8)?.percent == 34)
+        // A limit about to stop every session does.
+        let limit = ClaudeAlert(subject: .limit(.session), level: .critical, fraction: 0.97)
+        #expect(ClaudeClosedActivity.gauge(snapshot: waiting, alerts: [limit, other], contextWarning: 0.8) == .limit(limit))
+        let warning = ClaudeAlert(subject: .limit(.session), level: .warning, fraction: 0.85)
+        #expect(ClaudeClosedActivity.gauge(snapshot: waiting, alerts: [warning], contextWarning: 0.8)?.percent == 34)
+
+        // The session's own level colours it.
+        let full = ClaudeLiveSnapshot(waiting: [session("full", .idle, tokens: 820_000, at: 60)])
+        #expect(ClaudeClosedActivity.gauge(snapshot: full, alerts: [], contextWarning: 0.8)?.level == .warning)
+
+        // A session that hasn't replied yet has nothing to show.
+        let fresh = ClaudeLiveSnapshot(working: [session("new", .busy, tokens: nil, at: 70)], waiting: [recent])
+        #expect(ClaudeClosedActivity.gauge(snapshot: fresh, alerts: [], contextWarning: 0.8) == nil)
+    }
+
+    @Test func theClosedNotchMakesRoomForTheRing() {
         let settings = ClaudeSettings(defaults: makeDefaults("ClaudeAlertTests"))
         let usage = ClaudeUsageStore()
         let monitor = ClaudeLiveMonitor(loadSessions: { [] }, loadPlan: { nil }, usage: usage)
@@ -423,16 +461,21 @@ struct ClaudeAlertTests {
         defer { subscription.cancel() }
         let context = ClosedActivityContext(closedHeight: 32, notchWidth: 185, isHovering: false, gestureProgress: 0, hasHardwareNotch: true)
 
-        monitor.apply([live("a", tokens: 100_000)])
+        monitor.apply([live("a", tokens: nil)])
         attention.recompute()
-        #expect(activity.rightWingWidth(in: context) == context.wingBaseWidth)
+        #expect(activity.rightWingWidth(in: context) == context.wingBaseWidth, "the green dot until the session replies")
         let before = changes
 
-        monitor.apply([live("a", tokens: 900_000)])
+        monitor.apply([live("a", tokens: 100_000)])
         attention.recompute()
-        #expect(activity.rightWingWidth(in: context) == ClaudeClosedActivity.alertWingWidth(height: context.contentHeight))
+        #expect(activity.rightWingWidth(in: context) == ClaudeClosedActivity.gaugeWingWidth(height: context.contentHeight))
         #expect(activity.rightWingWidth(in: context) > context.wingBaseWidth)
         #expect(changes > before, "the wider wing re-lays out the notch")
+        let afterRing = changes
+
+        monitor.apply([live("a", tokens: 200_000)])
+        attention.recompute()
+        #expect(changes == afterRing, "a new percentage doesn't re-lay out the notch")
     }
 
     @Test func aChatReplyBringsTheFiguresUpToDate() async throws {

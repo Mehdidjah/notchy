@@ -13,6 +13,14 @@ struct ClaudeLiveSnapshot: Equatable, Sendable {
     var workingCount: Int { working.count + (chatIsReplying ? 1 : 0) }
     var isWorking: Bool { workingCount > 0 }
     var openCount: Int { working.count + waiting.count }
+
+    /// The session the user is most likely in: the one Claude is working in, or else the one
+    /// active most recently (sending a message or getting a reply updates it).
+    var focus: ClaudeLiveSession? {
+        (working.isEmpty ? waiting : working).max { lhs, rhs in
+            (lhs.updatedAt ?? .distantPast, lhs.sessionID) < (rhs.updatedAt ?? .distantPast, rhs.sessionID)
+        }
+    }
 }
 
 /// Keeps an eye on Claude Code's open sessions while the island is closed: re-reads the small
