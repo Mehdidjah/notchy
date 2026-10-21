@@ -433,94 +433,104 @@
       <h2>One download.<br /><em>Every feature.</em></h2>
       <p>Make yourself at home at the top of your Mac.</p>
     </div>
-    <div class="download-scenery" aria-hidden="true"></div>
-    <div class="download-card" use:reveal={{ threshold: 0.25 }}>
-      <div class="download-notch">
-        <img src="/assets/img/icon-256.png" alt="" width="29" height="29" /><span
-          >Notchy for macOS</span
-        >
-      </div>
-      <div class="download-tabs" role="tablist" aria-label="Get Notchy">
-        <button
-          role="tab"
-          id="download-choice"
-          aria-selected={downloadTab === 'download'}
-          aria-controls="download-panel"
-          tabindex={downloadTab === 'download' ? 0 : -1}
-          onclick={() => (downloadTab = 'download')}
-          onkeydown={(e) => {
-            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-              downloadTab = 'install';
-              document.getElementById('install-choice')?.focus();
-            }
-          }}>The app</button
-        ><button
-          role="tab"
-          id="install-choice"
-          aria-selected={downloadTab === 'install'}
-          aria-controls="install-panel"
-          tabindex={downloadTab === 'install' ? 0 : -1}
-          onclick={() => (downloadTab = 'install')}
-          onkeydown={(e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-              downloadTab = 'download';
-              document.getElementById('download-choice')?.focus();
-            }
-          }}>Getting started</button
-        >
-      </div>
-      {#if downloadTab === 'download'}<div
-          id="download-panel"
-          role="tabpanel"
-          aria-labelledby="download-choice"
-          class="download-panel"
-        >
-          <img
-            class="download-app-icon"
-            src="/assets/img/icon-256.png"
-            alt="Notchy app icon"
-            width="84"
-            height="84"
-          />
-          <h3>Hello, Notchy.</h3>
-          <p class="release-version" aria-live="polite">{version}</p>
-          <ul class="download-checks">
-            <li><Icon name="check" size={16} /> macOS 14 Sonoma or later</li>
-            <li><Icon name="check" size={16} /> Apple silicon and Intel</li>
-            <li><Icon name="check" size={16} /> Every feature in one app</li>
-            <li><Icon name="check" size={16} /> Built-in update notifications</li>
-            <li><Icon name="check" size={16} /> No account required</li>
-          </ul>
-          <a class="button button-black button-large" href={download}
-            ><Icon name="apple" size={20} /> Download for macOS</a
+    <div class="download-stage">
+      <div class="download-scenery" aria-hidden="true"></div>
+      <div class="download-card" use:reveal={{ threshold: 0.25 }}>
+        <div class="download-notch">
+          <img src="/assets/img/icon-256.png" alt="" width="30" height="30" /><span
+            >Notchy for macOS</span
           >
-          <p class="download-meta">{assetLabel}</p>
-          {#if releaseStatus === 'fallback'}<p class="metadata-fallback">
-              Release details are unavailable. Check GitHub for download availability.
-            </p>{/if}
         </div>
-      {:else}<div
-          id="install-panel"
-          role="tabpanel"
-          aria-labelledby="install-choice"
-          class="download-panel install-preview"
-        >
-          <span class="install-illustration"
-            ><Icon name="download" size={42} /><Icon name="arrow-right" size={25} /><Icon
-              name="shelf"
-              size={42}
-            /></span
+        <div class="download-tabs" data-active={downloadTab} role="tablist" aria-label="Get Notchy">
+          <button
+            role="tab"
+            id="download-choice"
+            aria-selected={downloadTab === 'download'}
+            aria-controls="download-panel"
+            tabindex={downloadTab === 'download' ? 0 : -1}
+            onclick={() => (downloadTab = 'download')}
+            onkeydown={(e) => {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                downloadTab = 'install';
+                document.getElementById('install-choice')?.focus();
+              }
+            }}>The app</button
+          ><button
+            role="tab"
+            id="install-choice"
+            aria-selected={downloadTab === 'install'}
+            aria-controls="install-panel"
+            tabindex={downloadTab === 'install' ? 0 : -1}
+            onclick={() => (downloadTab = 'install')}
+            onkeydown={(e) => {
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                downloadTab = 'download';
+                document.getElementById('download-choice')?.focus();
+              }
+            }}>Getting started</button
           >
-          <h3>Just drag it in.</h3>
-          <p>Open the disk image, then drag Notchy into Applications.</p>
-          <p class="install-warning">
-            <Icon name="shield" size={20} /> Notchy is not notarized by Apple yet. You’ll need to choose
-            Open Anyway in Privacy & Security.
-          </p>
-          <a class="button button-black button-large" href="#install"
-            >View installation steps<Icon name="arrow-right" size={17} /></a
+        </div>
+        {#if downloadTab === 'download'}<div
+            id="download-panel"
+            role="tabpanel"
+            aria-labelledby="download-choice"
+            class="download-panel"
           >
-        </div>{/if}
+            <img
+              class="download-app-icon"
+              src="/assets/img/icon-256.png"
+              alt="Notchy app icon"
+              width="84"
+              height="84"
+            />
+            <h3>Hello, Notchy.</h3>
+            <p class="release-version" aria-live="polite">{version}</p>
+            <ul class="download-checks">
+              <li>
+                <Icon name="check-circle" size={24} strokeWidth={1.5} /> macOS 14 Sonoma or later
+              </li>
+              <li>
+                <Icon name="check-circle" size={24} strokeWidth={1.5} /> Apple silicon and Intel
+              </li>
+              <li>
+                <Icon name="check-circle" size={24} strokeWidth={1.5} /> Every feature in one app
+              </li>
+              <li>
+                <Icon name="check-circle" size={24} strokeWidth={1.5} /> Built-in update notifications
+              </li>
+              <li><Icon name="check-circle" size={24} strokeWidth={1.5} /> No account required</li>
+            </ul>
+            <a class="button button-black button-large" href={download}
+              ><Icon name="apple" size={20} /> Download for macOS</a
+            >
+            <p class="download-meta">{assetLabel}</p>
+            {#if releaseStatus === 'fallback'}<p class="metadata-fallback">
+                Release details are unavailable. Check GitHub for download availability.
+              </p>{/if}
+          </div>
+        {:else}<div
+            id="install-panel"
+            role="tabpanel"
+            aria-labelledby="install-choice"
+            class="download-panel install-preview"
+          >
+            <span class="install-illustration"
+              ><Icon name="download" size={42} /><Icon name="arrow-right" size={25} /><Icon
+                name="shelf"
+                size={42}
+              /></span
+            >
+            <h3>Just drag it in.</h3>
+            <p>Open the disk image, then drag Notchy into Applications.</p>
+            <p class="install-warning">
+              <Icon name="shield" size={20} /> Notchy is not notarized by Apple yet. You’ll need to choose
+              Open Anyway in Privacy & Security.
+            </p>
+            <a class="button button-black button-large" href="#install"
+              >View installation steps<Icon name="arrow-right" size={17} /></a
+            >
+          </div>{/if}
+      </div>
     </div>
     <p class="download-note">
       A native app. A local clipboard. A little more breathing room.<br /><a

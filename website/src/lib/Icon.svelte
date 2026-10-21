@@ -4,6 +4,7 @@
     download: 'M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5',
     'arrow-right': 'M4 12h16m-6-6 6 6-6 6',
     check: 'm5 12 4 4L19 6',
+    'check-circle': 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M8 12l3 3 5-6',
     plus: 'M12 5v14M5 12h14',
     minus: 'M5 12h14',
     x: 'm6 6 12 12M18 6 6 18',
