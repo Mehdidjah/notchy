@@ -4,13 +4,23 @@ import SwiftUI
 /// spring, optionally beside the clipboard grid (split layout).
 struct NotchNotesTabView: View {
     @ObservedObject var model: NotchViewModel
-    @StateObject private var controller = NotesTabController()
-    @ObservedObject private var settings = NotesSettings.shared
-    @ObservedObject private var store = NotesStore.shared
-    @ObservedObject private var sync = AppleNotesSyncManager.shared
+    @StateObject private var controller: NotesTabController
+    @ObservedObject private var settings: NotesSettings
+    @ObservedObject private var store: NotesStore
+    @ObservedObject private var sync: AppleNotesSyncManager
 
     /// List and editor swap with this spring (response 0.35, damping 0.8).
     private static let paneAnimation = Animation.spring(response: 0.35, dampingFraction: 0.8)
+
+    /// Without a controller the tab runs on the shared notes library, settings and sync; a
+    /// controller passed in brings its own.
+    init(model: NotchViewModel, controller: NotesTabController? = nil) {
+        _model = ObservedObject(wrappedValue: model)
+        _controller = StateObject(wrappedValue: controller ?? NotesTabController())
+        _settings = ObservedObject(wrappedValue: controller?.settings ?? .shared)
+        _store = ObservedObject(wrappedValue: controller?.store ?? .shared)
+        _sync = ObservedObject(wrappedValue: controller?.sync ?? .shared)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
