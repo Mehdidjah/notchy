@@ -416,11 +416,13 @@ struct ClaudeAlertTests {
         for (height, hovering) in [(20.0, false), (32.0, true), (12.0, false)] {
             let metrics = ClaudeGaugeMetrics(height: height)
             let widest = TimerTextMeasurer.width(of: "100%", font: ClaudeGaugeMetrics.font(size: metrics.fontSize))
-            let content = metrics.ring + ClaudeGaugeMetrics.spacing + widest
-            #expect(metrics.wingWidth - content >= ClaudeGaugeMetrics.notchGap + ClaudeGaugeMetrics.outerPadding,
-                    "\(height) pt\(hovering ? ", hovered" : ""): the number fits and the ring stays clear of the notch")
+            let clearance = ClaudeGaugeMetrics.notchGap + ClaudeGaugeMetrics.outerPadding
+            #expect(metrics.wingWidth - widest >= clearance, "\(height) pt\(hovering ? ", hovered" : ""): the number fits beside the notch")
+            #expect(metrics.wingWidth - metrics.ring >= clearance, "\(height) pt: the ring fits beside the notch")
+            #expect(metrics.ring <= height, "the ring fits the wing's height")
         }
         #expect(ClaudeGaugeMetrics(height: 32).wingWidth > ClaudeGaugeMetrics(height: 20).wingWidth, "hovering makes room for the larger number")
+        #expect(ClaudeGaugeMetrics(height: 20).wingWidth <= 36, "the closed island stays narrow")
     }
 
     @Test func theRingFollowsTheSessionTheUserIsIn() {

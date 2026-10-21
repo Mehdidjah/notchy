@@ -102,7 +102,7 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     }
 
     func leftWing(in context: ClosedActivityContext) -> AnyView {
-        AnyView(ClaudeClosedLogoWing(monitor: monitor, attention: attention, height: context.contentHeight))
+        AnyView(ClaudeClosedLogoWing(monitor: monitor, attention: attention, settings: settings, height: context.contentHeight))
     }
 
     func rightWing(in context: ClosedActivityContext) -> AnyView {
@@ -117,14 +117,15 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     }
 }
 
-/// Sizes of the ring and its percentage at a wing height. The wing is measured for "100%", so
-/// the number never runs past it, and keeps the ring clear of the camera housing.
+/// Sizes of the closed notch's gauge at a wing height: on the left the ring, with Claude Code's
+/// mark inside it, and on the right the percentage. Both wings take the wider of the two, so the
+/// black centre stays over the camera housing; the number is measured as "100%" so it never runs
+/// past its wing, and both keep clear of the housing.
 struct ClaudeGaugeMetrics: Equatable {
-    /// Between the camera housing and the ring.
-    static let notchGap: CGFloat = 6
-    /// Between the number and the island's outer edge, mirrored by the logo on the left.
+    /// Between the camera housing and the ring or the number.
+    static let notchGap: CGFloat = 5
+    /// Between the ring or the number and the island's outer edge.
     static let outerPadding: CGFloat = 2
-    static let spacing: CGFloat = 2
     static let ringLineWidth: CGFloat = 1.6
 
     let ring: CGFloat
@@ -133,12 +134,14 @@ struct ClaudeGaugeMetrics: Equatable {
     let textWidth: CGFloat
 
     init(height: CGFloat) {
-        ring = (height * 0.5).rounded()
-        fontSize = max(7, height * 0.46)
+        ring = (height * 0.9).rounded()
+        fontSize = max(7, height * 0.44)
         textWidth = TimerTextMeasurer.width(of: "100%", font: Self.font(size: fontSize)) + 1
     }
 
-    var wingWidth: CGFloat { Self.notchGap + ring + Self.spacing + textWidth + Self.outerPadding }
+    var wingWidth: CGFloat {
+        Self.notchGap + max(ring, textWidth) + Self.outerPadding
+    }
 
     /// What the view draws with: the rounded system font, bold, with even-width digits.
     static func font(size: CGFloat) -> NSFont {
@@ -147,29 +150,55 @@ struct ClaudeGaugeMetrics: Equatable {
     }
 }
 
-/// Claude Code's mark, hopping gently while Claude works. Beside the ring it sits at the outer
-/// edge, mirroring the percentage on the right.
+/// Claude Code's mark, hopping gently while Claude works. With a gauge it sits inside the
+/// ring, against the outer edge, mirroring the percentage on the right.
 private struct ClaudeClosedLogoWing: View {
     @ObservedObject var monitor: ClaudeLiveMonitor
     @ObservedObject var attention: ClaudeAttention
+    @ObservedObject var settings: ClaudeSettings
     let height: CGFloat
     @State private var isUp = false
 
     var body: some View {
         let isWorking = monitor.snapshot.isWorking
-        let outward = ClaudeClosedActivity.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil
+        let gauge = ClaudeClosedActivity.gauge(
+            snapshot: monitor.snapshot,
+            alerts: attention.alerts,
+            contextWarning: Double(settings.contextWarningPercent) / 100
+        )
+        Group {
+            if let gauge {
+                let metrics = ClaudeGaugeMetrics(height: height)
+                ZStack {
+                    Circle().stroke(Color.white.opacity(0.18), lineWidth: ClaudeGaugeMetrics.ringLineWidth)
+                    Circle()
+                        .trim(from: 0, to: gauge.fraction)
+                        .stroke(gauge.color, style: StrokeStyle(lineWidth: ClaudeGaugeMetrics.ringLineWidth, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    logo(width: metrics.ring * 0.56, hop: metrics.ring * 0.05, isWorking: isWorking)
+                }
+                .frame(width: metrics.ring, height: metrics.ring)
+                .animation(.smooth(duration: 0.3), value: gauge.percent)
+                .padding(.leading, ClaudeGaugeMetrics.outerPadding)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                logo(width: height * 0.8, hop: height * 0.08, isWorking: isWorking)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onAppear { isUp = true }
+        .accessibilityElement()
+        .accessibilityLabel(isWorking ? "Claude is working" : "Claude Code session open")
+    }
+
+    private func logo(width: CGFloat, hop: CGFloat, isWorking: Bool) -> some View {
         ClaudeCodeLogo()
-            .frame(width: max(0, height * 0.8), height: max(0, height * 0.5))
-            .offset(y: isWorking && isUp ? -height * 0.08 : 0)
+            .frame(width: max(0, width), height: max(0, width * 0.625))
+            .offset(y: isWorking && isUp ? -hop : 0)
             .animation(
                 isWorking ? .easeInOut(duration: 0.42).repeatForever(autoreverses: true) : .smooth(duration: 0.2),
                 value: isWorking && isUp
             )
-            .padding(.leading, outward ? ClaudeGaugeMetrics.outerPadding : 0)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: outward ? .leading : .center)
-            .onAppear { isUp = true }
-            .accessibilityElement()
-            .accessibilityLabel(isWorking ? "Claude is working" : "Claude Code session open")
     }
 }
 
@@ -198,6 +227,14 @@ enum ClaudeClosedGauge: Equatable {
         switch self {
         case .context(_, let level, _): level
         case .limit(let alert): alert.level
+        }
+    }
+
+    var color: Color {
+        switch level {
+        case .normal: Color.white.opacity(0.85)
+        case .warning: .orange
+        case .critical: .red
         }
     }
 
@@ -293,39 +330,22 @@ private struct ClaudeWorkingDots: View {
     }
 }
 
-/// A ring filled to the percentage, with the number beside it: white, orange once it's worth
-/// acting on, red when it's urgent.
+/// The percentage beside the camera housing, against the outer edge: white, orange once it's
+/// worth acting on, red when it's urgent. The ring that shows it is on the left, around the mark.
 private struct ClaudeClosedGaugeView: View {
     let gauge: ClaudeClosedGauge
     let height: CGFloat
 
     var body: some View {
-        let color: Color = switch gauge.level {
-        case .normal: Color.white.opacity(0.85)
-        case .warning: .orange
-        case .critical: .red
-        }
-        let metrics = ClaudeGaugeMetrics(height: height)
-        HStack(spacing: ClaudeGaugeMetrics.spacing) {
-            ZStack {
-                Circle().stroke(Color.white.opacity(0.18), lineWidth: ClaudeGaugeMetrics.ringLineWidth)
-                Circle()
-                    .trim(from: 0, to: gauge.fraction)
-                    .stroke(color, style: StrokeStyle(lineWidth: ClaudeGaugeMetrics.ringLineWidth, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: metrics.ring, height: metrics.ring)
-            Text("\(gauge.percent)%")
-                .font(.system(size: metrics.fontSize, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(color)
-                .lineLimit(1)
-                .fixedSize()
-                .contentTransition(.numericText())
-        }
-        // Against the outer edge; the wing's width keeps it clear of the camera housing.
-        .padding(.trailing, ClaudeGaugeMetrics.outerPadding)
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .animation(.smooth(duration: 0.3), value: gauge.percent)
+        Text("\(gauge.percent)%")
+            .font(.system(size: ClaudeGaugeMetrics(height: height).fontSize, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(gauge.color)
+            .lineLimit(1)
+            .fixedSize()
+            .contentTransition(.numericText())
+            .padding(.trailing, ClaudeGaugeMetrics.outerPadding)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .animation(.smooth(duration: 0.3), value: gauge.percent)
     }
 }
