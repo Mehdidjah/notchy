@@ -701,33 +701,39 @@ em,
 .download-section {
   position: relative;
   isolation: isolate;
-  padding: 80px 20px 90px;
+  padding: 100px 20px;
   overflow: clip;
 }
 .download-section .section-intro {
   padding-inline: 0;
-  margin-bottom: 60px;
+  margin-bottom: 40px;
 }
 .download-section h2 em {
   font-style: normal;
   font-family: inherit;
   font-weight: 700;
 }
+.download-stage {
+  position: relative;
+  isolation: isolate;
+}
 .download-scenery {
   position: absolute;
   z-index: -1;
-  top: 340px;
-  left: 0;
-  right: 0;
-  height: 370px;
-  background: linear-gradient(180deg, #fff 0%, #e3f5ff 15%, #78d2ff 42%, #0080ff 72%, #190096 100%);
-  opacity: 0.92;
-}
-.download-scenery:after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, #fff2, transparent 25%, transparent 75%, #fff2);
+  pointer-events: none;
+  /* Follow the card, including its alternate panel and wrapped release metadata. */
+  bottom: 20px;
+  left: -80px;
+  right: -80px;
+  height: calc(100% + 40px);
+  background: linear-gradient(
+    0deg,
+    var(--deep-blue) 0%,
+    var(--blue) 21.0902%,
+    var(--sky) 52.6658%,
+    #fff0 100%
+  );
+  filter: blur(50px);
 }
 .download-card {
   position: relative;
@@ -735,8 +741,9 @@ em,
   margin: 0 auto;
   background: var(--surface);
   border-radius: 40px;
-  padding: 80px 40px 36px;
-  box-shadow: 0 16px 40px #163c6c0a;
+  padding: 80px 40px 40px;
+  overflow: hidden;
+  box-shadow: none;
 }
 .download-notch {
   position: absolute;
@@ -747,38 +754,81 @@ em,
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 12px 24px;
-  border-radius: 0 0 20px 20px;
-  font-size: 12px;
+  justify-content: center;
+  gap: 10px;
+  width: min(240px, calc(100% - 120px));
+  height: 50px;
+  padding: 10px;
+  border-radius: 0 0 18px 18px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.32px;
   white-space: nowrap;
 }
+.download-notch::before,
+.download-notch::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+.download-notch::before {
+  right: 100%;
+  background: radial-gradient(circle at 0 100%, transparent 19.5px, #000 20px);
+}
+.download-notch::after {
+  left: 100%;
+  background: radial-gradient(circle at 100% 100%, transparent 19.5px, #000 20px);
+}
 .download-notch img {
-  border-radius: 7px;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 8px;
 }
 .download-tabs {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  padding: 4px;
-  background: #e8e8e8;
-  border-radius: 12px;
-  gap: 4px;
-  margin-bottom: 25px;
+  height: 40px;
+  padding: 1px;
+  background: #fff;
+  border-radius: 14px;
+  gap: 0;
+  margin-bottom: 20px;
+}
+.download-tabs::before {
+  content: '';
+  position: absolute;
+  inset: 1px auto 1px 1px;
+  width: calc((100% - 2px) / 2);
+  border-radius: 13px;
+  background: #000;
+  transition: transform 0.4s var(--spring);
+}
+.download-tabs[data-active='install']::before {
+  transform: translateX(100%);
 }
 .download-tabs button {
+  position: relative;
+  z-index: 1;
   flex: 1;
-  padding: 10px 8px;
-  font-size: 12px;
-  border-radius: 9px;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.28px;
+  border-radius: 13px;
   background: transparent;
-  color: #777;
-  transition:
-    background 0.25s,
-    color 0.25s;
+  color: #000;
+  transition: color 0.2s;
 }
 .download-tabs button[aria-selected='true'] {
-  background: #fff;
-  color: #000;
-  box-shadow: 0 1px 4px #00000008;
+  color: #fff;
 }
 .download-panel {
   text-align: center;
@@ -804,22 +854,30 @@ em,
   text-align: left;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 26px 0 28px;
+  gap: 10px;
+  margin: 26px 0 20px;
 }
 .download-checks li {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
+  min-height: 24px;
   font-size: 14px;
-  color: #555;
+  line-height: 1.6;
+  color: #000;
 }
 .download-checks svg {
-  color: #000;
+  color: #ccc;
 }
 .download-panel > .button {
   width: 100%;
-  padding-inline: 15px;
+  min-height: 52.4px;
+  border-radius: 20px;
+  padding: 15px;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 .download-meta {
   font-size: 10px;
@@ -835,7 +893,7 @@ em,
 }
 .download-note {
   text-align: center;
-  margin: 32px 0 0;
+  margin: 40px 0 0;
   font-size: 12px;
   line-height: 1.6;
   color: #888;
@@ -1433,13 +1491,11 @@ html[data-motion='paused'] .hero-enter {
   .download-section .section-intro {
     margin-bottom: 45px;
   }
-  .download-scenery {
-    top: 260px;
-    height: 350px;
-  }
   .download-card {
     padding: 80px 32px 32px;
-    border-radius: 35px;
+  }
+  .download-notch {
+    font-size: 14px;
   }
   .download-note {
     max-width: 340px;
@@ -1894,6 +1950,15 @@ html[data-motion='paused'] .hero-device.reveal {
   }
 }
 @media (max-width: 359px) {
+  .download-notch {
+    font-size: 12px;
+    gap: 8px;
+  }
+  .download-notch img {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
   .hero-device {
     width: 320px;
   }
