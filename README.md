@@ -69,7 +69,8 @@ A website's download button can always link to
 https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg
 ```
 
-which serves the newest release, and can read the newest version number from
+which serves the newest release (the download page in `website/` uses it),
+and can read the newest version number from
 `https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest`
 (`tag_name`). Installed copies check the same release every 30 minutes and,
 once per version, show an update peek under the notch and a notification that
