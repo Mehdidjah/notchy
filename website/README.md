@@ -1,39 +1,75 @@
 # Notchy website
 
-The download page for Notchy: plain HTML, CSS and JavaScript with no build step.
+A responsive Svelte 5 + Vite website for Notchy. All UI state is implemented in Svelte components, with locally served fonts and original generated landscape imagery.
+
+## Run
 
 ```sh
 cd website
-python3 -m http.server 8000   # then open http://localhost:8000
+npm ci
+npm run dev
 ```
 
-## Deploying
+Open `http://127.0.0.1:4173`.
 
-Upload the folder as it is to any static host, for example Netlify or Vercel
-(drag the folder in, or point a project at `website/`), or GitHub Pages from a
-public repository. Once the site has a domain, make the `og:image` link in
-`index.html` absolute (`https://your-domain/assets/img/icon-256.png`) so link
-previews show the icon.
-
-## Downloads and versions
-
-Every Download button links to
-
-```text
-https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg
+```sh
+npm run check       # Svelte + accessibility/compiler diagnostics
+npm run build       # static production bundle in dist/
+npm run preview     # serve the production build
+npm test            # Playwright browser/interaction regression suite
 ```
 
-which always serves the newest release that `script/release.sh --publish`
-uploaded. The download card reads the version, date and size of that release
-from the GitHub API when the page loads; `RELEASES` at the top of `script.js`
-names the repository. Nothing on the page needs editing for a new release.
+Playwright uses Chromium. Install it with `npx playwright install chromium` if it is not already available. The test configuration may also select a local browser via `PLAYWRIGHT_CHANNEL`.
 
-The "First time opening Notchy?" card explains Open Anyway, which macOS asks
-for while releases aren't notarized. Remove it, and the FAQ answer that links
-to it, once they are.
+The dependency overrides select the official WebAssembly distributions of Rollup and esbuild. This keeps builds portable without depending on platform-specific executable permissions.
 
-## Fonts
+## Structure
 
-Inter, Instrument Serif (italic) and Fragment Mono are served from
-`assets/fonts`, so visitors' browsers don't contact a font service. They are
-licensed under the SIL Open Font License; see `assets/fonts/OFL.txt`.
+- `src/App.svelte`: page sections, navigation, responsive menu, release data, download tabs, FAQ and page-motion control.
+- `src/lib/NotchDemo.svelte`: eight isolated interactive app-preview panels.
+- `src/lib/LiveActivities.svelte`: eight selectable live-activity states.
+- `src/lib/DeviceStage.svelte`: reusable desktop/glass presentation.
+- `src/lib/Icon.svelte`: local SVG icon set.
+- `src/lib/motion.js`: cleanly disposed IntersectionObserver reveal action.
+- `styles.css`: fonts, layout tokens, responsive rules and page motion.
+- `public/assets/`: production images, fonts, app icons and social card.
+- `tests/website.spec.js`: browser regression coverage.
+
+The native macOS app is not changed by this website.
+
+## Visual system
+
+- Inter Display 400/500/600/700, with Instrument Serif Italic as the editorial accent.
+- Blue landscape palette: `#190096`, `#0080FF`, `#78D2FF`; white, black and `#F7F7F7` surfaces.
+- 1200px content container, 40px desktop inset, 30px feature-card radius.
+- Breakpoints at 1200px and 810px; additional compact-phone refinements below 480px.
+- Staggered character blur reveals, one-time section entrances, reversible scroll-linked foreground parallax and stateful component transitions.
+- `prefers-reduced-motion` disables decorative movement. The footer also exposes a page-motion pause control.
+
+`landscape.webp` and `wallpaper.webp` are original generated images. `foreground.webp` is a transparent foreground derived from the generated landscape, not a third-party asset. `social-card.jpg` is derived from the original landscape. The app icon is the existing Notchy brand asset. Fonts are self-hosted under the SIL Open Font License; see `public/assets/fonts/OFL.txt`.
+
+## Interactive previews
+
+Preview data is fictional and clearly labeled. Tabs, clipboard filters, sample selection/dragging, shelf add/remove/Quick Look, playback controls, timer start/pause/reset, editable notes and simulated Face Check all work. They do not access a visitor's clipboard, files, camera, accounts or native app. Demo state is kept in memory and is not persisted or uploaded. The Face Check preview is not a biometric check.
+
+## Downloads and releases
+
+The existing stable download integration is preserved:
+
+- Download: `https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg`
+- Release metadata: `https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest`
+- Release notes: `https://github.com/Mehdidjah/notchy-releases/releases`
+
+The metadata request has a seven-second timeout and an explicit unavailable state. It never invents a version, size, date or price. It does not replace the configured download destination based on an API response.
+
+**Release availability:** during verification on 2026-10-21, the public latest-release API and stable download returned 404. The repository must have a publicly accessible published release with an asset named `Notchy.dmg` before the public download works. Publishing a release is separate from deploying the website.
+
+Keep the first-launch guidance until the app is notarized. The current build explains Privacy & Security → Open Anyway and notes that permission grants may need to be renewed after updates.
+
+## Deploy
+
+Deploy the production `dist/` folder, not the Svelte source folder.
+
+For Vercel, set **Root Directory** to `website`, **Build Command** to `npm run build`, and **Output Directory** to `dist`. The local `vercel.json` contains these build settings. For another static host, use the same build command and output directory.
+
+Once a production domain is selected, make the `og:image` URL in `index.html` absolute and add the site's canonical URL. No domain is invented in this project. Existing in-page anchors are retained: `#top`, `#features`, `#live`, `#privacy`, `#download`, `#install`, `#faq`.
