@@ -61,6 +61,7 @@ final class ClaudeChatController: ObservableObject {
     private let usage: ClaudeUsageStore
     private let contextWindows: ClaudeContextWindows
     private let runTurn: @Sendable (ClaudeChatRequest, URL, URL) -> AsyncStream<ClaudeStreamEvent>
+    private let workingDirectory: @MainActor () throws -> URL
     private var sessionID: String?
     private var replyTask: Task<Void, Never>?
 
@@ -71,13 +72,15 @@ final class ClaudeChatController: ObservableObject {
         contextWindows: ClaudeContextWindows = .shared,
         runTurn: @escaping @Sendable (ClaudeChatRequest, URL, URL) -> AsyncStream<ClaudeStreamEvent> = { request, executable, directory in
             ClaudeChatRunner.run(request, executable: executable, workingDirectory: directory)
-        }
+        },
+        workingDirectory: @escaping @MainActor () throws -> URL = ClaudeChatPaths.prepareWorkingDirectory
     ) {
         self.settings = settings
         self.locator = locator
         self.usage = usage
         self.contextWindows = contextWindows
         self.runTurn = runTurn
+        self.workingDirectory = workingDirectory
     }
 
     var hasConversation: Bool { !messages.isEmpty }
@@ -137,7 +140,7 @@ final class ClaudeChatController: ObservableObject {
         isClaudeCodeInstalled = true
         let directory: URL
         do {
-            directory = try ClaudeChatPaths.prepareWorkingDirectory()
+            directory = try workingDirectory()
         } catch {
             finishReply(replyID, error: "Couldn't prepare the chat folder: \(error.localizedDescription)")
             return

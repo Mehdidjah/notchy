@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import CryptoKit
 import Foundation
+import os
 import SwiftUI
 import Testing
 @testable import Notchy
@@ -9,14 +10,15 @@ import Testing
 ///
 /// Face Check runs on its own controller with an in-memory key and a camera that never opens a
 /// device. AI tools reads a Claude Code folder written here, chats through a stand-in for the
-/// `claude` tool, and keeps every setting in its own defaults suite; nothing reads the user's
-/// camera, keychain, `~/.claude` or `~/.claude.json`.
+/// `claude` tool in a chat folder of its own, and keeps every setting in its own defaults
+/// suite; nothing reads or writes the user's camera, keychain, `~/.claude`, `~/.claude.json`
+/// or Notchy's Application Support folder.
 @MainActor
 @Suite(.serialized)
 struct WebsiteShotsFaceAITests {
     // MARK: Face Check
 
-    /// One saved face, camera off, ready for a check.
+    /// One saved face that a check has just recognised, with Check now and Scan again ready.
     @Test func faceTab() async throws {
         guard let output = WebsiteShots.output else { return }
         let folder = try WebsiteShots.temporaryDirectory("face")
@@ -46,11 +48,18 @@ struct WebsiteShotsFaceAITests {
                 tab == .face ? AnyView(NotchFaceTabView(model: island.model, controller: controller)) : nil
             },
             beforeCapture: {
-                // The tab turns the (stand-in) camera on as it appears; the shot shows it off.
+                // The tab turns the (stand-in) camera on as it appears. It goes off again so the
+                // frame shows no camera picture, and the status and result are those of a
+                // saved face that a check has just recognised.
                 controller.stopCamera()
+                controller.showcase(
+                    status: "Face saved. You can use Check now.",
+                    outcome: .init(matched: true, name: nil, distance: 0.31, limit: controller.preset.maximumDistance)
+                )
             }
         )
         #expect(controller.cameraState == .off)
+        #expect(controller.testOutcome?.matched == true)
     }
 
     // MARK: AI tools
@@ -69,6 +78,9 @@ struct WebsiteShotsFaceAITests {
         #expect(await shotEventually { !chat.isReplying })
         #expect(chat.messages.count == 2)
         #expect(chat.messages.last?.state == .complete)
+        // The reply ran in the temporary home's chat folder, not in Application Support.
+        #expect(!workspace.chatDirectories.isEmpty)
+        #expect(workspace.chatDirectories.allSatisfy { $0.standardizedFileURL.path.hasPrefix(workspace.root.standardizedFileURL.path) })
 
         let island = try WebsiteIsland()
         island.open(.claude)
@@ -89,9 +101,12 @@ struct WebsiteShotsFaceAITests {
 
         let island = try WebsiteIsland()
         island.open(.claude)
+        // The working session's dot pulses (1 → 0.35 → 1 over 1.6 s from appearing); capture
+        // lands at the end of a cycle (settle + 120 ms), where it is as bright as the open one.
         try await island.renderOpen(
             to: output.appendingPathComponent("tab-ai-sessions.png"),
-            content: workspace.content(for: island, chat: try workspace.makeChat())
+            content: workspace.content(for: island, chat: try workspace.makeChat()),
+            settle: .milliseconds(1_480)
         )
     }
 }
@@ -107,13 +122,19 @@ private final class ShotClaudeWorkspace {
     let usage = ClaudeUsageStore()
     let contextWindows: ClaudeContextWindows
     let sessions: ClaudeSessionsModel
-    /// The defaults suites the settings and context windows keep, removed with the folder.
+    /// The defaults suites the settings and context windows keep. Each is named by a path
+    /// inside the temporary home, so its file is written there rather than to
+    /// ~/Library/Preferences, and goes with the folder.
     private let suites: [String]
+    /// The folders chat replies ran in, as the stand-in for the `claude` tool received them.
+    private let chatDirectoryLog = OSAllocatedUnfairLock(initialState: [URL]())
+    var chatDirectories: [URL] { chatDirectoryLog.withLock { $0 } }
 
     init() async throws {
         root = try WebsiteShots.temporaryDirectory("claude")
-        let id = UUID().uuidString
-        suites = ["notchy.website-shots.claude-settings.\(id)", "notchy.website-shots.claude-windows.\(id)"]
+        let preferences = root.appendingPathComponent("Preferences", isDirectory: true)
+        try FileManager.default.createDirectory(at: preferences, withIntermediateDirectories: true)
+        suites = ["claude-settings", "claude-windows"].map { preferences.appendingPathComponent($0).path }
         let defaults = try suites.map { suite in
             let defaults = try #require(UserDefaults(suiteName: suite))
             defaults.removePersistentDomain(forName: suite)
@@ -147,7 +168,8 @@ private final class ShotClaudeWorkspace {
     }
 
     /// A chat whose replies come from `ShotConversation` instead of Claude Code. The locator
-    /// finds a stand-in `claude` in the temporary home, so no login shell is asked.
+    /// finds a stand-in `claude` in the temporary home, so no login shell is asked, and replies
+    /// run in a chat folder inside that home rather than in Notchy's Application Support.
     func makeChat() throws -> ClaudeChatController {
         let bin = root.appendingPathComponent(".local/bin", isDirectory: true)
         try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
@@ -156,16 +178,23 @@ private final class ShotClaudeWorkspace {
             try "#!/bin/sh\n".write(to: tool, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tool.path)
         }
+        let chatFolder = root.appendingPathComponent("Claude Chat", isDirectory: true)
+        let log = chatDirectoryLog
         return ClaudeChatController(
             settings: settings,
             locator: ClaudeCodeLocator(home: root),
             usage: usage,
             contextWindows: contextWindows,
-            runTurn: { request, _, _ in
-                AsyncStream { continuation in
+            runTurn: { request, _, directory in
+                log.withLock { $0.append(directory) }
+                return AsyncStream { continuation in
                     for event in ShotConversation.events(for: request) { continuation.yield(event) }
                     continuation.finish()
                 }
+            },
+            workingDirectory: {
+                try FileManager.default.createDirectory(at: chatFolder, withIntermediateDirectories: true)
+                return chatFolder
             }
         )
     }
@@ -178,9 +207,10 @@ private final class ShotClaudeWorkspace {
         }
     }
 
+    /// Clears both defaults suites, then deletes the temporary home with their files in it.
     func remove() {
-        try? FileManager.default.removeItem(at: root)
         for suite in suites { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        try? FileManager.default.removeItem(at: root)
     }
 }
 

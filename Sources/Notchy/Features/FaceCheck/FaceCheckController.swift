@@ -584,3 +584,14 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         }
     }
 }
+
+#if DEBUG
+extension FaceCheckController {
+    /// Sets the status line and the last check's result without running the camera or a
+    /// check, for screenshots of the Face Check tab. Debug builds only.
+    func showcase(status: String, outcome: TestOutcome?) {
+        self.status = status
+        testOutcome = outcome
+    }
+}
+#endif
