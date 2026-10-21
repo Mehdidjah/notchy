@@ -284,7 +284,7 @@ test('decorative motion is reversible and can be paused without hiding content',
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'running');
 });
 
-test('hero keeps its measured scene scale and supports native-icon clip interactions', async ({
+test('hero keeps its responsive scene scale and supports native-icon clip interactions', async ({
   page
 }) => {
   await open(page);
@@ -323,7 +323,7 @@ test('hero keeps its measured scene scale and supports native-icon clip interact
   expect(icon.headers()['content-type']).toContain('image/png');
 });
 
-test('audience cards use six crisp vector icons in reference-sized badges', async ({ page }) => {
+test('audience cards use six vector icons in 64px badges', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await open(page);
   const cards = page.locator('.benefit-card');
@@ -364,7 +364,7 @@ test('audience cards use six crisp vector icons in reference-sized badges', asyn
     .toBeTruthy();
 });
 
-test('download card matches the reference surface, notch, tabs and checks', async ({ page }) => {
+test('download card uses the expected surface, notch, tabs and checks', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await open(page);
   const card = page.locator('.download-card');
