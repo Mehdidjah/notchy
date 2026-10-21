@@ -50,13 +50,28 @@ jobs:
           chmod +x "$RUNNER_TEMP/notchy-ci-bin/osascript"
           PATH="$RUNNER_TEMP/notchy-ci-bin:$PATH" ./script/release.sh
 
-      - name: Verify and collect the release files
+      - name: Collect the release files
+        id: collect
         run: |
           set -euo pipefail
           VERSION="$(tr -d '[:space:]' < VERSION)"
+          DMG="dist/release/Notchy-$VERSION.dmg"
+          OUT="$RUNNER_TEMP/notchy-installer"
+          mkdir -p "$OUT"
+          cp "$DMG" "$OUT/Notchy.dmg"
+          (cd "$OUT" && shasum -a 256 Notchy.dmg > SHA256SUMS.txt)
+          printf '{"name":"Notchy","version":"%s","build":"%s","sourceCommit":"%s","architectures":["arm64","x86_64"],"minimumMacOS":"14.0","notarized":false}\n' \
+            "$VERSION" "$(git rev-list --count HEAD)" "$(git rev-parse HEAD)" > "$OUT/build-metadata.json"
+          cat "$OUT/build-metadata.json"
+          cat "$OUT/SHA256SUMS.txt"
+
+      - name: Verify the installer
+        run: |
+          set -euxo pipefail
+          VERSION="$(tr -d '[:space:]' < VERSION)"
           APP="dist/release/Notchy.app"
           DMG="dist/release/Notchy-$VERSION.dmg"
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/Notchy"
+          lipo "$APP/Contents/MacOS/Notchy" -verify_arch arm64 x86_64
           lipo -archs "$APP/Contents/MacOS/Notchy"
           codesign --verify --deep --strict "$APP"
           hdiutil verify "$DMG"
@@ -67,16 +82,9 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.local.Notchy'
           test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyUpdateRepository' "$APP/Contents/Info.plist")" = 'Mehdidjah/notchy-releases'
           git diff --exit-code
-          OUT="$RUNNER_TEMP/notchy-installer"
-          mkdir -p "$OUT"
-          cp "$DMG" "$OUT/Notchy.dmg"
-          (cd "$OUT" && shasum -a 256 Notchy.dmg > SHA256SUMS.txt)
-          printf '{"name":"Notchy","version":"%s","build":"%s","sourceCommit":"%s","architectures":["arm64","x86_64"],"minimumMacOS":"14.0","notarized":false}\n' \
-            "$VERSION" "$(git rev-list --count HEAD)" "$(git rev-parse HEAD)" > "$OUT/build-metadata.json"
-          cat "$OUT/build-metadata.json"
-          cat "$OUT/SHA256SUMS.txt"
 
-      - name: Upload the verified installer
+      - name: Upload the installer for verification or publication
+        if: ${{ !cancelled() && steps.collect.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: notchy-universal-installer
