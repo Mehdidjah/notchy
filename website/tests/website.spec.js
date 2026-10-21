@@ -363,3 +363,122 @@ test('audience cards use six crisp vector icons in reference-sized badges', asyn
     )
     .toBeTruthy();
 });
+
+test('download card matches the reference surface, notch, tabs and checks', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await open(page);
+  const card = page.locator('.download-card');
+  await card.scrollIntoViewIfNeeded();
+  const design = await card.evaluate((el) => {
+    const style = getComputedStyle(el);
+    const notch = el.querySelector('.download-notch');
+    const tabs = el.querySelector('.download-tabs');
+    const active = tabs.querySelector('[aria-selected="true"]');
+    const cta = el.querySelector('.download-panel > .button');
+    return {
+      width: el.getBoundingClientRect().width,
+      surface: style.backgroundColor,
+      radius: style.borderRadius,
+      padding: style.padding,
+      shadow: style.boxShadow,
+      notchWidth: notch.getBoundingClientRect().width,
+      notchHeight: notch.getBoundingClientRect().height,
+      notchFontSize: getComputedStyle(notch).fontSize,
+      notchShoulder: getComputedStyle(notch, '::before').backgroundImage,
+      tabsHeight: tabs.getBoundingClientRect().height,
+      tabsBackground: getComputedStyle(tabs).backgroundColor,
+      indicatorBackground: getComputedStyle(tabs, '::before').backgroundColor,
+      activeColor: getComputedStyle(active).color,
+      ctaRadius: getComputedStyle(cta).borderRadius,
+      ctaHeight: cta.getBoundingClientRect().height,
+      checkColor: getComputedStyle(el.querySelector('.download-checks svg')).color
+    };
+  });
+  expect(design).toMatchObject({
+    width: 400,
+    surface: 'rgb(247, 247, 247)',
+    radius: '40px',
+    padding: '80px 40px 40px',
+    shadow: 'none',
+    notchWidth: 240,
+    notchHeight: 50,
+    notchFontSize: '16px',
+    tabsHeight: 40,
+    tabsBackground: 'rgb(255, 255, 255)',
+    indicatorBackground: 'rgb(0, 0, 0)',
+    activeColor: 'rgb(255, 255, 255)',
+    ctaRadius: '20px',
+    checkColor: 'rgb(204, 204, 204)'
+  });
+  expect(design.ctaHeight).toBeCloseTo(52.4, 1);
+  expect(design.notchShoulder).toContain('radial-gradient');
+  const checks = card.locator('.download-checks svg');
+  await expect(checks).toHaveCount(5);
+  for (const check of await checks.all()) {
+    await expect(check).toHaveAttribute('width', '24');
+    await expect(check).toHaveAttribute('stroke-width', '1.5');
+  }
+  await card.getByRole('tab', { name: 'Getting started' }).click();
+  await expect(card.getByRole('tablist')).toHaveAttribute('data-active', 'install');
+  const tabs = card.locator('.download-tabs');
+  const indicatorX = await tabs.evaluate((el) => (el.getBoundingClientRect().width - 2) / 2);
+  await expect
+    .poll(() =>
+      tabs.evaluate((el) => new DOMMatrix(getComputedStyle(el, '::before').transform).m41)
+    )
+    .toBeCloseTo(indicatorX, 1);
+  await expect(card.getByRole('tabpanel')).toContainText('not notarized');
+});
+
+for (const width of [1440, 834, 390, 320]) {
+  test(`download gradient follows both card panels without a hard cutoff at ${width}px`, async ({
+    page
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const errors = await open(page);
+    const section = page.locator('#download');
+    const assertCoverage = async () => {
+      const layout = await section.evaluate((el) => {
+        const card = el.querySelector('.download-card').getBoundingClientRect();
+        const backdrop = el.querySelector('.download-scenery');
+        const gradient = backdrop.getBoundingClientRect();
+        const style = getComputedStyle(backdrop);
+        return {
+          cardHeight: card.height,
+          cardBottom: card.bottom,
+          gradientHeight: gradient.height,
+          gradientBottom: gradient.bottom,
+          gradientLeft: gradient.left,
+          gradientRight: gradient.right,
+          fadeClearance: el.getBoundingClientRect().bottom - gradient.bottom,
+          filter: style.filter,
+          background: style.backgroundImage,
+          pointerEvents: style.pointerEvents,
+          overflow: document.documentElement.scrollWidth > innerWidth
+        };
+      });
+      expect(layout.gradientHeight).toBeCloseTo(layout.cardHeight + 40, 1);
+      expect(layout.gradientBottom).toBeCloseTo(layout.cardBottom - 20, 1);
+      expect(layout.gradientLeft).toBeCloseTo(-60, 1);
+      expect(layout.gradientRight).toBeCloseTo(width + 60, 1);
+      expect(layout.fadeClearance).toBeGreaterThan(150);
+      expect(layout.filter).toBe('blur(50px)');
+      expect(layout.background).toContain('0deg');
+      expect(layout.background).toContain('21.0902%');
+      expect(layout.background).toContain('52.6658%');
+      expect(layout.pointerEvents).toBe('none');
+      expect(layout.overflow).toBe(false);
+    };
+    await assertCoverage();
+    await section.getByRole('tab', { name: 'Getting started' }).click();
+    await assertCoverage();
+    await section.getByRole('tab', { name: 'The app' }).click();
+    await assertCoverage();
+    await expect(section.getByRole('link', { name: 'Download for macOS' })).toHaveAttribute(
+      'href',
+      dmg
+    );
+    expect(errors).toEqual([]);
+  });
+}

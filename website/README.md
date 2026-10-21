@@ -51,6 +51,7 @@ The native macOS app is not changed by this website.
 - 1200px content container, 40px desktop inset, 30px feature-card radius.
 - Breakpoints at 1200px and 810px; additional compact-phone refinements below 480px.
 - Hero glass width: 1000px desktop, 700px tablet, 350px phone. Hero heading: 80px desktop/tablet, 50px phone. The 700×220px clipboard shelf is scaled with the glass frame.
+- The download section uses a card-relative blue gradient with 50px blur and 60px horizontal bleed, fading back to white below the card rather than ending at a fixed height. Its 400px surface has 40px corners, a curved 240×50px black notch, a white tab rail with a sliding black selection, and light circled checks. Notchy content and download behavior are preserved.
 - Staggered character blur reveals, one-time section entrances, reversible scroll-linked foreground parallax and stateful component transitions.
 - `prefers-reduced-motion` disables decorative movement. The footer also exposes a page-motion pause control.
 
