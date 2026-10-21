@@ -121,10 +121,11 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
 /// the number never runs past it, and keeps the ring clear of the camera housing.
 struct ClaudeGaugeMetrics: Equatable {
     /// Between the camera housing and the ring.
-    static let notchGap: CGFloat = 8
+    static let notchGap: CGFloat = 6
     /// Between the number and the island's outer edge, mirrored by the logo on the left.
     static let outerPadding: CGFloat = 2
-    static let spacing: CGFloat = 3
+    static let spacing: CGFloat = 2
+    static let ringLineWidth: CGFloat = 1.6
 
     let ring: CGFloat
     let fontSize: CGFloat
@@ -132,8 +133,8 @@ struct ClaudeGaugeMetrics: Equatable {
     let textWidth: CGFloat
 
     init(height: CGFloat) {
-        ring = (height * 0.6).rounded()
-        fontSize = max(8, height * 0.55)
+        ring = (height * 0.5).rounded()
+        fontSize = max(7, height * 0.46)
         textWidth = TimerTextMeasurer.width(of: "100%", font: Self.font(size: fontSize)) + 1
     }
 
@@ -158,7 +159,7 @@ private struct ClaudeClosedLogoWing: View {
         let isWorking = monitor.snapshot.isWorking
         let outward = ClaudeClosedActivity.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil
         ClaudeCodeLogo()
-            .frame(width: max(0, height * 0.95), height: max(0, height * 0.6))
+            .frame(width: max(0, height * 0.8), height: max(0, height * 0.5))
             .offset(y: isWorking && isUp ? -height * 0.08 : 0)
             .animation(
                 isWorking ? .easeInOut(duration: 0.42).repeatForever(autoreverses: true) : .smooth(duration: 0.2),
@@ -307,10 +308,10 @@ private struct ClaudeClosedGaugeView: View {
         let metrics = ClaudeGaugeMetrics(height: height)
         HStack(spacing: ClaudeGaugeMetrics.spacing) {
             ZStack {
-                Circle().stroke(Color.white.opacity(0.18), lineWidth: 2)
+                Circle().stroke(Color.white.opacity(0.18), lineWidth: ClaudeGaugeMetrics.ringLineWidth)
                 Circle()
                     .trim(from: 0, to: gauge.fraction)
-                    .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: ClaudeGaugeMetrics.ringLineWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
             .frame(width: metrics.ring, height: metrics.ring)
