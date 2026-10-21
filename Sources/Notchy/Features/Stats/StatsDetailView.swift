@@ -325,6 +325,8 @@ struct RingSegment: Equatable {
 }
 
 /// A track circle with one or more arcs laid end to end from twelve o'clock, round-capped.
+/// The stroke sits inside `size`, so nothing spills past the frame where the detail panel's
+/// scroll view would clip it.
 struct StatsRing<Center: View>: View {
     let segments: [RingSegment]
     let track: Color
@@ -335,9 +337,11 @@ struct StatsRing<Center: View>: View {
     var body: some View {
         ZStack {
             Circle()
+                .inset(by: lineWidth / 2)
                 .stroke(track, lineWidth: lineWidth)
             ForEach(Array(arcs.enumerated()), id: \.offset) { _, arc in
                 Circle()
+                    .inset(by: lineWidth / 2)
                     .trim(from: arc.start, to: arc.end)
                     .stroke(arc.color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
