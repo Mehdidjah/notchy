@@ -48,7 +48,8 @@ struct WebsiteShotsTimerStatsTests {
 
     // MARK: Stats
 
-    /// CPU, Memory, GPU, Network and Disk, each graph drawn from thirty one-second samples.
+    /// The default cards, CPU, Memory and GPU, each graph drawn from thirty one-second samples;
+    /// the island keeps Home's height, as it does in the app with these cards.
     @Test func statsTab() async throws {
         guard let output = WebsiteShots.output else { return }
         let stats = StatsManager.shared
@@ -61,16 +62,16 @@ struct WebsiteShotsTimerStatsTests {
         stats.stopMonitoring()
         #expect(!stats.isMonitoring)
 
-        // All five cards. The shared settings live in the test runner's own defaults; put
-        // them back exactly as found.
+        // The app's default cards. The shared settings live in the test runner's own
+        // defaults; put them back exactly as found.
         let saved = StatsGraphToggles(settings)
         defer { saved.restore(on: settings) }
         settings.showCpuGraph = true
         settings.showMemoryGraph = true
         settings.showGpuGraph = true
-        settings.showNetworkGraph = true
-        settings.showDiskGraph = true
-        #expect(settings.enabledMetrics.count == 5)
+        settings.showNetworkGraph = false
+        settings.showDiskGraph = false
+        #expect(settings.enabledMetrics.count == 3)
 
         let samples = Self.sampleHistory()
         let countBefore = stats.sampleCount
@@ -86,7 +87,7 @@ struct WebsiteShotsTimerStatsTests {
         #expect(stats.diskWriteString == "2.1 MB/s")
 
         let island = try WebsiteIsland()
-        // The provider the app installs: a second row of cards makes the island taller.
+        // The provider the app installs; with three cards it adds no height.
         island.model.extraOpenHeightProvider = { tab in
             tab == .stats ? StatsLayout.extraOpenHeight(forCardCount: StatsSettings.shared.enabledMetrics.count) : 0
         }

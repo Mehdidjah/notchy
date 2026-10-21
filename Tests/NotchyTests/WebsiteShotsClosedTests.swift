@@ -12,15 +12,6 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct WebsiteShotsClosedTests {
-    // MARK: - The bare notch
-
-    @Test func idle() async throws {
-        guard let output = WebsiteShots.output else { return }
-        let island = try WebsiteIsland()
-        island.settings.hapticsEnabled = false
-        try await island.renderClosed(to: output.appendingPathComponent("closed-idle.png"))
-    }
-
     // MARK: - Music
 
     @Test func music() async throws {

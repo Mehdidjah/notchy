@@ -24,12 +24,12 @@ struct WebsiteShotsClipboardTests {
             return clip
         }
         return [
-            clip("Lunch moved to 1:30, same place.", app: "Messages", kind: .text, style: .light, minutesAgo: 2, pinned: true),
-            clip("https://notchyy.vercel.app", app: "Safari", kind: .link, style: .teal, minutesAgo: 6, urlTitle: "Notchy – Your notch, finally useful"),
-            clip("#E46642", app: "Figma", kind: .color, style: .blue, minutesAgo: 9),
-            clip("let island = Notch(open: .home)", app: "Xcode", kind: .code, style: .dark, minutesAgo: 14),
-            clip("Meet at the studio, 3rd floor", app: "Messages", kind: .text, style: .dark, minutesAgo: 27),
-            clip("Ship the update before Friday", app: "Notes", kind: .text, style: .light, minutesAgo: 48, pinned: true),
+            clip("Lunch moved to 1:30, same place.", app: "Messages", kind: .text, style: .light, minutesAgo: 2.22, pinned: true),
+            clip("https://notchyy.vercel.app", app: "Safari", kind: .link, style: .teal, minutesAgo: 6.6, urlTitle: "Notchy – Your notch, finally useful"),
+            clip("#E46642", app: "Figma", kind: .color, style: .blue, minutesAgo: 9.37),
+            clip("let island = Notch(open: .home)", app: "Xcode", kind: .code, style: .dark, minutesAgo: 14.75),
+            clip("Meet at the studio, 3rd floor", app: "Messages", kind: .text, style: .dark, minutesAgo: 27.4),
+            clip("Ship the update before Friday", app: "Notes", kind: .text, style: .light, minutesAgo: 48.12, pinned: true),
         ]
     }
 }
