@@ -412,6 +412,17 @@ struct ClaudeAlertTests {
         #expect(attention.top?.level == .critical)
     }
 
+    @Test func theRingAndItsNumberFitBesideTheNotch() {
+        for (height, hovering) in [(20.0, false), (32.0, true), (12.0, false)] {
+            let metrics = ClaudeGaugeMetrics(height: height)
+            let widest = TimerTextMeasurer.width(of: "100%", font: ClaudeGaugeMetrics.font(size: metrics.fontSize))
+            let content = metrics.ring + ClaudeGaugeMetrics.spacing + widest
+            #expect(metrics.wingWidth - content >= ClaudeGaugeMetrics.notchGap + ClaudeGaugeMetrics.outerPadding,
+                    "\(height) pt\(hovering ? ", hovered" : ""): the number fits and the ring stays clear of the notch")
+        }
+        #expect(ClaudeGaugeMetrics(height: 32).wingWidth > ClaudeGaugeMetrics(height: 20).wingWidth, "hovering makes room for the larger number")
+    }
+
     @Test func theRingFollowsTheSessionTheUserIsIn() {
         func session(_ id: String, _ status: ClaudeLiveSession.Status, tokens: Int?, at seconds: Double) -> ClaudeLiveSession {
             ClaudeLiveSession(
@@ -468,8 +479,11 @@ struct ClaudeAlertTests {
 
         monitor.apply([live("a", tokens: 100_000)])
         attention.recompute()
-        #expect(activity.rightWingWidth(in: context) == ClaudeClosedActivity.gaugeWingWidth(height: context.contentHeight))
+        let metrics = ClaudeGaugeMetrics(height: context.contentHeight)
+        #expect(activity.rightWingWidth(in: context) == metrics.wingWidth)
         #expect(activity.rightWingWidth(in: context) > context.wingBaseWidth)
+        #expect(activity.leftWingWidth(in: context) == activity.rightWingWidth(in: context),
+                "equal wings keep the black centre over the camera housing")
         #expect(changes > before, "the wider wing re-lays out the notch")
         let afterRing = changes
 

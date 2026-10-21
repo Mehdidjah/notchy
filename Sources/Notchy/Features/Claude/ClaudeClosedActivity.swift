@@ -81,20 +81,28 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
         )
     }
 
-    /// Room for the ring and "100%" while it shows.
-    func rightWingWidth(in context: ClosedActivityContext) -> CGFloat {
-        guard Self.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil else {
-            return context.wingBaseWidth
-        }
-        return Self.gaugeWingWidth(height: context.contentHeight) + max(0, context.gestureProgress) / 2
+    var showsGauge: Bool {
+        Self.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil
     }
 
-    static func gaugeWingWidth(height: CGFloat) -> CGFloat {
-        (height * 0.6).rounded() + 34
+    /// The island is centred on the screen, so both wings take the ring's width: with one wing
+    /// wider than the other, the black centre would slide off the camera housing and cover
+    /// part of the ring.
+    func leftWingWidth(in context: ClosedActivityContext) -> CGFloat {
+        wingWidth(in: context)
+    }
+
+    func rightWingWidth(in context: ClosedActivityContext) -> CGFloat {
+        wingWidth(in: context)
+    }
+
+    private func wingWidth(in context: ClosedActivityContext) -> CGFloat {
+        guard showsGauge else { return context.wingBaseWidth }
+        return ClaudeGaugeMetrics(height: context.contentHeight).wingWidth + max(0, context.gestureProgress) / 2
     }
 
     func leftWing(in context: ClosedActivityContext) -> AnyView {
-        AnyView(ClaudeClosedLogoWing(monitor: monitor, height: context.contentHeight))
+        AnyView(ClaudeClosedLogoWing(monitor: monitor, attention: attention, height: context.contentHeight))
     }
 
     func rightWing(in context: ClosedActivityContext) -> AnyView {
@@ -109,14 +117,46 @@ final class ClaudeClosedActivity: ClosedLiveActivity {
     }
 }
 
-/// Claude Code's mark, hopping gently while Claude works.
+/// Sizes of the ring and its percentage at a wing height. The wing is measured for "100%", so
+/// the number never runs past it, and keeps the ring clear of the camera housing.
+struct ClaudeGaugeMetrics: Equatable {
+    /// Between the camera housing and the ring.
+    static let notchGap: CGFloat = 8
+    /// Between the number and the island's outer edge, mirrored by the logo on the left.
+    static let outerPadding: CGFloat = 2
+    static let spacing: CGFloat = 3
+
+    let ring: CGFloat
+    let fontSize: CGFloat
+    /// The widest the number gets: "100%".
+    let textWidth: CGFloat
+
+    init(height: CGFloat) {
+        ring = (height * 0.6).rounded()
+        fontSize = max(8, height * 0.55)
+        textWidth = TimerTextMeasurer.width(of: "100%", font: Self.font(size: fontSize)) + 1
+    }
+
+    var wingWidth: CGFloat { Self.notchGap + ring + Self.spacing + textWidth + Self.outerPadding }
+
+    /// What the view draws with: the rounded system font, bold, with even-width digits.
+    static func font(size: CGFloat) -> NSFont {
+        let base = NSFont.monospacedDigitSystemFont(ofSize: size, weight: .bold)
+        return base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: size) } ?? base
+    }
+}
+
+/// Claude Code's mark, hopping gently while Claude works. Beside the ring it sits at the outer
+/// edge, mirroring the percentage on the right.
 private struct ClaudeClosedLogoWing: View {
     @ObservedObject var monitor: ClaudeLiveMonitor
+    @ObservedObject var attention: ClaudeAttention
     let height: CGFloat
     @State private var isUp = false
 
     var body: some View {
         let isWorking = monitor.snapshot.isWorking
+        let outward = ClaudeClosedActivity.gauge(snapshot: monitor.snapshot, alerts: attention.alerts, contextWarning: 1) != nil
         ClaudeCodeLogo()
             .frame(width: max(0, height * 0.95), height: max(0, height * 0.6))
             .offset(y: isWorking && isUp ? -height * 0.08 : 0)
@@ -124,7 +164,8 @@ private struct ClaudeClosedLogoWing: View {
                 isWorking ? .easeInOut(duration: 0.42).repeatForever(autoreverses: true) : .smooth(duration: 0.2),
                 value: isWorking && isUp
             )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.leading, outward ? ClaudeGaugeMetrics.outerPadding : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: outward ? .leading : .center)
             .onAppear { isUp = true }
             .accessibilityElement()
             .accessibilityLabel(isWorking ? "Claude is working" : "Claude Code session open")
@@ -263,8 +304,8 @@ private struct ClaudeClosedGaugeView: View {
         case .warning: .orange
         case .critical: .red
         }
-        let ring = (height * 0.6).rounded()
-        HStack(spacing: 3) {
+        let metrics = ClaudeGaugeMetrics(height: height)
+        HStack(spacing: ClaudeGaugeMetrics.spacing) {
             ZStack {
                 Circle().stroke(Color.white.opacity(0.18), lineWidth: 2)
                 Circle()
@@ -272,15 +313,18 @@ private struct ClaudeClosedGaugeView: View {
                     .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
             }
-            .frame(width: ring, height: ring)
+            .frame(width: metrics.ring, height: metrics.ring)
             Text("\(gauge.percent)%")
-                .font(.system(size: max(8, height * 0.55), weight: .bold, design: .rounded))
+                .font(.system(size: metrics.fontSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .fixedSize()
                 .contentTransition(.numericText())
         }
+        // Against the outer edge; the wing's width keeps it clear of the camera housing.
+        .padding(.trailing, ClaudeGaugeMetrics.outerPadding)
+        .frame(maxWidth: .infinity, alignment: .trailing)
         .animation(.smooth(duration: 0.3), value: gauge.percent)
     }
 }
