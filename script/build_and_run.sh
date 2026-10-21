@@ -63,9 +63,30 @@ install_face_model() {
 }
 install_face_model
 
-# The app icon, made from Assets/AppIcon/artwork.png by script/app-icon/make-icon.sh.
-mkdir -p "$APP_CONTENTS/Resources"
-cp "$ROOT_DIR/Assets/AppIcon/AppIcon.icns" "$APP_CONTENTS/Resources/AppIcon.icns"
+# The app icon. macOS 26 and later show the layered Liquid Glass icon (Assets/AppIcon/
+# AppIcon.icon), which Xcode 26's actool compiles into Assets.car; older systems, and builds
+# without that actool, use the flat AppIcon.icns. Both are made from Assets/AppIcon/artwork.png
+# by script/app-icon/make-icon.sh.
+install_app_icon() {
+  local resources="$APP_CONTENTS/Resources"
+  local work
+  work="$(mktemp -d)"
+  mkdir -p "$resources"
+  cp "$ROOT_DIR/Assets/AppIcon/AppIcon.icns" "$resources/AppIcon.icns"
+  ICON_NAME_ENTRY=""
+  if xcrun actool "$ROOT_DIR/Assets/AppIcon/AppIcon.icon" --compile "$work" \
+       --output-partial-info-plist "$work/partial.plist" --app-icon AppIcon --include-all-app-icons \
+       --enable-on-demand-resources NO --development-region en --target-device mac \
+       --minimum-deployment-target "$MIN_SYSTEM_VERSION" --platform macosx >/dev/null 2>&1 \
+     && [[ -f "$work/Assets.car" ]]; then
+    cp "$work/Assets.car" "$resources/Assets.car"
+    ICON_NAME_ENTRY="<key>CFBundleIconName</key><string>AppIcon</string>"
+  else
+    echo "note: the Liquid Glass icon needs Xcode 26 or later; using the flat icon" >&2
+  fi
+  rm -rf "$work"
+}
+install_app_icon
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -82,6 +103,7 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundleIconFile</key>
   <string>AppIcon</string>
+  $ICON_NAME_ENTRY
   <key>CFBundleShortVersionString</key>
   <string>$APP_VERSION</string>
   <key>CFBundleVersion</key>

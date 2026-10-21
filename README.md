@@ -33,11 +33,14 @@ The script builds the Swift package, stages `dist/Notchy.app`, stops any
 previous instance, and launches the new build. The bundle is unsigned, so the
 Accessibility grant used for pasting may need to be renewed after rebuilding.
 
-The app icon is `Assets/AppIcon/AppIcon.icns`, made from the square artwork in
-`Assets/AppIcon/artwork.png`. After changing the artwork, run
-`./script/app-icon/make-icon.sh` and commit both files; it fits the artwork into
-the rounded square macOS uses for app icons. `script/release.sh` also gives the
-disk image's volume this icon (with Xcode's `SetFile`).
+The app icon comes from the square artwork in `Assets/AppIcon/artwork.png`.
+`./script/app-icon/make-icon.sh` splits it into the layers of a Liquid Glass icon
+(`Assets/AppIcon/AppIcon.icon`: the wordmark and the band with its notch as glass
+over the gradient) and makes a flat `AppIcon.icns` for macOS before 26; run it
+after changing the artwork and commit the results. The build compiles the glass
+icon with Xcode 26's `actool` and falls back to the flat one without it.
+`script/release.sh` also gives the disk image's volume the icon (with Xcode's
+`SetFile`).
 
 ## What it does
 
