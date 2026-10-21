@@ -32,6 +32,7 @@ The dependency overrides select the official WebAssembly distributions of Rollup
 - `src/lib/HeroClipboard.svelte`: compact interactive clipboard shelf with search, categories, selection, drag and compact view.
 - `src/lib/DeviceStage.svelte`: reusable feature desktop with native app icons.
 - `src/lib/Icon.svelte`: local UI icon set and the locally rendered system Apple glyph.
+- `public/assets/icons/benefits/`: six vendored Phosphor regular SVGs for the audience cards, displayed in 64px white badges. The MIT license and source attribution are included.
 - `src/lib/motion.js`: cleanly disposed IntersectionObserver reveal action.
 - `styles.css`: fonts, layout tokens, responsive rules and page motion.
 - `public/assets/`: production images, fonts, app icons and social card.

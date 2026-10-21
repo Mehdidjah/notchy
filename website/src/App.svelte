@@ -89,32 +89,32 @@
   ];
   const benefits = [
     {
-      icon: 'color',
+      icon: 'paint-brush',
       title: 'Designers',
       text: 'Keep colors, visual references, screenshots and the assets for your next great idea within reach.'
     },
     {
-      icon: 'code',
+      icon: 'code-block',
       title: 'Developers',
       text: 'Bring back a command, watch your system stats, and keep an eye on your coding session.'
     },
     {
-      icon: 'sparkles',
+      icon: 'pencil-line',
       title: 'Creators',
       text: 'Save the thought, find the file, control the music. Spend more time making, less time switching.'
     },
     {
-      icon: 'calendar',
+      icon: 'calendar-check',
       title: 'Busy days',
       text: 'Meetings, reminders, the weather and a moment to focus, all without leaving your work.'
     },
     {
-      icon: 'layers',
+      icon: 'browsers',
       title: 'Multitaskers',
       text: 'A home for everything you’re moving between apps. Your workflow, with a little less friction.'
     },
     {
-      icon: 'heart',
+      icon: 'laptop',
       title: 'Your everyday Mac',
       text: 'Copied addresses, useful links, favorite tracks and quick notes. Small things that add up.'
     }
@@ -412,7 +412,15 @@
     </div>
     <div class="benefits-grid">
       {#each benefits as item, i}<article class="benefit-card" use:reveal={{ delay: (i % 3) * 80 }}>
-          <span class="benefit-icon"><Icon name={item.icon} size={25} /></span>
+          <span class="benefit-icon" aria-hidden="true"
+            ><img
+              src={`/assets/icons/benefits/${item.icon}.svg`}
+              alt=""
+              width="24"
+              height="24"
+              decoding="async"
+            /></span
+          >
           <h3>{item.title}</h3>
           <p>{item.text}</p>
         </article>{/each}

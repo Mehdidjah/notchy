@@ -314,3 +314,44 @@ test('hero keeps its measured scene scale and supports native-icon clip interact
   expect(icon.ok()).toBeTruthy();
   expect(icon.headers()['content-type']).toContain('image/png');
 });
+
+test('audience cards use six crisp vector icons in reference-sized badges', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await open(page);
+  const cards = page.locator('.benefit-card');
+  const badges = cards.locator('.benefit-icon');
+  const icons = badges.locator('img');
+  await expect(cards).toHaveCount(6);
+  await expect(icons).toHaveCount(6);
+  const names = [
+    'paint-brush',
+    'code-block',
+    'pencil-line',
+    'calendar-check',
+    'browsers',
+    'laptop'
+  ];
+  for (let i = 0; i < names.length; i++) {
+    await expect(icons.nth(i)).toHaveAttribute('src', `/assets/icons/benefits/${names[i]}.svg`);
+    await expect(icons.nth(i)).toHaveAttribute('alt', '');
+    await expect(badges.nth(i)).toHaveAttribute('aria-hidden', 'true');
+    const response = await page.request.get(`/assets/icons/benefits/${names[i]}.svg`);
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()['content-type']).toContain('image/svg+xml');
+  }
+  for (const width of [1440, 968, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(badges.first()).toHaveCSS('width', '64px');
+    await expect(badges.first()).toHaveCSS('height', '64px');
+    await expect(badges.first()).toHaveCSS('border-radius', '30px');
+    await expect(icons.first()).toHaveCSS('width', '24px');
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+    ).toBeTruthy();
+  }
+  await expect
+    .poll(() =>
+      icons.evaluateAll((imgs) => imgs.every((img) => img.complete && img.naturalWidth > 0))
+    )
+    .toBeTruthy();
+});
