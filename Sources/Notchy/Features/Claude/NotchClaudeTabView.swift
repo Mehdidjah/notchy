@@ -716,7 +716,8 @@ private struct ClaudeRing: View {
 struct ClaudeMark: View {
     var size: CGFloat
 
-    nonisolated static let orange = Color(red: 0.851, green: 0.467, blue: 0.341)
+    /// Claude Code's orange, #E46642.
+    nonisolated static let orange = Color(red: 0xE4 / 255, green: 0x66 / 255, blue: 0x42 / 255)
 
     var body: some View {
         Image(systemName: "asterisk")

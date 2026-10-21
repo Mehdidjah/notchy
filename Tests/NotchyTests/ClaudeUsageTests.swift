@@ -412,17 +412,24 @@ struct ClaudeAlertTests {
         #expect(attention.top?.level == .critical)
     }
 
-    @Test func theRingAndItsNumberFitBesideTheNotch() {
-        for (height, hovering) in [(20.0, false), (32.0, true), (12.0, false)] {
+    @Test func theNumberFitsInsideTheRingBesideTheNotch() {
+        func width(_ metrics: ClaudeGaugeMetrics, _ number: String) -> CGFloat {
+            TimerTextMeasurer.width(of: number, font: ClaudeGaugeMetrics.font(size: metrics.fontSize))
+        }
+        let clearance = ClaudeGaugeMetrics.notchGap + ClaudeGaugeMetrics.outerPadding
+        let shrunk = ClaudeGaugeMetrics.minimumNumberScale
+        for (height, hovering) in [(20.0, false), (32.0, true)] {
             let metrics = ClaudeGaugeMetrics(height: height)
-            let widest = TimerTextMeasurer.width(of: "100%", font: ClaudeGaugeMetrics.font(size: metrics.fontSize))
-            let clearance = ClaudeGaugeMetrics.notchGap + ClaudeGaugeMetrics.outerPadding
-            #expect(metrics.wingWidth - widest >= clearance, "\(height) pt\(hovering ? ", hovered" : ""): the number fits beside the notch")
+            #expect(width(metrics, "99") <= metrics.innerWidth, "\(height) pt\(hovering ? ", hovered" : ""): two digits fit at full size")
+            #expect(width(metrics, "100") * shrunk <= metrics.innerWidth, "\(height) pt: 100 fits once shrunk")
             #expect(metrics.wingWidth - metrics.ring >= clearance, "\(height) pt: the ring fits beside the notch")
             #expect(metrics.ring <= height, "the ring fits the wing's height")
         }
-        #expect(ClaudeGaugeMetrics(height: 32).wingWidth > ClaudeGaugeMetrics(height: 20).wingWidth, "hovering makes room for the larger number")
-        #expect(ClaudeGaugeMetrics(height: 20).wingWidth <= 36, "the closed island stays narrow")
+        // A menu-bar-height island on a display without a notch.
+        let small = ClaudeGaugeMetrics(height: 12)
+        #expect(width(small, "99") * shrunk <= small.innerWidth)
+        #expect(ClaudeGaugeMetrics(height: 32).wingWidth > ClaudeGaugeMetrics(height: 20).wingWidth, "hovering makes room for a larger ring")
+        #expect(ClaudeGaugeMetrics(height: 20).wingWidth <= 28, "the closed island stays narrow")
     }
 
     @Test func theRingFollowsTheSessionTheUserIsIn() {
