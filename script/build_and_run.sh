@@ -63,6 +63,10 @@ install_face_model() {
 }
 install_face_model
 
+# The app icon, made from Assets/AppIcon/artwork.png by script/app-icon/make-icon.sh.
+mkdir -p "$APP_CONTENTS/Resources"
+cp "$ROOT_DIR/Assets/AppIcon/AppIcon.icns" "$APP_CONTENTS/Resources/AppIcon.icns"
+
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -76,6 +80,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundleDisplayName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleShortVersionString</key>
   <string>$APP_VERSION</string>
   <key>CFBundleVersion</key>

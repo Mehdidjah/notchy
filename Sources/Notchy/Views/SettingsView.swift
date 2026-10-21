@@ -382,7 +382,10 @@ struct SettingsView: View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    SettingsTile(symbol: "macbook", tint: .blue, size: 48)
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 64, height: 64)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Notchy").font(.title2.weight(.semibold))
                         Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "development")")

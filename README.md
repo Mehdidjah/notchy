@@ -33,6 +33,12 @@ The script builds the Swift package, stages `dist/Notchy.app`, stops any
 previous instance, and launches the new build. The bundle is unsigned, so the
 Accessibility grant used for pasting may need to be renewed after rebuilding.
 
+The app icon is `Assets/AppIcon/AppIcon.icns`, made from the square artwork in
+`Assets/AppIcon/artwork.png`. After changing the artwork, run
+`./script/app-icon/make-icon.sh` and commit both files; it fits the artwork into
+the rounded square macOS uses for app icons. `script/release.sh` also gives the
+disk image's volume this icon (with Xcode's `SetFile`).
+
 ## What it does
 
 - **Island.** A fixed transparent strip at the top of the notch display hosts a

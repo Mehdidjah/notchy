@@ -64,7 +64,21 @@ STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 cp -R "$APP_BUNDLE" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
-hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -fs HFS+ -format UDZO -ov "$DMG" >/dev/null
+# The mounted image wears the app icon. Marking the volume as having a custom icon takes
+# SetFile, which comes with Xcode; without it the image just has the standard disk icon.
+cp "$ROOT_DIR/Assets/AppIcon/AppIcon.icns" "$STAGING/.VolumeIcon.icns"
+READ_WRITE="$(mktemp -d)/$APP_NAME.dmg"
+MOUNT="$(mktemp -d)"
+hdiutil create -volname "$APP_NAME" -srcfolder "$STAGING" -fs HFS+ -format UDRW -ov "$READ_WRITE" >/dev/null
+hdiutil attach "$READ_WRITE" -nobrowse -noautoopen -mountpoint "$MOUNT" >/dev/null
+if xcrun --find SetFile >/dev/null 2>&1; then
+  xcrun SetFile -a C "$MOUNT"
+else
+  echo "warning: SetFile not found (it comes with Xcode); the disk image keeps the standard icon" >&2
+fi
+hdiutil detach "$MOUNT" >/dev/null
+hdiutil convert "$READ_WRITE" -format UDZO -ov -o "$DMG" >/dev/null
+rm -rf "$(dirname "$READ_WRITE")" "$MOUNT"
 
 NOTARIZED=0
 if [[ -n "$SIGN_IDENTITY" ]]; then
