@@ -28,8 +28,25 @@ struct NotchShellView: View {
         .onExitCommand(perform: model.escape)
     }
 
+    #if DEBUG
+    @Environment(\.notchTabContentOverride) private var tabContentOverride
+    #endif
+
     @ViewBuilder
     private var tabContent: some View {
+        #if DEBUG
+        if let override = tabContentOverride?(model.selectedTab) {
+            override
+        } else {
+            standardTabContent
+        }
+        #else
+        standardTabContent
+        #endif
+    }
+
+    @ViewBuilder
+    private var standardTabContent: some View {
         // Pure SwiftUI tabs are drawn at the compact content scale; tabs with embedded AppKit
         // views (Notes' editor, Face Check's camera, Shelf's tiles) size themselves instead.
         switch model.selectedTab {
@@ -173,3 +190,18 @@ private struct NotchTabChip: View {
         }
     }
 }
+
+#if DEBUG
+/// Lets debug renders, such as the website's screenshots, give a tab its content built on
+/// their own sample data instead of the app's shared stores. Return nil to keep a tab as is.
+private struct NotchTabContentOverrideKey: EnvironmentKey {
+    static let defaultValue: (@MainActor @Sendable (NotchTab) -> AnyView?)? = nil
+}
+
+extension EnvironmentValues {
+    var notchTabContentOverride: (@MainActor @Sendable (NotchTab) -> AnyView?)? {
+        get { self[NotchTabContentOverrideKey.self] }
+        set { self[NotchTabContentOverrideKey.self] = newValue }
+    }
+}
+#endif
