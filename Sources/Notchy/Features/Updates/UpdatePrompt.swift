@@ -9,7 +9,7 @@ enum UpdatePrompt {
         switch checker.status {
         case .available(let release):
             alert.messageText = "Notchy \(release.version) is available"
-            alert.informativeText = "You have version \(current). Download the new version, open it, and drag Notchy into Applications to replace this copy."
+            alert.informativeText = "You have version \(current). \(AppSignature.installInstructions())"
             alert.addButton(withTitle: "Download")
             alert.addButton(withTitle: "Later")
             NSApp.activate()

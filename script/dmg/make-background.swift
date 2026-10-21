@@ -2,7 +2,11 @@
 // notch from the app icon, the instruction to drag Notchy into Applications, and an arrow
 // between the two icons over the icon's blue and orange.
 //
-//   swift script/dmg/make-background.swift <output.png> <scale> <width> <height> <app x> <applications x> <icons y>
+//   swift script/dmg/make-background.swift <output.png> <scale> <width> <height> <app x> <applications x> <icons y> [open-anyway]
+//
+// `open-anyway` adds a card under the icons with the steps to open a build Apple hasn't
+// notarized: macOS refuses it on first launch until it is allowed in System Settings, and the
+// app can't explain that itself because it doesn't run until then.
 //
 // Sizes and positions are in points; `scale` 2 draws the Retina version. Finder writes the icon
 // names in black in light mode and in white in dark mode, so the strip under the icons stays a
@@ -12,12 +16,13 @@
 import AppKit
 
 let arguments = CommandLine.arguments
-guard arguments.count == 8,
+guard arguments.count == 8 || (arguments.count == 9 && arguments[8] == "open-anyway"),
       let scale = Double(arguments[2]), let width = Double(arguments[3]), let height = Double(arguments[4]),
       let appX = Double(arguments[5]), let applicationsX = Double(arguments[6]), let iconsY = Double(arguments[7]) else {
-    FileHandle.standardError.write(Data("usage: make-background.swift <output.png> <scale> <width> <height> <app x> <applications x> <icons y>\n".utf8))
+    FileHandle.standardError.write(Data("usage: make-background.swift <output.png> <scale> <width> <height> <app x> <applications x> <icons y> [open-anyway]\n".utf8))
     exit(2)
 }
+let explainsOpenAnyway = arguments.count == 9
 
 let overrun = 60.0
 let canvas = CGSize(width: width, height: height + overrun)
@@ -99,6 +104,46 @@ arrow.addLine(to: end)
 arrow.addLine(to: CGPoint(x: end.x - head, y: end.y + head))
 context.addPath(arrow)
 context.strokePath()
+
+// MARK: Opening a build Apple hasn't notarized
+
+if explainsOpenAnyway {
+    context.setShadow(offset: .zero, blur: 0, color: nil)
+    let card = CGRect(x: 36, y: height - 150, width: width - 72, height: 128)
+    let plate = CGPath(roundedRect: card, cornerWidth: 16, cornerHeight: 16, transform: nil)
+    context.addPath(plate)
+    context.setFillColor(color(0x000000, 0.74))
+    context.fillPath()
+    context.addPath(plate)
+    context.setStrokeColor(color(0xFFFFFF, 0.1))
+    context.setLineWidth(1)
+    context.strokePath()
+
+    let left = card.minX + 22
+    NSAttributedString(string: "First time opening Notchy?", attributes: [
+        .font: NSFont.systemFont(ofSize: 14, weight: .semibold), .foregroundColor: NSColor.white,
+    ]).draw(at: CGPoint(x: left, y: card.minY + 14))
+
+    let steps = [
+        "Open Notchy. When macOS says it can't verify it, click Done.",
+        "Open System Settings → Privacy & Security and scroll down.",
+        "Click Open Anyway, enter your password, then Open Anyway again.",
+    ]
+    for (index, step) in steps.enumerated() {
+        let y = card.minY + 44 + Double(index) * 24
+        let badge = CGRect(x: left, y: y, width: 18, height: 18)
+        context.setFillColor(color(0xFF9A2E))
+        context.fillEllipse(in: badge)
+        let number = NSAttributedString(string: "\(index + 1)", attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold), .foregroundColor: NSColor.black,
+        ])
+        let size = number.size()
+        number.draw(at: CGPoint(x: badge.midX - size.width / 2, y: badge.midY - size.height / 2))
+        NSAttributedString(string: step, attributes: [
+            .font: NSFont.systemFont(ofSize: 13), .foregroundColor: NSColor(white: 1, alpha: 0.85),
+        ]).draw(at: CGPoint(x: left + 28, y: y + 9 - 8))
+    }
+}
 
 guard let image = context.makeImage(),
       let destination = CGImageDestinationCreateWithURL(URL(fileURLWithPath: arguments[1]) as CFURL, "public.png" as CFString, 1, nil) else {

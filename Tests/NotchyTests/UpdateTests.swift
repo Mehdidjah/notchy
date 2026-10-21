@@ -171,6 +171,16 @@ struct UpdateTests {
         #expect(announcer.versions == ["2.0"])
     }
 
+    @Test
+    func installInstructionsExplainOpenAnywayOnlyWithoutADeveloperID() {
+        let signed = AppSignature.installInstructions(hasDeveloperID: true)
+        let unsigned = AppSignature.installInstructions(hasDeveloperID: false)
+        #expect(signed.contains("drag Notchy into Applications"))
+        #expect(!signed.contains("Open Anyway"))
+        #expect(unsigned.hasPrefix(signed))
+        #expect(unsigned.contains("Open Anyway in System Settings → Privacy & Security"))
+    }
+
     // MARK: Helpers
 
     private static func defaults() -> UserDefaults {

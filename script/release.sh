@@ -18,7 +18,8 @@
 #                      (default Mehdidjah/notchy-releases); create it once with
 #                      gh repo create <owner/name> --public --add-readme
 #   SIGN_IDENTITY      a "Developer ID Application: …" identity; without one the app is ad-hoc
-#                      signed and macOS asks users to confirm the first launch
+#                      signed, macOS asks users to confirm the first launch of every version, and
+#                      the install window shows how
 #   NOTARY_PROFILE     a notarytool keychain profile; with SIGN_IDENTITY the image is notarized
 #   RELEASE_NOTES      file with the release notes (default: commit subjects since the last tag)
 set -euo pipefail
@@ -36,12 +37,21 @@ DMG="$RELEASE_DIR/$APP_NAME-$VERSION.dmg"
 # The name every release uploads its image under.
 DOWNLOAD_NAME="$APP_NAME.dmg"
 DOWNLOAD_LINK="https://github.com/$UPDATE_REPOSITORY/releases/latest/download/$DOWNLOAD_NAME"
-# The install window, in points: its content size and the centres of the two icons.
+# The install window, in points: its content size and the centres of the two icons. A build
+# Apple hasn't notarized is refused on first launch until it is allowed in System Settings, and
+# can't say so itself, so its window is taller and lists the Open Anyway steps under the icons.
 WINDOW_WIDTH=660
-WINDOW_HEIGHT=400
 APP_ICON_X=170
 APPLICATIONS_ICON_X=490
-ICONS_Y=220
+if [[ -n "$SIGN_IDENTITY" && -n "$NOTARY_PROFILE" ]]; then
+  WINDOW_HEIGHT=400
+  ICONS_Y=220
+  WINDOW_NOTE=""
+else
+  WINDOW_HEIGHT=470
+  ICONS_Y=205
+  WINDOW_NOTE="open-anyway"
+fi
 
 PUBLISH=0
 case "${1:-}" in
@@ -97,7 +107,7 @@ cp -R "$APP_BUNDLE" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 for scale in 1 2; do
   swift "$ROOT_DIR/script/dmg/make-background.swift" "$WORK/background-$scale.png" "$scale" \
-    "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$APP_ICON_X" "$APPLICATIONS_ICON_X" "$ICONS_Y"
+    "$WINDOW_WIDTH" "$WINDOW_HEIGHT" "$APP_ICON_X" "$APPLICATIONS_ICON_X" "$ICONS_Y" ${WINDOW_NOTE:+"$WINDOW_NOTE"}
 done
 tiffutil -cathidpicheck "$WORK/background-1.png" "$WORK/background-2.png" \
   -out "$STAGING/.background/background.tiff" >/dev/null 2>&1
