@@ -7,7 +7,9 @@ import SwiftUI
 /// onto the shelf.
 struct ShelfDropDetectorModifier: ViewModifier {
     var isEnabled = true
-    var store: ShelfStore = .shared
+    /// The shelf a drop goes onto; nil means `ShelfStore.shared`, looked up only when a drop
+    /// lands, so drawing the closed island never loads the shelf.
+    var store: ShelfStore?
     let onTargetChange: (Bool) -> Void
 
     @State private var isTargeted = false
@@ -16,7 +18,7 @@ struct ShelfDropDetectorModifier: ViewModifier {
         if isEnabled {
             content
                 .onDrop(of: ShelfDropImporter.acceptedTypes, isTargeted: $isTargeted) { providers in
-                    store.importProviders(providers)
+                    (store ?? .shared).importProviders(providers)
                     return true
                 }
                 .onChange(of: isTargeted) { _, targeted in
@@ -32,7 +34,7 @@ extension View {
     /// See `ShelfDropDetectorModifier`.
     func shelfDropDetector(
         isEnabled: Bool = true,
-        store: ShelfStore = .shared,
+        store: ShelfStore? = nil,
         onTargetChange: @escaping (Bool) -> Void
     ) -> some View {
         modifier(ShelfDropDetectorModifier(isEnabled: isEnabled, store: store, onTargetChange: onTargetChange))
