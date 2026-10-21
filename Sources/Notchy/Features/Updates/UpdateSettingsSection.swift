@@ -33,7 +33,7 @@ struct UpdateSettingsSection: View {
             }
             Button("Check Now") { Task { await checker.checkNow() } }
                 .disabled(checker.status == .unavailable || checker.isChecking)
-            Text("Notchy looks for a new version every 6 hours and tells you once when one is out. Open the downloaded disk image and drag Notchy into Applications to replace this copy.")
+            Text("Notchy looks for a new version every 30 minutes and tells you once when one is out. Open the downloaded disk image and drag Notchy into Applications to replace this copy.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -8,9 +8,9 @@ protocol UpdateAnnouncing: AnyObject {
     func announce(_ release: UpdateRelease)
 }
 
-/// Looks for a newer release shortly after launch and then every few hours, and keeps the result
-/// for the menu bar and Settings. Downloads open in the browser; installing is dragging the new
-/// copy into Applications.
+/// Looks for a newer release shortly after launch and then every half hour, so a release is
+/// announced soon after it is published, and keeps the result for the menu bar and Settings.
+/// Downloads open in the browser; installing is dragging the new copy into Applications.
 @MainActor
 final class UpdateChecker: ObservableObject {
     enum Status: Equatable {
@@ -31,7 +31,7 @@ final class UpdateChecker: ObservableObject {
 
     /// Info.plist key with the `owner/name` repository whose releases are checked.
     static let repositoryInfoKey = "NotchyUpdateRepository"
-    static let checkInterval: TimeInterval = 6 * 3_600
+    static let checkInterval: TimeInterval = 30 * 60
 
     static let shared: UpdateChecker = {
         let info = Bundle.main.infoDictionary ?? [:]
@@ -88,7 +88,7 @@ final class UpdateChecker: ObservableObject {
 
     /// Checks after `initialDelay`, then wakes every `pollInterval` and checks when one is due, so
     /// a Mac that slept through the interval catches up soon after waking.
-    func start(initialDelay: Duration = .seconds(20), pollInterval: Duration = .seconds(1_800)) {
+    func start(initialDelay: Duration = .seconds(20), pollInterval: Duration = .seconds(300)) {
         guard schedule == nil, status != .unavailable else { return }
         schedule = Task { [weak self] in
             try? await Task.sleep(for: initialDelay)
