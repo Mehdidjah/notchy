@@ -18,8 +18,8 @@ async function open(page) {
   return errors;
 }
 
-function heroDemo(page) {
-  return page.locator('.hero-device .notchy');
+function featureDemo(page) {
+  return page.locator('.feature-card .notchy').first();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -74,11 +74,11 @@ test('mobile navigation opens and closes via link and Escape', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
-test('first demo supports tabs, clipboard filters, timer, notes, shelf and Face Check', async ({
+test('full feature demo supports tabs, clipboard filters, timer, notes, shelf and Face Check', async ({
   page
 }) => {
   const errors = await open(page);
-  const demo = heroDemo(page);
+  const demo = featureDemo(page);
   await demo.getByRole('tab', { name: 'Home' }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(demo.getByRole('tab', { name: 'Shelf' })).toHaveAttribute('aria-selected', 'true');
@@ -227,7 +227,8 @@ test.describe('reduced motion', () => {
         .evaluate((el) => parseFloat(getComputedStyle(el).animationDuration))
     ).toBeLessThanOrEqual(0.00001);
     await expect(page.locator('.site-nav')).toHaveCSS('animation-name', 'none');
-    const demo = heroDemo(page);
+    const demo = featureDemo(page);
+    await demo.getByRole('tab', { name: 'Home', exact: true }).click();
     await demo.getByRole('button', { name: 'Play sample playback' }).click();
     await expect(demo.locator('.equalizer i').first()).toHaveCSS('animation-name', 'none');
     await expect(demo.getByRole('tab', { name: 'Home', exact: true })).toHaveCSS(
@@ -273,4 +274,43 @@ test('decorative motion is reversible and can be paused without hiding content',
   await expect(page.locator('.feature-card').first()).toHaveCSS('transition-duration', '0s');
   await page.getByRole('button', { name: 'Resume decorative motion' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'running');
+});
+
+test('hero keeps its measured scene scale and supports native-icon clip interactions', async ({
+  page
+}) => {
+  await open(page);
+  for (const [width, expectedFrame, headingSize] of [
+    [1440, 1000, '80px'],
+    [968, 700, '80px'],
+    [390, 350, '50px']
+  ]) {
+    await page.setViewportSize({ width, height: 1042 });
+    await expect
+      .poll(async () => Math.round((await page.locator('.glass-desktop').boundingBox()).width))
+      .toBe(expectedFrame);
+    await expect(page.locator('.hero-copy h1')).toHaveCSS('font-size', headingSize);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
+    ).toBeTruthy();
+  }
+  await page.setViewportSize({ width: 1440, height: 1042 });
+  const hero = page.getByRole('region', { name: 'Interactive clipboard shelf preview' });
+  await hero.getByRole('button', { name: /^Code \d/ }).click();
+  await expect(hero.locator('button.card')).toHaveCount(1);
+  await hero.getByRole('searchbox', { name: 'Search sample clips' }).fill('no-sample-can-match');
+  await expect(hero.locator('.empty')).toBeVisible();
+  await hero.getByRole('button', { name: 'Show all', exact: true }).click();
+  await expect(hero.locator('button.card')).toHaveCount(8);
+  await hero.getByRole('button', { name: 'Compact view', exact: true }).click();
+  await expect(hero.getByRole('button', { name: 'Compact view', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await hero.locator('button.card').first().click();
+  await expect(hero.getByRole('status')).toContainText('Sample selected');
+  expect(await hero.locator('img[src^="/assets/macos/"]').count()).toBeGreaterThan(4);
+  const icon = await page.request.get('/assets/macos/finder.png');
+  expect(icon.ok()).toBeTruthy();
+  expect(icon.headers()['content-type']).toContain('image/png');
 });

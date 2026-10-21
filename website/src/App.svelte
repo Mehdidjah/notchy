@@ -3,6 +3,7 @@
   import { slide } from 'svelte/transition';
   import Icon from './lib/Icon.svelte';
   import DeviceStage from './lib/DeviceStage.svelte';
+  import HeroStage from './lib/HeroStage.svelte';
   import LiveActivities from './lib/LiveActivities.svelte';
   import { reveal } from './lib/motion.js';
 
@@ -187,9 +188,8 @@
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const updatePreference = () => {
       reduceMotion = media.matches;
+      scroll();
     };
-    updatePreference();
-    media.addEventListener('change', updatePreference);
     let frame = 0;
     const updateParallax = () => {
       frame = 0;
@@ -203,7 +203,10 @@
     const scroll = () => {
       if (!frame) frame = requestAnimationFrame(updateParallax);
     };
+    updatePreference();
+    media.addEventListener('change', updatePreference);
     window.addEventListener('scroll', scroll, { passive: true });
+    window.addEventListener('resize', scroll, { passive: true });
     const onKey = (event) => {
       if (event.key === 'Escape') menuOpen = false;
     };
@@ -230,6 +233,7 @@
       .finally(() => clearTimeout(timeout));
     return () => {
       window.removeEventListener('scroll', scroll);
+      window.removeEventListener('resize', scroll);
       window.removeEventListener('keydown', onKey);
       media.removeEventListener('change', updatePreference);
       cancelAnimationFrame(frame);
@@ -256,7 +260,7 @@
     >
   </div>
   <a class="button button-white nav-download" href={download}
-    ><Icon name="download" size={15} /><span>Download</span></a
+    ><Icon name="apple" size={15} /><span>Download</span></a
   >
   <button
     class="menu-toggle"
@@ -273,7 +277,7 @@
     <div class="hero-sky" aria-hidden="true"></div>
     <div class="hero-content container">
       <div class="hero-copy">
-        <p class="eyebrow hero-enter"><Icon name="apple" size={23} /> A little more Mac.</p>
+        <p class="eyebrow hero-enter"><Icon name="apple" size={23} /> Dynamic Island for Mac</p>
         <h1 aria-label="Your notch, finally useful.">
           {#each ['Your notch,', 'finally useful.'] as line, lineIndex}<span
               class:serif={lineIndex === 1}
@@ -287,21 +291,19 @@
             >{/each}
         </h1>
         <p class="hero-description hero-enter">
-          Music, clipboard, files and little moments of focus.<br class="desktop-break" /> Notchy brings
-          your everyday essentials to the top of your Mac, so you can stay in the flow.
+          Notchy brings your music, clipboard, files, notes, timers, and system stats into one
+          beautiful island, so you can find what you need, stay in focus, and get back to doing what
+          you love.
         </p>
         <a class="button button-black button-large hero-enter" href={download}
           ><Icon name="apple" size={21} /> Download for macOS</a
         >
         <div class="hero-meta hero-enter">
-          <span><Icon name="check" size={13} /> No account needed</span><span
-            ><Icon name="lock" size={12} /> Local clipboard</span
-          >
+          <span>No account needed</span><span>Local clipboard</span><span>macOS 14.0 or later</span>
         </div>
-        <p class="compatibility hero-enter">macOS Sonoma 14.0 or later · Apple silicon & Intel</p>
       </div>
-      <div class="hero-device" use:reveal={{ delay: 350, threshold: 0.12 }}>
-        <DeviceStage hero label="Explore Notchy’s interactive desktop preview" />
+      <div class="hero-device" use:reveal={{ delay: 1000, threshold: 0.35 }}>
+        <HeroStage />
       </div>
     </div>
     <img
@@ -336,7 +338,6 @@
     <div class="feature-stack">
       <article class="feature-card" id="live" use:reveal>
         <div class="feature-copy">
-          <span class="section-label">A notch that’s in the moment</span>
           <h3>Little things. Happening live.</h3>
           <p>
             Your next track, a ticking timer, a finished download. Live activities appear beside the
@@ -348,7 +349,6 @@
       {#each features as feature, i}
         <article class="feature-card" id={feature.id} use:reveal={{ threshold: 0.12 }}>
           <div class="feature-copy">
-            <span class="section-label">{feature.label}</span>
             <h3>{feature.title}</h3>
             <p>{feature.text}</p>
           </div>

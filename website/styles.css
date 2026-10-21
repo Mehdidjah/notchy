@@ -1628,3 +1628,290 @@ html[data-motion='paused'] .hero-device.reveal {
   opacity: 1 !important;
   transform: none !important;
 }
+
+/* The hero is a fixed-size glass scene, scaled as a unit at smaller breakpoints. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.site-nav {
+  width: 710px;
+  justify-content: space-between;
+  gap: 30px;
+}
+.site-nav::before,
+.site-nav::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+.site-nav::before {
+  left: -20px;
+  background: radial-gradient(circle at 0 100%, transparent 19.5px, #000 20px);
+}
+.site-nav::after {
+  right: -20px;
+  background: radial-gradient(circle at 100% 100%, transparent 19.5px, #000 20px);
+}
+.brand img,
+.download-app-icon,
+.editorial-break img,
+.closing-section > img {
+  border-radius: 0;
+}
+.hero-content {
+  padding: 140px 40px 200px;
+  gap: 60px;
+}
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 600px;
+  max-width: 100%;
+  text-align: center;
+}
+.hero-copy .eyebrow {
+  font-size: 20px;
+  line-height: 25px;
+  letter-spacing: -0.4px;
+  margin: 0;
+  height: 25px;
+}
+.hero-copy h1 {
+  font-size: 80px;
+  line-height: 80px;
+  letter-spacing: -4px;
+  margin: 0;
+  font-weight: 700;
+}
+.hero-description {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.2px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0;
+  color: #fff;
+}
+.hero-copy > .button-large {
+  padding: 15px 30px;
+  line-height: 22.4px;
+  min-height: 52.4px;
+  font-size: 16px;
+  margin: 0;
+  border-radius: 20px;
+}
+.hero-meta {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  line-height: 19.2px;
+  font-size: 12px;
+  color: rgb(0 0 0 / 0.4);
+  opacity: 1;
+  white-space: nowrap;
+}
+.hero-meta span {
+  display: block;
+}
+.hero-device {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+.hero-sky {
+  inset: -60px -60px auto;
+  height: 1403px;
+  filter: blur(50px);
+  background: linear-gradient(180deg, #190096 0%, #0080ff 21.0902%, #78d2ff 52.6658%, #fff0 100%);
+}
+.hero-landscape,
+.hero-foreground {
+  height: 600px;
+  object-position: center;
+  background-position: center;
+  bottom: 0;
+}
+.hero-landscape {
+  mask-image: linear-gradient(transparent 20%, #000 55%, #000 75%, transparent);
+  background-repeat: no-repeat;
+}
+.hero-section::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 160px;
+  z-index: 5;
+  background: linear-gradient(#fff0, #fff);
+  pointer-events: none;
+}
+.feature-footnotes {
+  display: none;
+}
+.feature-copy {
+  margin-bottom: 40px;
+}
+.feature-copy h3 {
+  margin-bottom: 20px;
+}
+.feature-section .section-intro > .section-label,
+.benefits-section .section-intro > .section-label {
+  display: none;
+}
+.section-intro {
+  max-width: 740px;
+}
+.feature-chips {
+  max-width: 740px;
+}
+@media (min-width: 810px) and (max-width: 1199px) {
+  .hero-content {
+    padding: 140px 40px 200px;
+    gap: 60px;
+  }
+  .hero-copy h1 {
+    font-size: 80px;
+    line-height: 80px;
+    letter-spacing: -4px;
+  }
+  .hero-copy .eyebrow {
+    font-size: 20px;
+  }
+  .hero-description {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .hero-meta {
+    font-size: 12px;
+    line-height: 10.8px;
+  }
+  .hero-landscape,
+  .hero-foreground {
+    height: 500px;
+  }
+  .hero-device {
+    width: 711px;
+  }
+}
+@media (max-width: 809px) {
+  .site-nav {
+    width: calc(100% - 40px);
+    max-width: none;
+    padding: 10px;
+    gap: 14px;
+  }
+  .site-nav .brand {
+    font-size: 14px;
+  }
+  .nav-download {
+    display: none;
+  }
+  .menu-toggle {
+    padding: 3px 8px;
+  }
+  .hero-content {
+    padding: 100px 20px 20px;
+    gap: 60px;
+  }
+  .hero-copy {
+    width: 100%;
+    max-width: 600px;
+    gap: 20px;
+  }
+  .hero-copy .eyebrow {
+    font-size: 20px;
+    line-height: 25px;
+    margin: 0;
+    height: 25px;
+  }
+  .hero-copy .eyebrow svg {
+    width: 23px;
+  }
+  .hero-copy h1 {
+    font-size: 50px;
+    line-height: 50px;
+    letter-spacing: -2.5px;
+    margin: 0;
+  }
+  .hero-description {
+    font-size: 16px;
+    line-height: 22.4px;
+    letter-spacing: -0.16px;
+    margin: 0;
+  }
+  .hero-copy > .button-large {
+    width: 100%;
+    max-width: 600px;
+    font-size: 16px;
+    line-height: 22.4px;
+    padding: 15px 30px;
+    min-height: 52.4px;
+  }
+  .hero-meta {
+    font-size: 12px;
+    line-height: 19.2px;
+    gap: 16px;
+    margin: 0;
+  }
+  .hero-device {
+    width: 373px;
+  }
+  .hero-landscape,
+  .hero-foreground {
+    height: 200px;
+  }
+  .hero-section::after {
+    height: 80px;
+  }
+  .feature-copy h3 {
+    font-size: 30px;
+    line-height: 30px;
+    letter-spacing: -1.5px;
+  }
+  .feature-copy {
+    margin-bottom: 30px;
+  }
+}
+@media (max-width: 359px) {
+  .hero-device {
+    width: 320px;
+  }
+  .hero-meta {
+    font-size: 9px;
+    gap: 12px;
+  }
+  .hero-copy h1 {
+    font-size: 45px;
+    line-height: 45px;
+    letter-spacing: -2.25px;
+  }
+}
+
+.hero-landscape {
+  background-position: center calc(50% + 60px);
+}
+@media (min-width: 810px) and (max-width: 1199px) {
+  .hero-landscape {
+    background-position: center calc(50% + 40px);
+  }
+}
+@media (max-width: 809px) {
+  .hero-landscape {
+    background-position: center calc(50% + 20px);
+  }
+}

@@ -28,8 +28,10 @@ The dependency overrides select the official WebAssembly distributions of Rollup
 - `src/App.svelte`: page sections, navigation, responsive menu, release data, download tabs, FAQ and page-motion control.
 - `src/lib/NotchDemo.svelte`: eight isolated interactive app-preview panels.
 - `src/lib/LiveActivities.svelte`: eight selectable live-activity states.
-- `src/lib/DeviceStage.svelte`: reusable desktop/glass presentation.
-- `src/lib/Icon.svelte`: local SVG icon set.
+- `src/lib/HeroStage.svelte`: the 1000×562.5px glass hero scene, scaled as one unit on tablet and phone.
+- `src/lib/HeroClipboard.svelte`: compact interactive clipboard shelf with search, categories, selection, drag and compact view.
+- `src/lib/DeviceStage.svelte`: reusable feature desktop with native app icons.
+- `src/lib/Icon.svelte`: local UI icon set and the locally rendered system Apple glyph.
 - `src/lib/motion.js`: cleanly disposed IntersectionObserver reveal action.
 - `styles.css`: fonts, layout tokens, responsive rules and page motion.
 - `public/assets/`: production images, fonts, app icons and social card.
@@ -43,10 +45,11 @@ The native macOS app is not changed by this website.
 - Blue landscape palette: `#190096`, `#0080FF`, `#78D2FF`; white, black and `#F7F7F7` surfaces.
 - 1200px content container, 40px desktop inset, 30px feature-card radius.
 - Breakpoints at 1200px and 810px; additional compact-phone refinements below 480px.
+- Hero glass width: 1000px desktop, 700px tablet, 350px phone. Hero heading: 80px desktop/tablet, 50px phone. The 700×220px clipboard shelf is scaled with the glass frame.
 - Staggered character blur reveals, one-time section entrances, reversible scroll-linked foreground parallax and stateful component transitions.
 - `prefers-reduced-motion` disables decorative movement. The footer also exposes a page-motion pause control.
 
-`landscape.webp` and `wallpaper.webp` are original generated images. `foreground.webp` is a transparent foreground derived from the generated landscape, not a third-party asset. `social-card.jpg` is derived from the original landscape. The app icon is the existing Notchy brand asset. Fonts are self-hosted under the SIL Open Font License; see `public/assets/fonts/OFL.txt`.
+`landscape.webp` and `wallpaper.webp` are original generated images. `foreground.webp` is a transparent foreground derived from the generated landscape, not a third-party asset. `social-card.jpg` is derived from the original landscape. The app icon is rendered from the built Notchy app’s original ICNS resource. The macOS application icons were extracted locally from the installed macOS 27.0.1 application bundles; see `public/assets/macos/PROVENANCE.md`. They are not hand-drawn substitutes. Fonts are self-hosted under the SIL Open Font License; see `public/assets/fonts/OFL.txt`.
 
 ## Interactive previews
 
