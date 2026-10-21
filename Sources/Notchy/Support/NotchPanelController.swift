@@ -191,6 +191,8 @@ final class NotchPanelController: NSObject {
         panel.isOpaque = false
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
+        // Hide Notchy (Command-H, while it's in the Dock) hides its windows, not the island.
+        panel.canHide = false
         panel.isReleasedWhenClosed = false
         panel.isMovable = false
         panel.isMovableByWindowBackground = false

@@ -78,6 +78,7 @@ final class UserSettings: ObservableObject {
         static let showFaceTab = "tabs.face"
         static let showClaudeTab = "tabs.claude"
         static let openLastTab = "tabs.openLastTab"
+        static let showInDock = "app.showInDock"
         static let showShelfTab = "tabs.shelf"
         static let showTimerTab = "tabs.timer"
         static let showStatsTab = "tabs.stats"
@@ -136,6 +137,8 @@ final class UserSettings: ObservableObject {
     @Published var showClaudeTab: Bool { didSet { defaults.set(showClaudeTab, forKey: Key.showClaudeTab) } }
     /// Reopen on the last tab instead of Home (default off).
     @Published var openLastTab: Bool { didSet { defaults.set(openLastTab, forKey: Key.openLastTab) } }
+    /// A Dock icon, with the dot that shows Notchy is running (default on).
+    @Published var showInDock: Bool { didSet { defaults.set(showInDock, forKey: Key.showInDock) } }
     @Published var showShelfTab: Bool { didSet { defaults.set(showShelfTab, forKey: Key.showShelfTab) } }
     @Published var showTimerTab: Bool { didSet { defaults.set(showTimerTab, forKey: Key.showTimerTab) } }
     @Published var showStatsTab: Bool { didSet { defaults.set(showStatsTab, forKey: Key.showStatsTab) } }
@@ -199,6 +202,7 @@ final class UserSettings: ObservableObject {
         showFaceTab = defaults.object(forKey: Key.showFaceTab) as? Bool ?? true
         showClaudeTab = defaults.object(forKey: Key.showClaudeTab) as? Bool ?? true
         openLastTab = defaults.bool(forKey: Key.openLastTab)
+        showInDock = defaults.object(forKey: Key.showInDock) as? Bool ?? true
         showShelfTab = defaults.object(forKey: Key.showShelfTab) as? Bool ?? true
         showTimerTab = defaults.object(forKey: Key.showTimerTab) as? Bool ?? true
         showStatsTab = defaults.object(forKey: Key.showStatsTab) as? Bool ?? true

@@ -42,7 +42,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         guard let window else { return }
         window.orderOut(nil)
         window.close()
-        restoreAccessoryPolicy()
+        restoreDockPresence()
     }
 
     private func buildWindow() {
@@ -104,7 +104,7 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         guard let window else { return }
         window.orderOut(nil)
         window.close()
-        restoreAccessoryPolicy()
+        restoreDockPresence()
         if openingSettings {
             OnboardingFeature.openSettings?()
         } else {
@@ -112,8 +112,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func restoreAccessoryPolicy() {
-        NSApp.setActivationPolicy(.accessory)
+    private func restoreDockPresence() {
+        DockPresence.update(closing: window)
     }
 
     func windowWillClose(_ notification: Notification) {

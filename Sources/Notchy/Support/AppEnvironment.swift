@@ -229,6 +229,11 @@ final class AppEnvironment {
     func start() {
         // Installed at launch so a click on a notification delivered before relaunch still routes.
         NotificationRouter.shared.install()
+        AppMainMenu.install { [weak settingsWindowController] in settingsWindowController?.show() }
+        settings.$showInDock
+            .removeDuplicates()
+            .sink { DockPresence.isEnabled = $0 }
+            .store(in: &cancellables)
         startFeatures()
         model.start()
         clipboardMonitor.start()

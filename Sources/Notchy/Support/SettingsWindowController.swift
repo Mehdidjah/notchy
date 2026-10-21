@@ -46,7 +46,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        DockPresence.update(closing: window)
         window?.contentView = NSView()
     }
 }

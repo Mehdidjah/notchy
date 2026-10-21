@@ -267,6 +267,8 @@ struct SettingsView: View {
                 Toggle("Hide in fullscreen", isOn: $settings.hideInFullscreen)
                 Toggle("Reopen on the last tab", isOn: $settings.openLastTab)
                 LaunchAtLoginToggle()
+                Toggle("Show in the Dock", isOn: $settings.showInDock)
+                    .help("A Dock icon with a dot while Notchy runs, and a place in the app switcher. Click it to open the island.")
             }
             Section("Gesture control") {
                 Toggle("Enable gestures", isOn: $settings.gesturesEnabled)

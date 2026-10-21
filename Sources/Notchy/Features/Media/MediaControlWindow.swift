@@ -195,6 +195,7 @@ final class MediaControlWindowController {
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         panel.isMovable = false
         panel.hidesOnDeactivate = false
+        panel.canHide = false
         panel.becomesKeyOnlyIfNeeded = true
         panel.isReleasedWhenClosed = false
         panel.contentView = hosting
