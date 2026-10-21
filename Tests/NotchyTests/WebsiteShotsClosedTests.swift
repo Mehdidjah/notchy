@@ -97,6 +97,9 @@ struct WebsiteShotsClosedTests {
         let island = try WebsiteIsland()
         let fixedNow = ClosedShotTime.today(hour: 10, minute: 26)
         let calendarSettings = CalendarSettings(defaults: try WebsiteShots.defaults())
+        // The countdown in minutes and seconds says "a meeting is about to start" on its own,
+        // where the default ring needs the open island to explain it.
+        calendarSettings.reminderPresentationStyle = .digital
         let reminder = ReminderLiveActivityModel(
             settings: calendarSettings,
             events: Empty().eraseToAnyPublisher(),
@@ -213,7 +216,7 @@ struct WebsiteShotsClosedTests {
         let island = try WebsiteIsland()
         island.settings.hapticsEnabled = false
         let clip = Clip(
-            title: "18 Rua Augusta, Lisbon", value: "18 Rua Augusta, Lisbon", detail: "Maps",
+            title: "Meet at the studio, 3rd floor", value: "Meet at the studio, 3rd floor", detail: "Messages",
             kind: .text, style: .dark, symbolName: ""
         )
         island.model.acceptCapturedClip(clip)

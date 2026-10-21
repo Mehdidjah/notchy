@@ -33,7 +33,7 @@ struct WebsiteShotsShelfNotesTests {
             try ShelfItem.file(at: files.hero),
             try ShelfItem.file(at: files.brief),
             .text("Call Ana about the launch"),
-            .link(try #require(URL(string: "https://www.apple.com/macbook-pro/"))),
+            .link(try #require(URL(string: "https://notchyy.vercel.app"))),
             try ShelfItem.file(at: files.brandFolder),
             try ShelfItem.file(at: files.releaseNotes),
         ])
@@ -334,7 +334,7 @@ private struct NotesSampleLibrary {
             if pinned { store.togglePin(id: id) }
         }
         // Palette: yellow, blue, red, green, purple, orange.
-        save("Lisbon trip", "Flight Thu 9:40 · hotel near Rua Augusta · dinner with Sam on Friday", color: 2, minutesAgo: 60 * 52)
+        save("Lisbon trip", "Flight Thu 9:40 · hotel by the river · dinner with Sam on Friday", color: 2, minutesAgo: 60 * 52)
         save("Interview questions", "What did you ship last that you're proud of? How do you like to get feedback?", color: 4, minutesAgo: 60 * 26)
         save("Groceries", "Oat milk, lemons, sourdough, coffee beans, basil", color: 5, minutesAgo: 190)
         save("Ideas for the landing page", "Open the island on hover in the hero. Short loops of the shelf and timer.", color: 1, minutesAgo: 64)

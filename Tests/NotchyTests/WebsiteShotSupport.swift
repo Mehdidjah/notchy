@@ -34,9 +34,12 @@ enum WebsiteShots {
         return url
     }
 
-    /// A defaults suite of its own, so sample settings never reach the user's.
-    static func defaults() throws -> UserDefaults {
-        let suite = "notchy.website-shots.\(UUID().uuidString)"
+    /// A defaults suite of its own, emptied first, so sample settings never reach the user's.
+    /// Each call site has one suite of its own that every run reuses, so runs don't pile up
+    /// files in ~/Library/Preferences.
+    static func defaults(file: String = #fileID, line: Int = #line) throws -> UserDefaults {
+        let site = file.replacingOccurrences(of: "/", with: ".").replacingOccurrences(of: ".swift", with: "")
+        let suite = "notchy.website-shots.\(site).\(line)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         return defaults
@@ -116,9 +119,9 @@ final class WebsiteIsland {
     let center: IslandActivityCenter
     let settings: UserSettings
 
-    init(items: [Clip] = []) throws {
+    init(items: [Clip] = [], file: String = #fileID, line: Int = #line) throws {
         center = IslandActivityCenter()
-        settings = UserSettings(defaults: try WebsiteShots.defaults())
+        settings = UserSettings(defaults: try WebsiteShots.defaults(file: file, line: line))
         settings.openOnHover = false
         model = NotchViewModel(items: items, activityCenter: center, settings: settings)
         model.updateNotchGeometry(WebsiteShots.geometry)

@@ -50,10 +50,10 @@ struct WebsiteShotsFaceAITests {
             beforeCapture: {
                 // The tab turns the (stand-in) camera on as it appears. It goes off again so the
                 // frame shows no camera picture, and the status and result are those of a
-                // saved face that a check has just recognised.
+                // check that has just recognised the saved face.
                 controller.stopCamera()
                 controller.showcase(
-                    status: "Face saved. You can use Check now.",
+                    status: "It's you.",
                     outcome: .init(matched: true, name: nil, distance: 0.31, limit: controller.preset.maximumDistance)
                 )
             }
