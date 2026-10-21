@@ -81,6 +81,7 @@ final class CalendarStore: ObservableObject {
     /// Re-reads the authorization status (access may have changed in System Settings) and
     /// reloads when it did.
     func refreshAuthorizationStatus() {
+        guard usesEventKit else { return }
         let event = CalendarEventService.status(for: .event)
         let reminder = CalendarEventService.status(for: .reminder)
         let changed = event != eventAuthorization || reminder != reminderAuthorization
@@ -93,7 +94,7 @@ final class CalendarStore: ObservableObject {
 
     /// Asks for full access to events, then reminders, where the user has not decided yet.
     func requestAccess() async {
-        guard !isRequestingAccess else { return }
+        guard usesEventKit, !isRequestingAccess else { return }
         isRequestingAccess = true
         defer { isRequestingAccess = false }
         if eventAuthorization == .notDetermined {
@@ -166,6 +167,7 @@ final class CalendarStore: ObservableObject {
     }
 
     func reloadCalendars() async {
+        guard usesEventKit else { return }
         guard hasAnyAccess else {
             if !calendars.isEmpty { calendars = [] }
             return
@@ -175,6 +177,7 @@ final class CalendarStore: ObservableObject {
     }
 
     func refreshSelectedDay(force: Bool) async {
+        guard usesEventKit else { return }
         guard hasAnyAccess else {
             if !events.isEmpty { events = [] }
             return
@@ -196,6 +199,7 @@ final class CalendarStore: ObservableObject {
     }
 
     func refreshUpcoming(force: Bool) async {
+        guard usesEventKit else { return }
         guard hasAnyAccess, settings.enableReminderLiveActivity else {
             if !upcomingEvents.isEmpty { upcomingEvents = [] }
             return
@@ -220,6 +224,7 @@ final class CalendarStore: ObservableObject {
     /// Fetches everything across the date strip (a week back, two weeks ahead) so the strip
     /// can tint the days that have events.
     func refreshEventDays(force: Bool) async {
+        guard usesEventKit else { return }
         guard hasAnyAccess else {
             stripEntries = []
             if !eventDays.isEmpty { eventDays = [:] }
@@ -293,7 +298,7 @@ final class CalendarStore: ObservableObject {
 
     /// Ticks or unticks a reminder, updating the list at once and refetching after the save.
     func setReminderCompleted(_ entry: CalendarEntry, completed: Bool) {
-        guard entry.kind.isReminder else { return }
+        guard usesEventKit, entry.kind.isReminder else { return }
         events = events.map { $0.itemIdentifier == entry.itemIdentifier ? $0.withReminderCompleted(completed) : $0 }
         Task {
             _ = await service.setReminderCompleted(itemIdentifier: entry.itemIdentifier, completed: completed)
@@ -444,4 +449,32 @@ final class CalendarStore: ObservableObject {
             }
         }
     }
+
+    // MARK: - Debug renders
+
+    /// False while a debug render shows injected entries, so nothing reads or writes EventKit.
+    private var usesEventKit: Bool {
+        #if DEBUG
+        return !showsInjectedEntries
+        #else
+        return true
+        #endif
+    }
+
+    #if DEBUG
+    private var showsInjectedEntries = false
+
+    /// Shows `entries` as today's and the upcoming entries, with access granted, for previews
+    /// and debug renders such as the website's screenshots. From then on the store neither
+    /// reads EventKit nor asks for access.
+    func injectForPreview(entries: [CalendarEntry], calendars: [CalendarSource]) {
+        showsInjectedEntries = true
+        selectedDay = Calendar.current.startOfDay(for: Date())
+        eventAuthorization = .fullAccess
+        reminderAuthorization = .fullAccess
+        self.calendars = calendars
+        events = entries
+        upcomingEvents = entries
+    }
+    #endif
 }
