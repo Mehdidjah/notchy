@@ -91,7 +91,7 @@
     {
       icon: 'paint-brush',
       title: 'Designers',
-      text: 'Keep colors, visual references, screenshots and the assets for your next great idea within reach.'
+      text: 'Keep colors, design ideas, screenshots and the assets for your next great idea within reach.'
     },
     {
       icon: 'code-block',
