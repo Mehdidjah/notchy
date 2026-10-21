@@ -32,13 +32,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         super.init()
 
         if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "doc.on.clipboard.fill",
-                accessibilityDescription: "Notchy"
-            )
-            button.image?.isTemplate = true
-            button.title = " Notchy"
-            button.toolTip = "Notchy Clipboard"
+            button.image = MenuBarIcon.image
+            button.imagePosition = .imageOnly
+            button.toolTip = "Notchy"
+            button.setAccessibilityLabel("Notchy")
         }
         menu.delegate = self
         statusItem.menu = menu
@@ -196,5 +193,52 @@ final class MenuBarController: NSObject, NSMenuDelegate {
               let id = UUID(uuidString: value),
               let clip = model.items.first(where: { $0.id == id }) else { return }
         model.paste(clip)
+    }
+}
+
+/// The menu bar icon: a small screen whose top band carries the notch, like the app icon, drawn
+/// as a template so it follows the menu bar's light or dark look.
+enum MenuBarIcon {
+    static let size = NSSize(width: 18, height: 16)
+
+    static var image: NSImage {
+        let image = NSImage(size: size, flipped: true) { _ in
+            draw()
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "Notchy"
+        return image
+    }
+
+    /// Drawn top-down in an 18 × 16 pt box.
+    private static func draw() {
+        let lineWidth: CGFloat = 1.5
+        let screen = NSRect(x: 1, y: 1.5, width: 16, height: 13).insetBy(dx: lineWidth / 2, dy: lineWidth / 2)
+        let outline = NSBezierPath(roundedRect: screen, xRadius: 3.2, yRadius: 3.2)
+        NSColor.black.setStroke()
+        NSColor.black.setFill()
+        outline.lineWidth = lineWidth
+        outline.stroke()
+
+        // The top band, inside the outline, with the notch hanging from its middle.
+        NSGraphicsContext.saveGraphicsState()
+        outline.addClip()
+        let band = NSRect(x: screen.minX, y: screen.minY, width: screen.width, height: screen.height * 0.42)
+        NSBezierPath(rect: band).fill()
+        NSGraphicsContext.restoreGraphicsState()
+
+        let notchWidth: CGFloat = 6
+        let notch = NSRect(x: screen.midX - notchWidth / 2, y: band.maxY - 1, width: notchWidth, height: 3.2)
+        let notchPath = NSBezierPath()
+        let radius: CGFloat = 1.3
+        notchPath.move(to: NSPoint(x: notch.minX, y: notch.minY))
+        notchPath.line(to: NSPoint(x: notch.maxX, y: notch.minY))
+        notchPath.line(to: NSPoint(x: notch.maxX, y: notch.maxY - radius))
+        notchPath.appendArc(withCenter: NSPoint(x: notch.maxX - radius, y: notch.maxY - radius), radius: radius, startAngle: 0, endAngle: 90)
+        notchPath.line(to: NSPoint(x: notch.minX + radius, y: notch.maxY))
+        notchPath.appendArc(withCenter: NSPoint(x: notch.minX + radius, y: notch.maxY - radius), radius: radius, startAngle: 90, endAngle: 180)
+        notchPath.close()
+        notchPath.fill()
     }
 }
