@@ -446,7 +446,15 @@
               >{:else if clip.type === 'Code'}<code
                 ><span>island</span>.open(<br />&nbsp; .home<br />)</code
               >{:else}<strong>{clip.title}</strong><span class="clip-body">{clip.body}</span>{/if}
-            <span class="clip-source">{clip.source}<small>{clip.time}</small></span>
+            <span class="clip-source"
+              ><img
+                class="source-app-icon"
+                src={`/assets/macos/${{ Notes: 'notes', Photos: 'photos', Safari: 'safari', Messages: 'messages', Xcode: 'xcode', 'Colour picker': 'notchy' }[clip.source] || 'finder'}.png`}
+                alt=""
+                width="16"
+                height="16"
+              /><span>{clip.source}<small>{clip.time}</small></span></span
+            >
           </button>
         {/each}
       </div>
@@ -1176,7 +1184,16 @@
     object-fit: cover;
     pointer-events: none;
   }
+  .source-app-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex: none;
+  }
   .clip-source {
+    display: flex;
+    align-items: center;
+    gap: 5px;
     margin-top: auto;
     font-size: 9px;
     color: #b1b1bb;

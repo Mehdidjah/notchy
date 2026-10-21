@@ -1,8 +1,6 @@
 <script>
   let { name, size = 20, strokeWidth = 1.7 } = $props();
   const paths = {
-    apple:
-      'M16 2c.1 2-1.3 3.7-3.3 4 .1-1.9 1.4-3.5 3.3-4ZM16.7 6.2c-1.8-.1-2.7 1-4 1s-2.1-1-3.8-.9C5.8 6.5 4 9 4.2 12.1c.2 3.6 2.8 8.9 5.2 9 1.2 0 1.7-.8 3.3-.8s2 .8 3.3.7c1.8-.1 3.3-2.8 4.2-5-3.4-1.4-3.7-5.8-.5-7.8-.8-1.2-1.8-1.9-3-2Z',
     download: 'M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5',
     'arrow-right': 'M4 12h16m-6-6 6 6-6 6',
     check: 'm5 12 4 4L19 6',
@@ -63,22 +61,33 @@
   };
 </script>
 
-<svg
-  width={size}
-  height={size}
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width={strokeWidth}
-  stroke-linecap="round"
-  stroke-linejoin="round"
-  aria-hidden="true"
-  focusable="false"
->
-  <path d={paths[name] ?? paths.sparkles} />
-</svg>
+{#if name === 'apple'}
+  <span class="native-apple" aria-hidden="true" style={`width:${size}px;height:${size}px`}></span>
+{:else}
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width={strokeWidth}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d={paths[name] ?? paths.sparkles} />
+  </svg>
+{/if}
 
 <style>
+  .native-apple {
+    display: inline-block;
+    flex: none;
+    vertical-align: middle;
+    background: currentColor;
+    mask: url('/assets/macos/apple-logo.png') center / contain no-repeat;
+  }
   svg {
     display: inline-block;
     flex: none;
