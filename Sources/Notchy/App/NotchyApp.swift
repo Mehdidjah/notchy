@@ -42,4 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
+
+    /// Opening Notchy again while it runs (from the Dock, the Finder or Launchpad) opens the
+    /// island: a menu-bar app has no window to bring back, so otherwise nothing would happen.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        environment?.showIsland()
+        return false
+    }
 }

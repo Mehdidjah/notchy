@@ -235,6 +235,30 @@ final class AppEnvironment {
         panelController.show()
         PerfTabCycler.startIfRequested(model: model)
         fullscreenDetector.start()
+        announceLaunch()
+    }
+
+    /// Opens the island pinned, as when Notchy is opened again while it runs.
+    func showIsland() {
+        panelController.openPinned()
+    }
+
+    /// The closed island looks just like the camera housing, so a launch says so under the
+    /// notch. Not on the first launch, which opens the island with its hello, nor while
+    /// measuring tab switches.
+    private func announceLaunch() {
+        guard OnboardingSettings.shared.helloShown, !PerfTabCycler.isRequested else { return }
+        Task { @MainActor [weak model] in
+            // Once the island is on screen.
+            try? await Task.sleep(for: .milliseconds(700))
+            model?.activityCenter.requestSneakPeek(SneakPeek(
+                kind: .generic,
+                systemImage: "checkmark.circle.fill",
+                title: "Notchy is running",
+                tint: .green,
+                duration: .seconds(2)
+            ))
+        }
     }
 
     func stop() {
