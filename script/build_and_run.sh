@@ -133,7 +133,7 @@ cat >"$INFO_PLIST" <<PLIST
   <key>NSRemindersUsageDescription</key>
   <string>Notchy lists today's reminders beside your events.</string>
   <key>NSCameraUsageDescription</key>
-  <string>Notchy shows a camera mirror in the notch when you turn it on.</string>
+  <string>Notchy uses the camera for Face Check, to confirm it's you before showing hidden clips. Images stay on your Mac.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>Notchy shows when an app is using the microphone.</string>
   <key>NSAudioCaptureUsageDescription</key>
