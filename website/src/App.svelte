@@ -74,7 +74,7 @@
       icon: 'face',
       label: 'Personal stays personal',
       title: 'Your clipboard. For your eyes.',
-      text: 'Clips that look like passwords or keys start hidden. Face Check uses your camera to check an enrolled face before revealing protected content. Face data stays on your Mac.',
+      text: 'Clips that look like passwords or keys aren’t kept unless you choose to, and the ones you keep stay hidden until Face Check confirms it’s you with your Mac’s camera. Face data stays on your Mac.',
       chips: ['Sensitive clip detection', 'Local face processing', 'Protected actions'],
       id: 'privacy'
     },
@@ -130,7 +130,7 @@
     ['sun', 'Weather'],
     ['face', 'Face Check'],
     ['sparkles', 'AI tools'],
-    ['headphones', 'Headphones'],
+    ['volume', 'Volume & brightness'],
     ['lock', 'Local clipboard']
   ];
   const faqs = [
@@ -148,7 +148,7 @@
     ],
     [
       'Where is my clipboard history stored?',
-      'Your clipboard history is stored locally on your Mac. No account is required and Notchy does not upload what you copy. Weather and AI integrations use their respective online services.'
+      'Your clipboard history is stored locally on your Mac. No account is required and Notchy does not upload what you copy. A few features go online: the weather, the AI tools through Claude Code, album art and track details for the song that is playing, and the check for updates.'
     ],
     [
       'What is Face Check?',
@@ -172,7 +172,7 @@
     ],
     [
       'What permissions will it ask for?',
-      'Permissions depend on the features you enable: Accessibility for pasting and media keys, Calendar access for your agenda, Location for weather, Automation for music apps, Camera for the mirror and Face Check, Bluetooth for headphones, and notifications.'
+      'Permissions depend on the features you use: Accessibility for pasting and media keys, Calendar and Reminders access for your agenda, Location for weather, Automation for music apps, the camera for Face Check, and notifications.'
     ]
   ];
   function toggleFaq(index) {
@@ -340,8 +340,8 @@
         <div class="feature-copy">
           <h3>Little things. Happening live.</h3>
           <p>
-            Your next track, a ticking timer, a finished download. Live activities appear beside the
-            notch when they matter, then quietly tuck themselves away.
+            Your next track, a ticking timer, a meeting about to start. Live activities appear
+            beside the notch when they matter, then quietly tuck themselves away.
           </p>
         </div>
         <LiveActivities />
@@ -352,10 +352,7 @@
             <h3>{feature.title}</h3>
             <p>{feature.text}</p>
           </div>
-          <DeviceStage
-            initialTab={feature.tab}
-            label={`Try the ${feature.tab} preview with sample data`}
-          />
+          <DeviceStage tab={feature.tab} />
           <div class="feature-footnotes">
             {#each feature.chips as chip}<span><Icon name="check" size={13} />{chip}</span>{/each}
           </div>
@@ -387,13 +384,14 @@
           </p>
           <div class="settings-art" aria-label="Illustration of customizable settings">
             <div>
-              <Icon name="layers" size={18} /> All your Spaces <span class="toggle on"></span>
+              <Icon name="cursor" size={18} /> Open on hover <span class="toggle on"></span>
             </div>
             <div>
-              <Icon name="camera" size={18} /> Hide from recordings <span class="toggle on"></span>
+              <Icon name="camera" size={18} /> Hide from screenshots and recordings
+              <span class="toggle on"></span>
             </div>
             <div>
-              <Icon name="moon" size={18} /> Retract in fullscreen <span class="toggle"></span>
+              <Icon name="moon" size={18} /> Hide in fullscreen <span class="toggle"></span>
             </div>
           </div>
         </article>
@@ -630,6 +628,11 @@
         ><Icon name="apple" size={17} /> Download for macOS</a
       >
       <p class="copyright">© {new Date().getFullYear()} Notchy. Made for your Mac.</p>
+      <p class="trademarks">
+        Apple, Mac, macOS and AirDrop are trademarks of Apple Inc. Spotify is a trademark of Spotify
+        AB. Claude and Claude Code are trademarks of Anthropic. Notchy is not affiliated with or
+        endorsed by them.
+      </p>
     </div>
     <div class="footer-links">
       <h3>Explore</h3>

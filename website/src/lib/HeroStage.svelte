@@ -1,6 +1,8 @@
 <script>
   import Icon from './Icon.svelte';
-  import HeroClipboard from './HeroClipboard.svelte';
+  import { tabShots } from './shots.js';
+
+  const shot = tabShots.home;
 </script>
 
 <div class="hero-stage">
@@ -24,12 +26,17 @@
         ><span>09:41</span>
       </div>
     </div>
-    <div class="hero-shelf"><HeroClipboard /></div>
+    <img
+      class="hero-island"
+      src={shot.src}
+      alt={shot.alt}
+      width={shot.width}
+      height={shot.height}
+      fetchpriority="high"
+      decoding="async"
+      draggable="false"
+    />
   </div>
-  <p class="sr-only">
-    Interactive clipboard preview with sample content. Search, filter and drag the cards. This
-    preview does not access your clipboard.
-  </p>
 </div>
 
 <style>
@@ -48,7 +55,6 @@
     width: 1000px;
     height: 562.5px;
     background: #ffffff33;
-    border: 1px solid #ffffff99;
     border-radius: 30px;
     backdrop-filter: blur(10px);
     box-shadow:
@@ -57,6 +63,16 @@
       inset 0 -20px 20px #ffffff40,
       inset 0 -1px #ffffff66;
     overflow: hidden;
+  }
+  /* The glass edge is drawn under the island, so the island meets the top edge. */
+  .glass-desktop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: 1px solid #ffffff99;
+    border-radius: inherit;
+    pointer-events: none;
   }
   .glass-menubar {
     position: absolute;
@@ -80,13 +96,17 @@
   .glass-menubar > div:last-child {
     gap: 12px;
   }
-  .hero-shelf {
+  /* The real island, open on Home, hanging from the top of the screen like it does from the
+     notch. */
+  .hero-island {
     position: absolute;
     left: 50%;
-    top: -1px;
+    top: 0;
     transform: translateX(-50%);
-    width: 700px;
+    width: 696px;
+    height: auto;
     z-index: 2;
+    user-select: none;
   }
   @media (min-width: 810px) and (max-width: 1199px) {
     .hero-stage {

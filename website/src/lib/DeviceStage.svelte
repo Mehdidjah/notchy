@@ -1,12 +1,23 @@
 <script>
-  import NotchDemo from './NotchDemo.svelte';
   import Icon from './Icon.svelte';
-  export let initialTab = 'home';
-  export let label = 'Interactive Notchy preview';
-  const dock = ['finder', 'safari', 'music', 'mail', 'notes', 'notchy', 'settings'];
+  import { tabShots } from './shots.js';
+
+  /** The tab of the real island to show; `ai` also offers its Sessions view. */
+  let { tab = 'home' } = $props();
+
+  const views = $derived(
+    tab === 'ai'
+      ? [
+          { id: 'ai', label: 'Chat' },
+          { id: 'ai-sessions', label: 'Sessions' }
+        ]
+      : [{ id: tab, label: '' }]
+  );
+  let selected = $state(null);
+  const shot = $derived(tabShots[selected ?? views[0].id] ?? tabShots.home);
 </script>
 
-<div class="device-stage" aria-label={label}>
+<figure class="device-stage">
   <div class="desktop-screen">
     <div class="desktop-bar" aria-hidden="true">
       <div>
@@ -20,45 +31,61 @@
         >
       </div>
     </div>
-    <div class="demo-placement"><NotchDemo {initialTab} {label} compact /></div>
-    <div class="desktop-dock" aria-hidden="true">
-      {#each dock as app}<img
-          src={`/assets/macos/${app}.png`}
-          alt=""
-          width="44"
-          height="44"
-          draggable="false"
-        />{/each}
-      <span class="dock-divider"></span><img
-        src="/assets/macos/folder.png"
-        alt=""
-        width="44"
-        height="44"
-        draggable="false"
-      />
-    </div>
+    <img
+      class="island-shot"
+      src={shot.src}
+      alt={shot.alt}
+      width={shot.width}
+      height={shot.height}
+      style={`--shot-width: ${shot.width}px`}
+      loading="lazy"
+      decoding="async"
+      draggable="false"
+    />
   </div>
-</div>
+  {#if views.length > 1}
+    <div class="view-switch" role="group" aria-label="AI tools view">
+      {#each views as view}
+        <button
+          type="button"
+          aria-pressed={(selected ?? views[0].id) === view.id}
+          onclick={() => (selected = view.id)}>{view.label}</button
+        >
+      {/each}
+    </div>
+  {/if}
+</figure>
 
 <style>
   .device-stage {
     position: relative;
     width: 100%;
+    margin: 0;
     isolation: isolate;
   }
   .desktop-screen {
     position: relative;
-    min-height: 490px;
-    padding-bottom: 110px;
+    container-type: inline-size;
+    padding-bottom: clamp(56px, 10vw, 120px);
     border-radius: 20px;
     overflow: hidden;
     background: #5199d9 url('/assets/img/wallpaper.webp') center 64% / cover;
     box-shadow:
       0 1px 0 #ffffff80 inset,
       0 12px 35px #102b5424;
+  }
+  /* The border is drawn under the island, so the island meets the top edge. */
+  .desktop-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
     border: 1px solid #ffffff50;
+    border-radius: inherit;
+    pointer-events: none;
   }
   .desktop-bar {
+    position: absolute;
+    inset: 0 0 auto;
     height: 30px;
     background: #e0eeff28;
     backdrop-filter: blur(12px);
@@ -73,83 +100,70 @@
     gap: 14px;
     align-items: center;
   }
-  .demo-placement {
+  /* The island hangs from the top edge of the screen, the way it grows out of the notch. */
+  .island-shot {
     position: relative;
-    z-index: 3;
-    padding: 0 24px;
+    z-index: 1;
+    display: block;
+    width: min(var(--shot-width), calc(100% - 24px));
+    height: auto;
+    margin: 0 auto;
+    user-select: none;
+  }
+  .view-switch {
     display: flex;
     justify-content: center;
-    margin-top: -30px;
-  }
-  .desktop-dock {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
     gap: 6px;
-    padding: 8px;
-    border-radius: 18px;
-    background: #ffffff30;
-    box-shadow: inset 0 0 0 1px #ffffff60;
-    backdrop-filter: blur(18px);
+    margin-top: 14px;
   }
-  .desktop-dock img {
-    width: 44px;
-    height: 44px;
-    max-width: none;
-    object-fit: contain;
+  .view-switch button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid #e3e2df;
+    background: #fff;
+    color: #3b3f46;
+    cursor: pointer;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
   }
-  .dock-divider {
-    height: 32px;
-    width: 1px;
-    background: #fff5;
-    margin: 0 3px;
+  .view-switch button[aria-pressed='true'] {
+    background: #0d0d0d;
+    border-color: #0d0d0d;
+    color: #fff;
+  }
+  .view-switch button:focus-visible {
+    outline: 2px solid #0080ff;
+    outline-offset: 2px;
   }
   @media (max-width: 1199px) {
     .desktop-bar > div {
       gap: 8px;
     }
-    .desktop-screen {
-      min-height: 460px;
+  }
+  /* Where the island would cover the menu bar's items, only the bar itself shows. */
+  @container (max-width: 1000px) {
+    .desktop-bar > div {
+      visibility: hidden;
     }
   }
   @media (max-width: 809px) {
     .desktop-screen {
-      min-height: 460px;
       border-radius: 14px;
     }
     .desktop-bar {
+      height: 22px;
       font-size: 8px;
       padding: 0 10px;
     }
     .desktop-bar > div > span {
       display: none;
     }
-    .demo-placement {
-      padding: 0 10px;
-    }
-    .desktop-dock {
-      padding: 6px;
-      gap: 3px;
-      bottom: 14px;
-    }
-    .desktop-dock img {
-      width: 29px;
-      height: 29px;
-    }
-    .dock-divider {
-      height: 23px;
-    }
-  }
-  @media (max-width: 480px) {
-    .desktop-screen {
-      min-height: 470px;
-    }
-    .desktop-dock img {
-      width: 26px;
-      height: 26px;
+    .island-shot {
+      width: min(var(--shot-width), calc(100% - 12px));
     }
   }
 </style>

@@ -1108,6 +1108,13 @@ em,
   color: #777;
   margin-top: 34px;
 }
+.trademarks {
+  max-width: 340px;
+  margin-top: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #8a8a8a;
+}
 .footer-links {
   display: flex;
   align-items: flex-start;
@@ -1691,18 +1698,6 @@ html[data-motion='paused'] .hero-device.reveal {
   transform: none !important;
 }
 
-/* The hero is a fixed-size glass scene, scaled as a unit at smaller breakpoints. */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
 .site-nav {
   width: 710px;
   justify-content: space-between;

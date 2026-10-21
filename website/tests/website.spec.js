@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { closedShots, tabShots } from '../src/lib/shots.js';
 
 const dmg = 'https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg';
 const releaseApi = '**/repos/Mehdidjah/notchy-releases/releases/latest';
@@ -18,8 +19,25 @@ async function open(page) {
   return errors;
 }
 
-function featureDemo(page) {
-  return page.locator('.feature-card .notchy').first();
+// The feature cards in page order and the screenshot of the real app each one shows.
+const featureShots = [
+  'tab-clipboard',
+  'tab-shelf',
+  'tab-home',
+  'tab-timer',
+  'tab-stats',
+  'tab-notes',
+  'tab-face',
+  'tab-ai'
+];
+
+/** Waits until an image has loaded and returns its natural and displayed widths. */
+async function loadedWidths(image) {
+  await image.scrollIntoViewIfNeeded();
+  await expect
+    .poll(() => image.evaluate((img) => (img.complete ? img.naturalWidth : 0)))
+    .toBeGreaterThan(0);
+  return image.evaluate((img) => [img.naturalWidth, img.getBoundingClientRect().width]);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -82,71 +100,27 @@ test('mobile navigation opens and closes via link and Escape', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
-test('full feature demo supports tabs, clipboard filters, timer, notes, shelf and Face Check', async ({
-  page
-}) => {
+test('feature cards show sharp screenshots of the real app on each tab', async ({ page }) => {
   const errors = await open(page);
-  const demo = featureDemo(page);
-  await demo.getByRole('tab', { name: 'Home' }).focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(demo.getByRole('tab', { name: 'Shelf' })).toHaveAttribute('aria-selected', 'true');
-  await expect(demo.getByRole('tab', { name: 'Shelf' })).toBeFocused();
-  await page.keyboard.press('ArrowLeft');
-  await expect(demo.getByRole('tab', { name: 'Home' })).toBeFocused();
-  for (const name of ['Stats', 'AI tools', 'Clipboard']) {
-    await demo.getByRole('tab', { name, exact: true }).click();
-    await expect(demo.getByRole('tabpanel', { name, exact: true })).toBeVisible();
+  const shots = page.locator('.feature-card .island-shot');
+  await expect(shots).toHaveCount(featureShots.length);
+  for (const [index, name] of featureShots.entries()) {
+    const shot = shots.nth(index);
+    await expect(shot).toHaveAttribute('src', `/assets/app/${name}.png`);
+    await expect(shot).toHaveAttribute('alt', /^Notchy/);
+    const [natural, shown] = await loadedWidths(shot);
+    expect(natural).toBeGreaterThanOrEqual(shown * 2 - 2);
   }
-  await expect(demo.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
+  const ai = page.getByRole('group', { name: 'AI tools view' });
+  await ai.getByRole('button', { name: 'Sessions', exact: true }).click();
+  await expect(ai.getByRole('button', { name: 'Sessions', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true'
   );
-  await expect(demo.locator('.clip-card')).toHaveCount(6);
-  await demo.getByRole('button', { name: 'Code', exact: true }).click();
-  await expect(demo.getByText('1 clip', { exact: true })).toBeVisible();
-  await expect(demo.locator('.clip-card')).toHaveCount(1);
-  await expect(demo.locator('.clip-card')).toContainText('island');
-  await expect(demo.getByRole('button', { name: 'Code', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  await expect(demo.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'false'
-  );
-
-  await demo.getByRole('tab', { name: 'Timer' }).click();
-  await demo.getByRole('button', { name: 'Start timer' }).click();
-  await expect(demo.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
-  await expect(demo.getByRole('timer')).not.toHaveText('25:00');
-  await demo.getByRole('button', { name: 'Pause', exact: true }).click();
-  await expect(demo.getByRole('button', { name: 'Resume', exact: true })).toBeVisible();
-  await demo.getByRole('button', { name: 'Reset timer' }).click();
-  await expect(demo.getByRole('timer')).toHaveText('25:00');
-
-  await demo.getByRole('tab', { name: 'Notes' }).click();
-  const note = demo.getByRole('textbox');
-  await note.fill('Keep this note');
-  await demo.getByRole('tab', { name: 'Home' }).click();
-  await demo.getByRole('tab', { name: 'Notes' }).click();
-  await expect(note).toHaveValue('Keep this note');
-
-  await demo.getByRole('tab', { name: 'Shelf' }).click();
-  await demo.getByRole('button', { name: 'Add demo file' }).click();
-  await expect(demo.getByRole('button', { name: 'Remove Idea 1.txt' })).toBeVisible();
-  await demo.getByRole('button', { name: 'Remove Idea 1.txt' }).click();
-  await expect(demo.getByRole('button', { name: 'Remove Idea 1.txt' })).toHaveCount(0);
-  await demo.getByRole('button', { name: 'Quick Look Brief.pdf' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toBeHidden();
-
-  await demo.getByRole('tab', { name: 'Face Check' }).click();
-  await demo.getByRole('button', { name: 'Simulate Face Check' }).click();
-  await expect(demo.getByRole('button', { name: 'Simulating scan…' })).toBeDisabled();
-  await expect(demo.getByRole('tabpanel').getByRole('status')).toHaveText(
-    'Demo success. No face data was captured.'
-  );
+  await expect(shots.last()).toHaveAttribute('src', '/assets/app/tab-ai-sessions.png');
+  await loadedWidths(shots.last());
+  await ai.getByRole('button', { name: 'Chat', exact: true }).click();
+  await expect(shots.last()).toHaveAttribute('src', '/assets/app/tab-ai.png');
   expect(errors).toEqual([]);
 });
 
@@ -185,37 +159,51 @@ test('download tabs and FAQ are keyboard-accessible', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('live activities switch sample status and playback controls', async ({ page }) => {
-  const errors = await open(page);
-  const live = page.getByRole('region', { name: 'Interactive live activity preview' });
-  await live.getByRole('button', { name: 'Pause music', exact: true }).click();
-  await expect(live.getByRole('button', { name: 'Play music', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'false'
-  );
-  for (const [name, value] of [
-    ['Downloads', '72%'],
-    ['Headphones', '82%'],
-    ['Charging', '84%'],
-    ['Focus', 'Deep Work'],
-    ['Camera', 'In use'],
-    ['AI context', '19%'],
-    ['Timer', '24:18']
-  ]) {
-    await live.getByRole('button', { name, exact: true }).click();
-    await expect(live.getByRole('button', { name, exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    await expect(live.locator('.notch-copy strong')).toHaveText(value);
+test('screenshot sizes in shots.js match the images at the scale they are drawn at', async ({
+  page
+}) => {
+  await page.goto('/');
+  const sizeOf = (src) =>
+    page.evaluate(async (url) => {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight];
+    }, src);
+  // The open island is drawn at 2x, the closed notch at 4x (Tests/NotchyTests/WebsiteShot*).
+  for (const shot of Object.values(tabShots)) {
+    const [width, height] = await sizeOf(shot.src);
+    expect([width / 2, height / 2], shot.src).toEqual([shot.width, shot.height]);
   }
-  await live.getByRole('button', { name: 'Start timer', exact: true }).click();
-  await expect(live.getByText('Pomodoro timer is running')).toBeVisible();
-  await live.getByRole('button', { name: 'Pause timer', exact: true }).click();
-  await expect(live.getByRole('button', { name: 'Start timer', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'false'
-  );
+  for (const shot of closedShots) {
+    const [width, height] = await sizeOf(shot.src);
+    expect([width / 4, height / 4], shot.src).toEqual([shot.width, shot.height]);
+  }
+});
+
+test('live activities show the real closed notch for each activity', async ({ page }) => {
+  const errors = await open(page);
+  const live = page.getByRole('region', { name: 'Live activities on the closed notch' });
+  const stage = live.locator('.stage-shot');
+  for (const [name, file] of [
+    ['Timer', 'closed-timer'],
+    ['Next meeting', 'closed-reminder'],
+    ['Claude Code', 'closed-claude'],
+    ['Volume', 'closed-volume'],
+    ['Brightness', 'closed-brightness'],
+    ['Shelf', 'closed-shelf'],
+    ['Caps Lock', 'closed-capslock'],
+    ['Copied', 'peek-copied'],
+    ['Face Check', 'closed-facecheck'],
+    ['Now playing', 'closed-music']
+  ]) {
+    const button = live.getByRole('button', { name, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(stage).toHaveAttribute('src', `/assets/app/${file}.png`);
+    await loadedWidths(stage);
+  }
+  await expect(live.getByRole('button', { pressed: true })).toHaveCount(1);
   expect(errors).toEqual([]);
 });
 
@@ -235,20 +223,17 @@ test.describe('reduced motion', () => {
         .evaluate((el) => parseFloat(getComputedStyle(el).animationDuration))
     ).toBeLessThanOrEqual(0.00001);
     await expect(page.locator('.site-nav')).toHaveCSS('animation-name', 'none');
-    const demo = featureDemo(page);
-    await demo.getByRole('tab', { name: 'Home', exact: true }).click();
-    await demo.getByRole('button', { name: 'Play sample playback' }).click();
-    await expect(demo.locator('.equalizer i').first()).toHaveCSS('animation-name', 'none');
-    await expect(demo.getByRole('tab', { name: 'Home', exact: true })).toHaveCSS(
-      'transition-duration',
-      '0s'
-    );
+    expect(
+      await page
+        .locator('.activity-card')
+        .first()
+        .evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration))
+    ).toBeLessThanOrEqual(0.00001);
     expect(
       await page
         .locator('#top')
         .evaluate((el) => getComputedStyle(el).getPropertyValue('--hero-progress').trim())
     ).toBe('0');
-    await expect(page.locator('.live-activities .equalizer').first()).toHaveCSS('display', 'none');
     expect(errors).toEqual([]);
   });
 });
@@ -273,9 +258,6 @@ test('decorative motion is reversible and can be paused without hiding content',
         .evaluate((el) => Number(getComputedStyle(el).getPropertyValue('--hero-progress')))
     )
     .toBe(0);
-  const live = page.getByRole('region', { name: 'Interactive live activity preview' });
-  await live.getByRole('button', { name: 'Pause music', exact: true }).click();
-  await expect(live.locator('.equalizer i').first()).toHaveCSS('animation-play-state', 'paused');
   await page.getByRole('button', { name: 'Pause decorative motion' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'paused');
   await expect(page.locator('.feature-card').first()).toHaveCSS('opacity', '1');
@@ -284,9 +266,7 @@ test('decorative motion is reversible and can be paused without hiding content',
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'running');
 });
 
-test('hero keeps its responsive scene scale and supports native-icon clip interactions', async ({
-  page
-}) => {
+test('hero keeps its responsive scene scale and shows the real island', async ({ page }) => {
   await open(page);
   for (const [width, expectedFrame, headingSize] of [
     [1440, 1000, '80px'],
@@ -303,24 +283,12 @@ test('hero keeps its responsive scene scale and supports native-icon clip intera
     ).toBeTruthy();
   }
   await page.setViewportSize({ width: 1440, height: 1042 });
-  const hero = page.getByRole('region', { name: 'Interactive clipboard shelf preview' });
-  await hero.getByRole('button', { name: /^Code \d/ }).click();
-  await expect(hero.locator('button.card')).toHaveCount(1);
-  await hero.getByRole('searchbox', { name: 'Search sample clips' }).fill('no-sample-can-match');
-  await expect(hero.locator('.empty')).toBeVisible();
-  await hero.getByRole('button', { name: 'Show all', exact: true }).click();
-  await expect(hero.locator('button.card')).toHaveCount(8);
-  await hero.getByRole('button', { name: 'Compact view', exact: true }).click();
-  await expect(hero.getByRole('button', { name: 'Compact view', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  await hero.locator('button.card').first().click();
-  await expect(hero.getByRole('status')).toContainText('Sample selected');
-  expect(await hero.locator('img[src^="/assets/macos/"]').count()).toBeGreaterThan(4);
-  const icon = await page.request.get('/assets/macos/finder.png');
-  expect(icon.ok()).toBeTruthy();
-  expect(icon.headers()['content-type']).toContain('image/png');
+  const island = page.locator('.hero-island');
+  await expect(island).toHaveAttribute('src', '/assets/app/tab-home.png');
+  const [natural, shown] = await loadedWidths(island);
+  expect(natural).toBeGreaterThanOrEqual(shown * 2 - 2);
+  // The app icons once extracted from macOS are gone; only the menu glyph remains.
+  expect(await page.locator('img[src^="/assets/macos/"]').count()).toBe(0);
 });
 
 test('audience cards use six vector icons in 64px badges', async ({ page }) => {

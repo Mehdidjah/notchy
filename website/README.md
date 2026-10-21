@@ -30,16 +30,15 @@ The dependency overrides select the official WebAssembly distributions of Rollup
 ## Structure
 
 - `src/App.svelte`: page sections, navigation, responsive menu, release data, download tabs, FAQ and page-motion control.
-- `src/lib/NotchDemo.svelte`: eight isolated interactive app-preview panels.
-- `src/lib/LiveActivities.svelte`: eight selectable live-activity states.
-- `src/lib/HeroStage.svelte`: the 1000×562.5px glass hero scene, scaled as one unit on tablet and phone.
-- `src/lib/HeroClipboard.svelte`: compact interactive clipboard shelf with search, categories, selection, drag and compact view.
-- `src/lib/DeviceStage.svelte`: reusable feature desktop with native app icons.
+- `src/lib/shots.js`: the screenshots of the real app (see below), with their sizes and descriptions.
+- `src/lib/LiveActivities.svelte`: the closed notch with each live activity, chosen from a grid of thumbnails.
+- `src/lib/HeroStage.svelte`: the 1000×562.5px glass hero scene with the real island open on Home, scaled as one unit on tablet and phone.
+- `src/lib/DeviceStage.svelte`: a feature card's desktop with the real island open on that card's tab, and a Chat/Sessions switch for AI tools.
 - `src/lib/Icon.svelte`: local UI icon set and the locally rendered system Apple glyph.
 - `public/assets/icons/benefits/`: six vendored Phosphor regular SVGs for the audience cards, displayed in 64px white badges. The MIT license and source attribution are included.
 - `src/lib/motion.js`: cleanly disposed IntersectionObserver reveal action.
 - `styles.css`: fonts, layout tokens, responsive rules and page motion.
-- `public/assets/`: production images, fonts, app icons and social card.
+- `public/assets/`: production images, the app's screenshots (`app/`), fonts, the app icon and social card.
 - `tests/website.spec.js`: browser regression coverage.
 
 The native macOS app is not changed by this website.
@@ -50,16 +49,22 @@ The native macOS app is not changed by this website.
 - Blue landscape palette: `#190096`, `#0080FF`, `#78D2FF`; white, black and `#F7F7F7` surfaces.
 - 1200px content container, 40px desktop inset, 30px feature-card radius.
 - Breakpoints at 1200px and 810px; additional compact-phone refinements below 480px.
-- Hero glass width: 1000px desktop, 700px tablet, 350px phone. Hero heading: 80px desktop/tablet, 50px phone. The 700×220px clipboard shelf is scaled with the glass frame.
+- Hero glass width: 1000px desktop, 700px tablet, 350px phone. Hero heading: 80px desktop/tablet, 50px phone. The 696px open island is scaled with the glass frame.
 - The download section uses a card-relative blue gradient with 50px blur and 60px horizontal bleed, fading back to white below the card rather than ending at a fixed height. Its 400px surface has 40px corners, a curved 240×50px black notch, a white tab rail with a sliding black selection, and light circled checks. Notchy content and download behavior are preserved.
 - Staggered character blur reveals, one-time section entrances, reversible scroll-linked foreground parallax and stateful component transitions.
 - `prefers-reduced-motion` disables decorative movement. The footer also exposes a page-motion pause control.
 
-`landscape.webp` and `wallpaper.webp` are original generated images. `foreground.webp` is a transparent foreground derived from the generated landscape, not a third-party asset. `social-card.jpg` is derived from the original landscape. The app icon is rendered from the built Notchy app’s original ICNS resource. The macOS application icons were extracted locally from the installed macOS 27.0.1 application bundles; see `public/assets/macos/PROVENANCE.md`. They are not hand-drawn substitutes. Fonts are self-hosted under the SIL Open Font License; see `public/assets/fonts/OFL.txt`.
+`landscape.webp` and `wallpaper.webp` are original generated images. `foreground.webp` is a transparent foreground derived from the generated landscape, not a third-party asset. `social-card.jpg` is derived from the original landscape. The app icon is rendered from the built Notchy app’s original ICNS resource. The menu-bar and download glyph is the system `apple.logo` symbol; see `public/assets/macos/PROVENANCE.md`. Application icons are not used as standalone artwork; the ones on the page are inside the screenshots of the app, as Notchy draws them (the Home tab's app grid and its music card's Spotify badge), and the footer credits their trademarks. Fonts are self-hosted under the SIL Open Font License; see `public/assets/fonts/OFL.txt`.
 
-## Interactive previews
+## Screenshots of the app
 
-Preview data is fictional and clearly labeled. Tabs, clipboard filters, sample selection/dragging, shelf add/remove/Quick Look, playback controls, timer start/pause/reset, editable notes and simulated Face Check all work. They do not access a visitor's clipboard, files, camera, accounts or native app. Demo state is kept in memory and is not persisted or uploaded. The Face Check preview is not a biometric check.
+Every picture of Notchy on the page is a screenshot of the real app: the WebsiteShots test suites in `Tests/NotchyTests/WebsiteShots*.swift` draw Notchy's own SwiftUI views offscreen, filled with made-up data from temporary folders and their own settings, and write transparent PNGs to `public/assets/app/` (the open island at 2x, the closed notch at 4x, trimmed to what is drawn). They never read the clipboard, files, notes, music, calendar, Claude sessions, camera or settings of the Mac they run on. After a change to the app's interface, render them again from the repository root:
+
+```sh
+NOTCHY_WEBSITE_SHOTS="$PWD/website/public/assets/app" swift test --no-parallel --filter WebsiteShots
+```
+
+The suites do nothing unless `NOTCHY_WEBSITE_SHOTS` is set. Sizes and alt text live in `src/lib/shots.js`; a browser test fails if they no longer match the images, so update them when a shot's size changes. The calendar event on the Home shot is the next half hour, so it shows a different time depending on when the shots are rendered.
 
 ## Downloads and releases
 
