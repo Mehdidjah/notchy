@@ -70,13 +70,13 @@ The suites do nothing unless `NOTCHY_WEBSITE_SHOTS` is set. Sizes and alt text l
 
 The existing stable download integration is preserved:
 
-- Download: `https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg`
-- Release metadata: `https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest`
-- Release notes: `https://github.com/Mehdidjah/notchy-releases/releases`
+- Download: `https://github.com/Mehdidjah/notchy/releases/latest/download/Notchy.dmg`
+- Release metadata: `https://api.github.com/repos/Mehdidjah/notchy/releases/latest`
+- Release notes: `https://github.com/Mehdidjah/notchy/releases`
 
 The metadata request has a seven-second timeout and an explicit unavailable state. It never invents a version, size, date or price. It does not replace the configured download destination based on an API response.
 
-**Release availability:** [v1.0.0](https://github.com/Mehdidjah/notchy-releases/releases/tag/v1.0.0) was published on 2026-10-21 with a universal `Notchy.dmg` for Apple silicon and Intel, requiring macOS 14 or later. The public latest-release API and stable download both return HTTP 200. The 19,765,455-byte asset matches the verified GitHub Actions build from committed source `04c06a4e05f275c073622871baa4280141880f61` (build 85). Future releases must retain the fixed asset name `Notchy.dmg`.
+**Release availability:** [v1.0.0](https://github.com/Mehdidjah/notchy/releases/tag/v1.0.0) was published on 2026-10-21 with a universal `Notchy.dmg` for Apple silicon and Intel, requiring macOS 14 or later. The public latest-release API and stable download both return HTTP 200. The 19,765,455-byte asset matches the verified GitHub Actions build from committed source `04c06a4e05f275c073622871baa4280141880f61` (build 85). Releases are published in the source repository `Mehdidjah/notchy`; `Mehdidjah/notchy-releases` held v1.0.0 originally and is kept only so copies installed from it can find the next update. Future releases must retain the fixed asset name `Notchy.dmg`.
 
 Keep the first-launch guidance until the app is notarized. The current build explains Privacy & Security → Open Anyway and notes that permission grants may need to be renewed after updates.
 

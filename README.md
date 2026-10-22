@@ -45,12 +45,8 @@ icon with Xcode 26's `actool` and falls back to the flat one without it.
 ## Releases
 
 Notchy is distributed as a disk image, `Notchy.dmg`, published as a GitHub
-release in the public repository `Mehdidjah/notchy-releases` (set
-`UPDATE_REPOSITORY` to use another). Create that repository once:
-
-```sh
-gh repo create Mehdidjah/notchy-releases --public --add-readme
-```
+release in this repository, `Mehdidjah/notchy` (set `UPDATE_REPOSITORY` to use
+another public repository).
 
 To release a version, raise `VERSION`, commit, and publish:
 
@@ -66,12 +62,12 @@ control Finder.
 A website's download button can always link to
 
 ```text
-https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg
+https://github.com/Mehdidjah/notchy/releases/latest/download/Notchy.dmg
 ```
 
 which serves the newest release (the download page in `website/` uses it),
 and can read the newest version number from
-`https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest`
+`https://api.github.com/repos/Mehdidjah/notchy/releases/latest`
 (`tag_name`). Installed copies check the same release every 30 minutes and,
 once per version, show an update peek under the notch and a notification that
 downloads the new image when clicked; the menu bar and Settings → About offer
