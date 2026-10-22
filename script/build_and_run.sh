@@ -15,7 +15,7 @@ KEEP_RUNNING="${KEEP_RUNNING:-0}"
 APP_VERSION="${APP_VERSION:-$(tr -d '[:space:]' <"$ROOT_DIR/VERSION")}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(git -C "$ROOT_DIR" rev-list --count HEAD 2>/dev/null || echo 1)}"
 # Public GitHub repository (owner/name) whose releases the app checks for updates.
-UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-Mehdidjah/notchy-releases}"
+UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-Mehdidjah/notchy}"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"

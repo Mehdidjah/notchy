@@ -22,6 +22,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 20
     env:
+      UPDATE_REPOSITORY: ${{ github.repository }}
       DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - name: Check out the exact source revision
@@ -80,7 +81,7 @@ jobs:
           test -s "$APP/Contents/Resources/FaceDescriptor-LICENSE.md"
           test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")" = '14.0'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.local.Notchy'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyUpdateRepository' "$APP/Contents/Info.plist")" = 'Mehdidjah/notchy-releases'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyUpdateRepository' "$APP/Contents/Info.plist")" = "$UPDATE_REPOSITORY"
           git diff --exit-code
 
       - name: Upload the installer for verification or publication

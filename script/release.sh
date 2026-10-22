@@ -15,8 +15,7 @@
 #
 # The version comes from VERSION; raise it before each release. Environment:
 #   UPDATE_REPOSITORY  public owner/name the app checks and --publish uploads to
-#                      (default Mehdidjah/notchy-releases); create it once with
-#                      gh repo create <owner/name> --public --add-readme
+#                      (default Mehdidjah/notchy, the source repository)
 #   SIGN_IDENTITY      a "Developer ID Application: …" identity; without one the app is ad-hoc
 #                      signed, macOS asks users to confirm the first launch of every version, and
 #                      the install window shows how
@@ -28,7 +27,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="Notchy"
 VERSION="$(tr -d '[:space:]' <"$ROOT_DIR/VERSION")"
 TAG="v$VERSION"
-UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-Mehdidjah/notchy-releases}"
+UPDATE_REPOSITORY="${UPDATE_REPOSITORY:-Mehdidjah/notchy}"
 SIGN_IDENTITY="${SIGN_IDENTITY:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-}"
 RELEASE_DIR="$ROOT_DIR/dist/release"
