@@ -8,8 +8,8 @@
   import { reveal } from './lib/motion.js';
 
   const download =
-    'https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg';
-  const releases = 'https://github.com/Mehdidjah/notchy-releases/releases';
+    'https://github.com/Mehdidjah/notchy/releases/latest/download/Notchy.dmg';
+  const releases = 'https://github.com/Mehdidjah/notchy/releases';
   let menuOpen = false;
   let reduceMotion = false;
   let motionPaused = false;
@@ -213,7 +213,7 @@
     window.addEventListener('keydown', onKey);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 7000);
-    fetch('https://api.github.com/repos/Mehdidjah/notchy-releases/releases/latest', {
+    fetch('https://api.github.com/repos/Mehdidjah/notchy/releases/latest', {
       signal: controller.signal,
       headers: { Accept: 'application/vnd.github+json' }
     })

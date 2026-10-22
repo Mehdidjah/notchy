@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { closedShots, tabShots } from '../src/lib/shots.js';
 
-const dmg = 'https://github.com/Mehdidjah/notchy-releases/releases/latest/download/Notchy.dmg';
-const releaseApi = '**/repos/Mehdidjah/notchy-releases/releases/latest';
+const dmg = 'https://github.com/Mehdidjah/notchy/releases/latest/download/Notchy.dmg';
+const releaseApi = '**/repos/Mehdidjah/notchy/releases/latest';
 const release = { tag_name: 'v2.4.0', assets: [{ name: 'Notchy-test.dmg', size: 12_500_000 }] };
 
 async function mockRelease(page, body = release, status = 200) {
