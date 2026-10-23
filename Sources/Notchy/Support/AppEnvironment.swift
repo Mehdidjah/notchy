@@ -175,7 +175,10 @@ final class AppEnvironment {
             panelController?.setPresentationSuppressed(presented)
         }
         model.activityCenter.register(faceCheck.liveActivity)
-        faceCheck.liveActivity.hapticsEnabled = { [weak settings] in settings?.hapticsEnabled ?? false }
+        faceCheck.liveActivity.hapticsEnabled = { [weak settings] in
+            (settings?.hapticsEnabled ?? false) && FaceCheckPreferences.shared.options.haptics
+        }
+        faceCheck.liveActivity.retryOnHover = { FaceCheckPreferences.shared.options.retryOnHover }
         faceCheck.onBeginCheck = { [weak model, weak faceWindow, weak enrollmentWindow] in
             guard let model else { return }
             enrollmentWindow?.hide(immediately: true)
@@ -190,9 +193,10 @@ final class AppEnvironment {
             model?.collapseForFaceCheck()
         }
         faceCheck.onEnrollmentEnded = { [weak enrollmentWindow] message in enrollmentWindow?.ended(message: message) }
-        faceCheck.onNeedsEnrollment = { [weak model, weak settings, weak panelController, weak enrollmentWindow] in
+        faceCheck.onNeedsEnrollment = { [weak model, weak settings, weak enrollmentWindow] in
             if faceCheck.activity == .enrolling {
-                enrollmentWindow?.present(on: panelController?.currentScreen, forMacUnlock: faceCheck.isMacUnlockEnrollment)
+                enrollmentWindow?.present(on: FaceCheckDisplay.resolve(FaceCheckPreferences.shared.options.displayID),
+                                          forMacUnlock: faceCheck.isMacUnlockEnrollment)
                 model?.collapseForFaceCheck()
                 return
             }
@@ -226,7 +230,7 @@ final class AppEnvironment {
             model?.lockSensitiveClips()
         }
         .store(in: &cancellables)
-        SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection() }
+        SettingsSectionRegistry.shared.register(.faceCheck, id: "faceCheck") { FaceCheckSettingsSection(userSettings: settings) }
         ClaudeFeature.start(userSettings: settings, model: model)
 
         // New releases: a sneak peek and a notification once per version, the menu bar, and About.

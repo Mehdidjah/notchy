@@ -131,6 +131,14 @@ and notarize the image so it opens without that step.
   An explicit `EXPERIMENTAL_FACE_UNLOCK=1` local build enables personal testing
   with the same face and photo/screen checks, marked experimental in the UI;
   it does not count as validation and cannot be packaged by the release script.
+- **Face Check settings.** The existing Face Check pane includes
+  wake/lock/spacebar triggers, display and camera routing, retries, haptics,
+  scan duration, and Minimal or Original animation. Manage named encrypted
+  identities, recapture them atomically, and change or remove the bound password.
+  Password authorization expires after the selected inactivity period or app exit.
+  Light liveness uses passive photo/screen checks; Heavy also requires a blink or
+  small head turn. Turning liveness off pauses Mac unlocking. The spacebar option
+  needs Input Monitoring permission and listens only while the Mac is locked.
 
 Sensitive clipboard items start hidden in every view. Face Check reveals an
 item for 60 seconds; app deactivation hides revealed content again.

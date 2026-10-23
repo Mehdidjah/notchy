@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import OSLog
 
 @MainActor
@@ -10,6 +11,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     private let statusItem: NSStatusItem
     private let menu = NSMenu()
+    private var visibilityObserver: AnyCancellable?
     private let model: NotchViewModel
     private let openShelf: () -> Void
     private let openQuickPaste: () -> Void
@@ -39,11 +41,15 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         menu.delegate = self
         statusItem.menu = menu
+        visibilityObserver = model.settings.$showInMenuBar.sink { [weak self] visible in
+            self?.statusItem.isVisible = visible
+        }
         rebuildMenu()
         Self.logger.info("Menu bar item installed")
     }
 
     func stop() {
+        visibilityObserver = nil
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 

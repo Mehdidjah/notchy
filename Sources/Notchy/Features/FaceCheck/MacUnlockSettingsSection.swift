@@ -1,130 +1,139 @@
-import ApplicationServices
 import SwiftUI
 
 struct MacUnlockSettingsSection: View {
     @ObservedObject var controller: MacUnlockController = .shared
     @ObservedObject var faces: FaceCheckController = .shared
+    @ObservedObject var preferences: FaceCheckPreferences = .shared
     @State private var password = ""
     @State private var selectedIdentity: UUID?
+    @State private var editing = false
     @State private var confirmRemoval = false
+    @State private var setupTask: Task<Void, Never>?
 
     private var identity: FaceIdentity? {
-        faces.identities.first { $0.id == (selectedIdentity ?? controller.boundIdentityID) && $0.isEnabled }
-            ?? faces.identities.first { $0.isEnabled }
+        faces.identities.first { $0.id == (selectedIdentity ?? controller.boundIdentityID) && $0.isEnabled && $0.supportsPassiveUnlock }
+            ?? faces.identities.first { $0.isEnabled && $0.supportsPassiveUnlock }
     }
 
-    private var readiness: String {
-        if !controller.isEnabled || !controller.isAuthorized { return "Face Unlock is paused" }
-        if !controller.accessibilityGranted { return "Allow Accessibility to finish setup" }
-        if case .failed = controller.state { return "Face Unlock needs attention" }
-        return "Face Unlock is ready"
+    private var lifetimeIndex: Binding<Double> {
+        Binding(get: { Double(FaceSessionLifetime.allCases.firstIndex(of: preferences.options.sessionLifetime) ?? 2) },
+                set: { preferences.options.sessionLifetime = FaceSessionLifetime.allCases[Int(min(3, max(0, $0.rounded())))] })
     }
 
     var body: some View {
-        Section("Unlock your Mac") {
-            Text("Save your Mac login password once. When your Mac locks or wakes, Notchy checks your saved face and looks for signs of a photo or screen, then enters the password for you. You don't need to blink or turn your head.")
-                .font(.callout).foregroundStyle(.secondary)
-
-            if controller.isExperimental {
-                Text("Experimental build: face recognition and photo/video rejection have not yet passed the live-camera validation trials.")
-                    .font(.callout).foregroundStyle(.orange)
+        Section("Password") {
+            Label(controller.hasPassword ? "Password encrypted" : "No password saved",
+                  systemImage: controller.hasPassword ? "lock.fill" : "key")
+                .fontWeight(.medium)
+            if let bound = faces.identities.first(where: { $0.id == controller.boundIdentityID }) {
+                LabeledContent("Linked face", value: bound.name)
             }
-
-            if let reason = controller.setupUnavailableReason {
-                Text(reason).foregroundStyle(.secondary)
-            } else if identity == nil {
-                Text("Scan and enable a saved face first.").foregroundStyle(.secondary)
-            } else if identity?.supportsPassiveUnlock != true {
-                Text("Scan your face again in the Face tab before setting up Face Unlock.").foregroundStyle(.secondary)
-            } else {
-                if faces.identities.filter(\.isEnabled).count > 1 {
-                    Picker("Face allowed to unlock this Mac", selection: Binding(
-                        get: { identity?.id }, set: { selectedIdentity = $0 }
-                    )) {
-                        ForEach(faces.identities.filter(\.isEnabled)) { face in
-                            Text(face.name).tag(Optional(face.id))
-                        }
-                    }
-                }
-                SecureField(controller.hasPassword ? "New Mac login password" : "Mac login password", text: $password)
-                    .textContentType(.password)
-                    .privacySensitive()
-                    .disabled(controller.isBusy)
-                    .onSubmit { save() }
-                HStack {
-                    Button(controller.hasPassword ? "Update password" : "Save password & enable") { save() }
-                        .disabled(password.isEmpty || identity == nil || controller.isBusy)
-                    if controller.isBusy { ProgressView().controlSize(.small) }
-                }
+            VStack(alignment: .leading) {
+                HStack { Text("Auto lock session"); Spacer(); Text(preferences.options.sessionLifetime.title).foregroundStyle(.secondary) }
+                Slider(value: lifetimeIndex, in: 0...3, step: 1).labelsHidden()
+                    .accessibilityLabel("Auto lock password authorization session")
+                Text("Authorize again after this many days without a face unlock, or after restarting Notchy.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
-
             if controller.hasPassword {
                 HStack {
-                    Label(readiness,
-                          systemImage: controller.isEnabled && controller.isAuthorized ? "lock.open" : "lock")
+                    Text("Change password")
                     Spacer()
-                    if controller.isEnabled && controller.isAuthorized {
-                        Button("Pause") { controller.disable() }
+                    Button("Change…") { editing = true }.disabled(controller.isBusy)
+                }
+                HStack {
+                    Text("Remove password")
+                    Spacer()
+                    Button("Remove…", role: .destructive) { confirmRemoval = true }.disabled(controller.isBusy)
+                }
+                HStack {
+                    Text(controller.isAuthorized ? "Session unlocked" : "Session locked")
+                    Spacer()
+                    if controller.isAuthorized {
+                        Button("Lock session") { controller.lockAuthorization() }
                     } else {
-                        Button("Authorize Face Unlock") { Task { await controller.authorizeSession() } }
+                        Button("Authorize Face Unlock") { authorize() }
                             .disabled(controller.isBusy || controller.setupUnavailableReason != nil)
                     }
                 }
+            } else if controller.canRemovePassword {
+                Button("Remove unavailable password…", role: .destructive) { confirmRemoval = true }
             }
-            if controller.canRemovePassword {
-                Button("Remove saved password…", role: .destructive) { confirmRemoval = true }
-                    .disabled(controller.isBusy)
-            }
+        }
 
-            if !controller.accessibilityGranted {
-                HStack {
-                    Text("Accessibility access is needed to enter the password.").foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Allow Accessibility") {
-                        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                            NSWorkspace.shared.open(url)
+        if editing || !controller.hasPassword {
+            Section(controller.hasPassword ? "Change your Mac password" : "Link your Mac password") {
+                if let reason = controller.setupUnavailableReason {
+                    Text(reason).foregroundStyle(.secondary)
+                } else if identity == nil {
+                    Text("Add or recapture an enabled face above first.").foregroundStyle(.secondary)
+                } else {
+                    Picker("Face allowed to unlock this Mac", selection: Binding(get: { identity?.id }, set: { selectedIdentity = $0 })) {
+                        ForEach(faces.identities.filter { $0.isEnabled && $0.supportsPassiveUnlock }) { face in
+                            Text(face.name).tag(Optional(face.id))
                         }
+                    }
+                    SecureField("Mac login password", text: $password)
+                        .textContentType(.password).privacySensitive().onSubmit { save() }
+                    HStack {
+                        if controller.hasPassword { Button("Cancel") { password = ""; editing = false } }
+                        Spacer()
+                        if controller.isBusy { ProgressView().controlSize(.small) }
+                        Button("Save password & enable") { save() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(password.isEmpty || identity == nil || identity?.supportsPassiveUnlock != true || controller.isBusy)
                     }
                 }
             }
-            if case .failed(let message) = controller.state {
-                Text(message).foregroundStyle(.red).font(.callout)
+            .disabled(controller.isBusy)
+        }
+        Section {
+            if controller.isExperimental {
+                Text("Experimental: photo/video protection has not yet passed the live-camera validation trials.")
+                    .font(.caption).foregroundStyle(.orange)
             }
-            Text("Your password stays encrypted on this Mac, protected by system authentication. Authorize once each time Notchy starts, then keep it running for future unlocks. The first login after a restart or logout still needs your password.")
+            if !controller.accessibilityGranted { FaceAccessibilityButton() }
+            if case .failed(let message) = controller.state { Text(message).foregroundStyle(.orange) }
+            Text("Your login password is encrypted on this Mac and protected by system authentication. Only its linked face can unlock this account. Adding another face does not give it access to this password.")
                 .font(.caption).foregroundStyle(.secondary)
-            Text("A webcam can be fooled by a convincing photo or video. Face Unlock is optional and does not provide the security of Touch ID. Lock-screen support can change after macOS updates.")
+            Text("The first login after restarting or logging out still requires your Mac password.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         .onAppear { controller.refreshReadiness() }
-        .onDisappear { password = "" }
+        .onDisappear {
+            password = ""
+            if setupTask != nil {
+                setupTask?.cancel()
+                setupTask = nil
+                controller.cancelSetup()
+            }
+        }
         .confirmationDialog("Remove the saved Mac password?", isPresented: $confirmRemoval) {
             Button("Remove password", role: .destructive) { controller.removePassword() }
-        } message: {
-            Text("Face Unlock stops. Your enrolled face remains available for in-app checks.")
-        }
+        } message: { Text("Face Unlock stops. Your saved faces remain available for in-app checks.") }
     }
 
     private func save() {
         guard let identity, identity.supportsPassiveUnlock, controller.setupUnavailableReason == nil,
-              !password.isEmpty, !controller.isBusy else { return }
-        let enteredPassword = password
+              !password.isEmpty, !controller.isBusy, setupTask == nil else { return }
+        let entered = password
         password = ""
-        Task { await controller.save(password: enteredPassword, identity: identity) }
-    }
-}
-
-struct MacUnlockSetupView: View {
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("Mac Face Unlock").font(.title2.weight(.semibold))
-                Spacer()
-                Button("Done") { dismiss() }
-            }.padding(20)
-            Form { MacUnlockSettingsSection() }.formStyle(.grouped)
+        setupTask = Task {
+            guard !Task.isCancelled else { return }
+            await controller.save(password: entered, identity: identity)
+            guard !Task.isCancelled else { return }
+            setupTask = nil
+            if controller.isAuthorized, controller.boundIdentityID == identity.id { editing = false }
         }
-        .frame(width: 540, height: 560)
+    }
+
+    private func authorize() {
+        guard setupTask == nil, !controller.isBusy else { return }
+        setupTask = Task {
+            guard !Task.isCancelled else { return }
+            await controller.authorizeSession()
+            guard !Task.isCancelled else { return }
+            setupTask = nil
+        }
     }
 }

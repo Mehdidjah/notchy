@@ -105,7 +105,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .devices: "bluetooth airpods headphones"
         case .controls: "volume brightness hud osd media keys"
         case .battery: "charging low full power"
-        case .faceCheck: "face camera recognition enrol enroll unlock privacy"
+        case .faceCheck: "face camera recognition enrol enroll unlock privacy password liveness confidence distance identities wake lock retry"
         case .claude: "ai chat sessions model anthropic claude code"
         case .clipboard: "history capture retention sensitive paste"
         case .shortcuts: "keyboard hotkey"
@@ -243,6 +243,7 @@ struct SettingsView: View {
         case .clipboard: clipboard
         case .permissions: permissionSettings
         case .about: about
+        case .faceCheck: Form { registeredSections(.faceCheck) }.formStyle(.grouped)
         default: featurePane(pane)
         }
     }
@@ -269,6 +270,7 @@ struct SettingsView: View {
                 LaunchAtLoginToggle()
                 Toggle("Show in the Dock", isOn: $settings.showInDock)
                     .help("A Dock icon with a dot while Notchy runs, and a place in the app switcher. Click it to open the island.")
+                Toggle("Show in menu bar", isOn: $settings.showInMenuBar)
             }
             Section("Gesture control") {
                 Toggle("Enable gestures", isOn: $settings.gesturesEnabled)
@@ -479,7 +481,7 @@ struct SettingsTile: View {
 
 /// Launch at login through the system login-item service. Unsigned development builds may be
 /// refused by the system; the toggle then reverts and shows why.
-private struct LaunchAtLoginToggle: View {
+struct LaunchAtLoginToggle: View {
     /// Read once when the row appears: the status is a synchronous call into the system, too
     /// slow to repeat on every rebuild of the settings view.
     @State private var enabled = false
