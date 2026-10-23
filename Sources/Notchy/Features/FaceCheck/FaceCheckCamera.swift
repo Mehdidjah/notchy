@@ -26,6 +26,32 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     /// Receives one frame at a time; the next frame is offered once it returns.
     typealias FrameHandler = @Sendable (CGImage, TimeInterval) async -> Void
 
+    /// Read a stable reference from the lock, never a bare function value. Passing an async
+    /// closure through generic inout storage can accumulate reabstraction wrappers on each
+    /// read, then overflow the stack when the camera releases the callback.
+    struct FrameCallbackStore: Sendable {
+        final class Receiver: Sendable {
+            private let callback: FrameHandler
+
+            init(_ callback: @escaping FrameHandler) { self.callback = callback }
+
+            func receive(_ image: CGImage, capturedAt: TimeInterval) async {
+                await callback(image, capturedAt)
+            }
+        }
+
+        private let receiver = OSAllocatedUnfairLock<Receiver?>(initialState: nil)
+
+        func replace(with callback: @escaping FrameHandler) {
+            let next = Receiver(callback)
+            receiver.withLock { $0 = next }
+        }
+
+        func snapshot() -> Receiver? { receiver.withLock { $0 } }
+
+        func clear() { receiver.withLock { $0 = nil } }
+    }
+
     /// The session the preview layer draws from. Only reconfigured on `sessionQueue`.
     let session = AVCaptureSession()
 
@@ -35,7 +61,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     /// Confined to `sessionQueue`.
     private var input: AVCaptureDeviceInput?
     private let isBusy = OSAllocatedUnfairLock(initialState: false)
-    private let handler = OSAllocatedUnfairLock<FrameHandler?>(initialState: nil)
+    private let handler = FrameCallbackStore()
 
     static var authorization: AVAuthorizationStatus { AVCaptureDevice.authorizationStatus(for: .video) }
 
@@ -49,7 +75,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     /// Opens the front camera and starts delivering frames to `onFrame`. Reports whether the
     /// session is running.
     func start(onFrame: @escaping FrameHandler, completion: @escaping @Sendable (Bool) -> Void) {
-        handler.withLock { $0 = onFrame }
+        handler.replace(with: onFrame)
         sessionQueue.async { [self] in
             completion(startOnQueue())
         }
@@ -57,7 +83,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
 
     /// Stops the session and detaches the camera, so the camera light goes out.
     func stop(completion: (@Sendable () -> Void)? = nil) {
-        handler.withLock { $0 = nil }
+        handler.clear()
         sessionQueue.async { [self] in
             if session.isRunning { session.stopRunning() }
             if let input {
@@ -118,7 +144,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         // Stamp delivery before conversion/model work. Analysis completion is not the time
         // the eyelids or head moved, and must not define the challenge's temporal evidence.
         let capturedAt = ProcessInfo.processInfo.systemUptime
-        guard let onFrame = handler.withLock({ $0 }) else { return }
+        guard let receiver = handler.snapshot() else { return }
         let claimed = isBusy.withLock { busy -> Bool in
             if busy { return false }
             busy = true
@@ -137,7 +163,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         }
         let isBusy = isBusy
         Task.detached(priority: .userInitiated) {
-            await onFrame(image, capturedAt)
+            await receiver.receive(image, capturedAt: capturedAt)
             isBusy.withLock { $0 = false }
         }
     }
