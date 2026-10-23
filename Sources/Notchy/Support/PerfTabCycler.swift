@@ -1,6 +1,7 @@
 import AppKit
 import os
 import QuartzCore
+import SwiftUI
 
 /// Developer aid for measuring tab-switch smoothness: launched with `--perf-cycle-tabs`, the
 /// app opens the island pinned, steps through every tab a few times while a display link
@@ -18,7 +19,9 @@ enum PerfTabCycler {
     static let islandRounds = 5
     static let islandWindow: TimeInterval = 0.7
 
-    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains(argument) }
+    private static var enrollmentOnly: Bool { ProcessInfo.processInfo.arguments.contains("--perf-face-enrollment") }
+    private static var unlockOnly: Bool { ProcessInfo.processInfo.arguments.contains("--perf-mac-unlock") }
+    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains(argument) || enrollmentOnly || unlockOnly }
 
     private static var recorder: FrameRecorder?
 
@@ -29,6 +32,22 @@ enum PerfTabCycler {
             let recorder = FrameRecorder()
             Self.recorder = recorder
             recorder.start()
+            if unlockOnly {
+                let samples = await measureMacUnlock(model: model, recorder: recorder)
+                recorder.stop()
+                for name in samples.keys.sorted() { print(summary(name: "unlock-\(name)", windows: samples[name] ?? [])) }
+                fflush(stdout)
+                NSApp.terminate(nil)
+                return
+            }
+            if enrollmentOnly {
+                let samples = await measureEnrollment(model: model, recorder: recorder)
+                recorder.stop()
+                for name in samples.keys.sorted() { print(summary(name: "enrollment-\(name)", windows: samples[name] ?? [])) }
+                fflush(stdout)
+                NSApp.terminate(nil)
+                return
+            }
             var samples: [NotchTab: [FrameRecorder.Window]] = [:]
             for _ in 0..<rounds {
                 for tab in model.availableTabs {
@@ -46,6 +65,7 @@ enum PerfTabCycler {
             let mediaContext = "PERF media playing=\(media.isPlaying ? 1 : 0) player=\(HomeLayoutState.shared.showsMediaPlayer ? 1 : 0)"
             let islandSamples = await measureOpenAndClose(model: model, recorder: recorder)
             let faceSamples = await measureFaceActivity(model: model, recorder: recorder)
+            let enrollmentSamples = await measureEnrollment(model: model, recorder: recorder)
             recorder.stop()
             print(report(samples, refresh: recorder.nominalInterval))
             print(mediaContext)
@@ -57,6 +77,9 @@ enum PerfTabCycler {
             }
             for name in faceSamples.keys.sorted() {
                 print(summary(name: "face-\(name)", windows: faceSamples[name] ?? []))
+            }
+            for name in enrollmentSamples.keys.sorted() {
+                print(summary(name: "enrollment-\(name)", windows: enrollmentSamples[name] ?? []))
             }
             fflush(stdout)
             NSApp.terminate(nil)
@@ -130,6 +153,116 @@ enum PerfTabCycler {
         return lines.joined(separator: "\n")
     }
 
+    /// Exercises the lock-screen artwork on an ordinary desktop panel. It never locks the
+    /// session, opens the camera, accesses a credential, or invokes the window-space adapter.
+    private static func measureMacUnlock(model: NotchViewModel, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
+        guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return [:] }
+        model.collapseForFaceCheck()
+        let activity = FaceCheckLiveActivity()
+        activity.hapticsEnabled = { false }
+        activity.onRetry = { [weak activity] in activity?.begin(reason: "Animation preview") }
+        let panel = NSPanel(contentRect: CGRect(x: screen.frame.midX - 220, y: screen.frame.maxY - 260, width: 440, height: 260),
+                            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 5)
+        panel.contentView = NSHostingView(rootView: MacUnlockOverlayView(activity: activity, geometry: .resolve(screen)))
+        panel.orderFrontRegardless()
+        defer { activity.dismiss(); panel.orderOut(nil); panel.contentView = nil }
+        var samples: [String: [FrameRecorder.Window]] = [:]
+        for _ in 0..<rounds {
+            var start = CACurrentMediaTime()
+            activity.begin(reason: "Animation preview")
+            try? await Task.sleep(for: .seconds(1))
+            samples["open", default: []].append(recorder.window(from: start, length: 0.8))
+            start = CACurrentMediaTime()
+            activity.update(prompt: "Turn slightly toward your left shoulder.")
+            try? await Task.sleep(for: .milliseconds(1_500))
+            samples["scan", default: []].append(recorder.window(from: start, length: 1.4))
+            start = CACurrentMediaTime()
+            activity.finish(recognized: true, message: "Mac unlocked")
+            try? await Task.sleep(for: .milliseconds(1_500))
+            samples["success", default: []].append(recorder.window(from: start, length: 1.4))
+            start = CACurrentMediaTime()
+            activity.dismiss()
+            try? await Task.sleep(for: .milliseconds(800))
+            samples["close", default: []].append(recorder.window(from: start, length: 0.7))
+            activity.begin(reason: "Animation preview")
+            try? await Task.sleep(for: .seconds(1))
+            start = CACurrentMediaTime()
+            activity.finish(recognized: false, message: "Face not recognized. Hover to try again.")
+            try? await Task.sleep(for: .milliseconds(1_500))
+            samples["failure", default: []].append(recorder.window(from: start, length: 1.4))
+            start = CACurrentMediaTime()
+            activity.handleHover(true)
+            try? await Task.sleep(for: .seconds(1))
+            samples["retry", default: []].append(recorder.window(from: start, length: 0.8))
+            activity.dismiss()
+            try? await Task.sleep(for: .milliseconds(700))
+        }
+        return samples
+    }
+
+    /// Presentation-only enrollment cycle: no camera, face store, or credential access.
+    private static func measureEnrollment(model: NotchViewModel, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
+        guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return [:] }
+        model.collapseForFaceCheck()
+        let state = EnrollmentPerfState()
+        let panel = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
+        panel.ignoresMouseEvents = true
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 5)
+        panel.contentView = NSHostingView(rootView: EnrollmentPerfView(state: state, geometry: NotchGeometryResolver.resolve(screen: screen)))
+        panel.orderFrontRegardless()
+        defer { panel.orderOut(nil); panel.contentView = nil }
+        var samples: [String: [FrameRecorder.Window]] = [:]
+        for _ in 0..<rounds {
+            state.counts = [:]
+            state.phase = .scanning
+            state.stage = .capturing
+            try? await Task.sleep(for: .milliseconds(300))
+            var start = CACurrentMediaTime()
+            state.expanded = true
+            try? await Task.sleep(for: .seconds(1))
+            samples["open", default: []].append(recorder.window(from: start, length: 0.8))
+            start = CACurrentMediaTime()
+            for pose in FaceEnrollmentPose.guidedOrder.prefix(4) {
+                state.counts[pose] = 2
+                try? await Task.sleep(for: .milliseconds(700))
+            }
+            samples["capture-and-sweep", default: []].append(recorder.window(from: start, length: 2.8))
+            start = CACurrentMediaTime()
+            state.phase = .saved
+            state.stage = .faceSaved
+            try? await Task.sleep(for: .seconds(1))
+            samples["save", default: []].append(recorder.window(from: start, length: 0.9))
+            start = CACurrentMediaTime()
+            state.unavailableReason = FaceModelValidation.unavailableMessage
+            state.stage = .password
+            try? await Task.sleep(for: .seconds(1))
+            samples["saved-confirmation", default: []].append(recorder.window(from: start, length: 0.9))
+            state.unavailableReason = nil
+            for (name, stage) in [("password", FaceUnlockSetupSession.Stage.password), ("experimental-password", .password),
+                                  ("permission", .permission), ("complete", .complete)] {
+                start = CACurrentMediaTime()
+                state.isExperimental = name == "experimental-password"
+                state.stage = stage
+                try? await Task.sleep(for: .seconds(1))
+                samples[name, default: []].append(recorder.window(from: start, length: 0.9))
+            }
+            start = CACurrentMediaTime()
+            state.expanded = false
+            try? await Task.sleep(for: .milliseconds(700))
+            samples["close", default: []].append(recorder.window(from: start, length: 0.6))
+        }
+        return samples
+    }
+
     private static func summary(name: String, windows: [FrameRecorder.Window]) -> String {
         let worst = windows.map(\.worstFrame).max() ?? 0
         let hitches = windows.map(\.hitchCount).reduce(0, +)
@@ -138,6 +271,47 @@ enum PerfTabCycler {
         let select = windows.map(\.selectCost).max() ?? 0
         return String(format: "PERF %@ switches=%d worstFrame=%.1fms hitches=%d dropped=%d firstFrame=%.1fms selectCall=%.1fms",
                       name, windows.count, worst * 1000, hitches, dropped, firstFrame * 1000, select * 1000)
+    }
+}
+
+@MainActor
+private final class EnrollmentPerfState: ObservableObject {
+    @Published var counts: [FaceEnrollmentPose: Int] = [:]
+    @Published var phase: FaceEnrollmentScanPhase = .scanning
+    @Published var stage: FaceUnlockSetupSession.Stage = .capturing
+    @Published var unavailableReason: String?
+    @Published var isExperimental = false
+    @Published var expanded = false
+}
+
+private struct EnrollmentPerfView: View {
+    @ObservedObject var state: EnrollmentPerfState
+    let geometry: NotchGeometry
+
+    var body: some View {
+        let target = FaceEnrollmentPresentation.nextPose(counts: state.counts, samplesPerPose: 2) ?? .centre
+        ZStack(alignment: .top) {
+            FaceEnrollmentSweepView(direction: state.expanded && state.phase == .scanning ? FaceEnrollmentPresentation.angle(for: target) : nil)
+            FaceUnlockSetupSurface(stage: state.stage, hasHardwareNotch: geometry.isHardwareNotch,
+                                    isExpanded: state.expanded, compactWidth: geometry.syntheticOrHardwareWidth + 32,
+                                    compactHeight: geometry.topInset) {
+                FaceEnrollmentScanView(counts: state.counts, instruction: FaceEnrollmentPresentation.instruction(for: target),
+                                       phase: state.phase, hasHardwareNotch: geometry.isHardwareNotch,
+                                       isExpanded: state.expanded, compactWidth: geometry.syntheticOrHardwareWidth + 32,
+                                       compactHeight: geometry.topInset, drawsBackground: false, cancel: {}) {
+                    Color(white: 0.15).overlay { Image(systemName: "person.fill").font(.system(size: 80)).foregroundStyle(.gray) }
+                }
+            } steps: {
+                FaceUnlockSetupCard(stage: state.stage, unavailableReason: state.unavailableReason,
+                                    isExperimental: state.isExperimental,
+                                    hasHardwareNotch: geometry.isHardwareNotch,
+                                    isExpanded: state.expanded, compactWidth: geometry.syntheticOrHardwareWidth + 32,
+                                    compactHeight: geometry.topInset, drawsBackground: false) {
+                    Text("Mac login password").foregroundStyle(.white.opacity(0.4)).frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 

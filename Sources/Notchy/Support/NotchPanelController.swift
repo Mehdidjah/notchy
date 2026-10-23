@@ -83,6 +83,7 @@ final class NotchPanelController: NSObject {
     private var lastScrollTimestamp: TimeInterval = 0
     private var scrollIdleTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
+    private var presentationSuppressed = false
 
     var currentScreen: NSScreen { screen }
 
@@ -163,7 +164,15 @@ final class NotchPanelController: NSObject {
     }
 
     func show() {
-        panel.orderFrontRegardless()
+        if !presentationSuppressed { panel.orderFrontRegardless() }
+        updateInteractiveZone()
+    }
+
+    /// A dedicated enrollment surface temporarily owns the same top-screen region.
+    func setPresentationSuppressed(_ suppressed: Bool) {
+        presentationSuppressed = suppressed
+        if suppressed { panel.orderOut(nil) }
+        else { panel.orderFrontRegardless() }
         updateInteractiveZone()
     }
 
@@ -183,7 +192,7 @@ final class NotchPanelController: NSObject {
 
     func openPinned() {
         model.openPinned()
-        panel.orderFrontRegardless()
+        if !presentationSuppressed { panel.orderFrontRegardless() }
     }
 
     private func configure(_ panel: NSPanel) {
@@ -253,7 +262,7 @@ final class NotchPanelController: NSObject {
             extraOpenHeight: model.extraOpenHeight(for: tab ?? model.selectedTab),
             activity: showsActivity ? model.closedActivityLayout(hovering: hovering) : nil
         )
-        hostingView.interactionEnabled = metrics.interactionEnabled
+        hostingView.interactionEnabled = !presentationSuppressed && metrics.interactionEnabled
         hostingView.interactiveRect = NotchGeometryResolver.interactiveRect(
             containerSize: hostingView.bounds.size,
             interactiveSize: metrics.interactiveSize
@@ -279,7 +288,7 @@ final class NotchPanelController: NSObject {
         guard !state.showsShelfContent, panel.isKeyWindow else { return }
         panel.makeFirstResponder(nil)
         panel.orderOut(nil)
-        panel.orderFrontRegardless()
+        if !presentationSuppressed { panel.orderFrontRegardless() }
     }
 
     private func startHoverMonitoring() {

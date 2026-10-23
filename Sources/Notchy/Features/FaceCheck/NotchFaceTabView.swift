@@ -1,159 +1,102 @@
 import SwiftUI
 
-/// The Face Check tab in the open island: a live camera view with the face outlined, enrolment
-/// with its pose grid, and a test scan with its result. The camera runs only while this tab is
-/// on screen.
+/// Enrollment owns the camera in its dedicated notch surface. Opening this dashboard
+/// only reads readiness; it cannot start an in-app check or a camera preview.
 struct NotchFaceTabView: View {
     let model: NotchViewModel
     @ObservedObject private var controller: FaceCheckController
-    @State private var previewID = UUID()
+    @ObservedObject private var unlock: MacUnlockController
+    @State private var showUnlockSettings = false
 
-    init(model: NotchViewModel, controller: FaceCheckController = .shared) {
+    init(model: NotchViewModel, controller: FaceCheckController = .shared,
+         unlock: MacUnlockController = .shared) {
         self.model = model
         _controller = ObservedObject(wrappedValue: controller)
+        _unlock = ObservedObject(wrappedValue: unlock)
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16.island) {
-            cameraView
-            VStack(alignment: .leading, spacing: 10.island) {
-                header
-                actions
-                Spacer(minLength: 0)
+        HStack(spacing: 18.island) {
+            ZStack {
+                Circle().fill(.white.opacity(0.06))
+                Image(systemName: "faceid")
+                    .font(.system(size: 40.island, weight: .light))
+                    .foregroundStyle(FaceEnrollmentPresentation.accent)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if controller.activity == .enrolling {
-                FaceEnrollmentGrid(counts: controller.poseCounts, samplesPerPose: controller.samplesPerPose, cell: 18.island)
-                    .padding(.top, 4.island)
-            }
-        }
-        .padding(.horizontal, 16.island)
-        .padding(.vertical, 8.island)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onAppear {
-            controller.loadIdentities()
-            controller.retainPreview(previewID, start: true)
-        }
-        .onDisappear {
-            controller.releasePreview(previewID)
-            model.releaseHold(reason: "faceEnrollment")
-        }
-        .onChange(of: controller.activity) { _, activity in
-            if activity == .enrolling || activity == .saving { model.holdOpen(reason: "faceEnrollment") }
-            else { model.releaseHold(reason: "faceEnrollment") }
-        }
-    }
+            .frame(width: 94.island, height: 94.island)
+            .accessibilityHidden(true)
 
-    // MARK: Parts
-
-    private var cameraView: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Group {
-                if controller.cameraState == .on || controller.cameraState == .starting {
-                    FaceCheckPreview(session: controller.camera.session, faceBounds: controller.face?.bounds)
-                } else {
-                    Color.white.opacity(0.06).overlay {
-                        Image(systemName: controller.cameraState == .denied ? "video.slash" : "faceid")
-                            .font(.system(size: 30.island))
-                            .foregroundStyle(.white.opacity(0.4))
+            VStack(alignment: .leading, spacing: 8.island) {
+                Text(unlock.isExperimental ? "Face Unlock · Experimental" : "Face Unlock")
+                    .font(.system(size: 15.island, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(statusLine)
+                    .font(.system(size: 12.island))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .lineLimit(2)
+                HStack(spacing: 8.island) {
+                    if unlock.hasPassword && (!unlock.isAuthorized || !unlock.isEnabled) {
+                        IslandActionButton(title: "Authorize Face Unlock", systemImage: "lock.open", prominent: true) {
+                            Task { await unlock.authorizeSession() }
+                        }
                     }
-                }
-            }
-            .frame(width: 184.island, height: 124.island)
-            .clipShape(RoundedRectangle(cornerRadius: 14.island, style: .continuous))
-
-            if let chip = controller.chip, controller.cameraState == .on {
-                Image(decorative: chip, scale: 1)
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 44.island, height: 44.island)
-                    .clipShape(RoundedRectangle(cornerRadius: 8.island, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8.island, style: .continuous).stroke(.white.opacity(0.4), lineWidth: 1))
-                    .padding(6.island)
-                    .help("What the face model sees")
-            }
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 3.island) {
-            Text("Face Check")
-                .font(.system(size: 15.island, weight: .semibold))
-                .foregroundStyle(.white)
-            Text(statusLine)
-                .font(.system(size: 12.island))
-                .foregroundStyle(.white.opacity(0.65))
-                .lineLimit(2)
-            if let distance = controller.liveDistance {
-                let limit = controller.preset.maximumDistance
-                Text("Distance \(String(format: "%.2f", distance)) / \(String(format: "%.2f", limit))")
-                    .font(.system(size: 11.island).monospacedDigit())
-                    .foregroundStyle(distance <= limit ? .green : .orange)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var actions: some View {
-        switch controller.activity {
-        case .enrolling:
-            HStack(spacing: 8.island) {
-                IslandActionButton(title: "Finish now", systemImage: "checkmark", prominent: true) { controller.finishEnrolment() }
-                    .disabled(!controller.canFinishEnrolmentEarly)
-                IslandActionButton(title: "Cancel", systemImage: "xmark") { controller.cancelEnrolment() }
-            }
-        case .testing:
-            IslandActionButton(title: "Cancel check", systemImage: "xmark") { controller.cancelVerification() }
-        case .saving:
-            Text("Saving your face…").font(.system(size: 12.island)).foregroundStyle(.secondary)
-        case .watching:
-            HStack(spacing: 8.island) {
-                if controller.identities.isEmpty {
-                    IslandActionButton(title: "Scan my face", systemImage: "faceid", prominent: true) {
-                        controller.startEnrolment(name: "Me")
+                    IslandActionButton(title: controller.identities.isEmpty ? "Set up Face Unlock" : "Scan again",
+                                       systemImage: "faceid", prominent: !unlock.hasPassword) {
+                        controller.startMacUnlockEnrolment()
                     }
-                } else {
-                    IslandActionButton(title: "Check now", systemImage: "faceid", prominent: true) { controller.startTest() }
-                    IslandActionButton(title: "Scan again", systemImage: "arrow.clockwise") {
-                        controller.startEnrolment(name: "Me")
-                    }
-                }
-                if controller.cameraState == .denied {
-                    IslandActionButton(title: "Allow camera", systemImage: "video") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
-                            NSWorkspace.shared.open(url)
+                    if unlock.hasPassword {
+                        IslandActionButton(title: "Manage", systemImage: "slider.horizontal.3") {
+                            showUnlockSettings = true
                         }
                     }
                 }
-            }
-            if let outcome = controller.testOutcome {
-                HStack(spacing: 6.island) {
-                    Image(systemName: outcome.matched ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(outcome.matched ? .green : .orange)
-                    Text(outcome.matched ? "It's \(outcome.name ?? "you")" : "Not recognized")
-                        .foregroundStyle(.white)
+                .disabled(controller.isPreparingEnrollment || controller.activity != .watching || unlock.isBusy)
+                if !unlock.hasPassword && !controller.identities.isEmpty {
+                    Button(unlock.setupUnavailableReason == nil ? "Set Mac password…" : "Use a saved face…") { showUnlockSettings = true }
+                        .font(.system(size: 11.island, weight: .medium))
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .disabled(controller.isPreparingEnrollment || unlock.isBusy)
                 }
-                .font(.system(size: 12.island, weight: .medium))
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 20.island)
+        .padding(.vertical, 10.island)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .onAppear {
+            guard !PerfTabCycler.isRequested else { return }
+            controller.loadIdentities()
+            unlock.refreshReadiness()
+        }
+        .onDisappear { model.releaseHold(reason: "macUnlockSetup") }
+        .sheet(isPresented: $showUnlockSettings) { MacUnlockSetupView() }
+        .onChange(of: showUnlockSettings) { _, showing in
+            if showing { model.holdOpen(reason: "macUnlockSetup") }
+            else { model.releaseHold(reason: "macUnlockSetup") }
         }
     }
 
     private var statusLine: String {
-        switch controller.cameraState {
-        case .denied: return "Notchy needs camera access."
-        case .unavailable: return "No camera available."
-        case .starting: return "Starting the camera…"
-        case .off: return controller.status.isEmpty ? "Camera off" : controller.status
-        case .on:
-            if controller.activity == .watching, controller.identities.isEmpty, controller.face != nil {
-                return "Ready to scan your face."
-            }
-            return controller.status.isEmpty ? "Looking for a face…" : controller.status
+        if controller.isPreparingEnrollment { return "Confirm with macOS to start a new face scan." }
+        if unlock.setupUnavailableReason != nil, !controller.identities.isEmpty {
+            return "Face saved. Automatic Mac unlocking is not available yet."
         }
+        if unlock.isBusy { return "Authorizing Face Unlock…" }
+        if case .failed(let message) = unlock.state { return message }
+        if unlock.hasPassword {
+            if !unlock.isAuthorized || !unlock.isEnabled { return "Your face and password are saved. Authorize Face Unlock for this session." }
+            if !unlock.accessibilityGranted { return "Your face and password are saved. Open Manage to allow Accessibility." }
+            return "Ready. When your Mac locks or wakes, look at the camera to unlock it."
+        }
+        if controller.cameraState == .denied { return "Allow Notchy in System Settings → Privacy & Security → Camera, then scan again." }
+        if controller.identities.contains(where: { $0.isEnabled && $0.supportsPassiveUnlock }),
+           unlock.setupUnavailableReason == nil { return "Your face is saved. Set your Mac password to enable automatic unlocking." }
+        if !controller.status.isEmpty { return controller.status }
+        return "Scan your face, then save your Mac login password."
     }
 }
 
-/// A compact capsule button that fits the island's dark style.
 private struct IslandActionButton: View {
     let title: String
     let systemImage: String
@@ -172,35 +115,5 @@ private struct IslandActionButton: View {
                 .opacity(isEnabled ? 1 : 0.4)
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// The nine enrolment poses as a 3×3 grid, laid out as the head moves in the mirrored preview.
-struct FaceEnrollmentGrid: View {
-    let counts: [FaceEnrollmentPose: Int]
-    let samplesPerPose: Int
-    let cell: CGFloat
-
-    static let rows: [[FaceEnrollmentPose]] = [
-        [.upRight, .up, .upLeft],
-        [.right, .centre, .left],
-        [.downRight, .down, .downLeft],
-    ]
-
-    var body: some View {
-        VStack(spacing: 4.island) {
-            ForEach(0..<3, id: \.self) { row in
-                HStack(spacing: 4.island) {
-                    ForEach(Self.rows[row], id: \.self) { pose in
-                        let count = counts[pose] ?? 0
-                        RoundedRectangle(cornerRadius: cell / 5)
-                            .fill(count >= samplesPerPose ? Color.green : (count > 0 ? Color.green.opacity(0.45) : Color.gray.opacity(0.3)))
-                            .frame(width: cell, height: cell)
-                    }
-                }
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(counts.values.reduce(0, +)) of \(FaceEnrollmentPose.allCases.count * samplesPerPose) samples captured")
     }
 }

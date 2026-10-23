@@ -36,6 +36,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     @Published private(set) var poseCounts: [FaceEnrollmentPose: Int] = [:]
     @Published private(set) var testOutcome: TestOutcome?
     @Published private(set) var enrollmentIsLive = false
+    @Published private(set) var isPreparingEnrollment = false
+    private(set) var isMacUnlockEnrollment = false
     @Published var preset: FaceMatchPreset {
         didSet {
             UserDefaults.standard.set(preset.rawValue, forKey: Self.presetKey)
@@ -46,17 +48,24 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     let camera: any FaceCheckCameraCapturing
     let liveActivity: FaceCheckLiveActivity
     var onBeginCheck: (() -> Void)?
-    var onSaved: (() -> Void)?
+    var onSaved: ((FaceIdentity) -> Void)?
     var onNeedsEnrollment: (() -> Void)?
+    var onEnrollmentEnded: ((String?) -> Void)?
 
-    private let embedder = FaceEmbedder()
-    private lazy var pipeline = FaceCheckPipeline(embedder: embedder)
+    private let recognitionProfile = FaceModelValidation.activeProfile
+    private let enrollmentProfile = FaceRecognitionProfile.auraFace
+    private let embedder = FaceEmbedder(profile: FaceModelValidation.activeProfile)
+    private let enrollmentEmbedder = FaceEmbedder(profile: .auraFace)
+    private lazy var pipeline = FaceCheckPipeline(embedder: embedder, enrollmentEmbedder: enrollmentEmbedder)
     private var store: FaceEnrollmentStore?
     private var matcher: FaceMatcher?
     private var tracker: FaceEnrollmentPoseTracker?
-    private var enrollmentLiveness = FaceLivenessTracker(direction: .left)
     private var enrollmentAnchor: [Float]?
+    private var enrollmentLegacyAnchor: [Float]?
+    private var enrollmentLegacySamples: [FaceSample] = []
     private var enrollmentLastFrame: TimeInterval?
+    private var lastEnrollmentLogAt: TimeInterval = 0
+    private var lastEnrollmentLogState = ""
     private var enrolmentName = ""
     private var verification: FaceVerificationSession?
     private var testClosest: FaceMatchScore?
@@ -70,13 +79,23 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     private var retryReason: String?
     private var preparingRequest = false
     private let checkTimeout: Duration
+    private let enrollmentOwnerAuthorization: @MainActor () async -> Bool
+    private var enrollmentOwnerTask: Task<Void, Never>?
+    private var enrollmentOwnerEpoch = 0
+    private var enrollmentOwnerGranted = false
 
     init(store: FaceEnrollmentStore? = nil, liveActivity: FaceCheckLiveActivity? = nil,
          camera: any FaceCheckCameraCapturing = FaceCheckCamera(),
-         checkTimeout: Duration = .seconds(FaceCheckController.testDuration)) {
+         checkTimeout: Duration = .seconds(FaceCheckController.testDuration),
+         enrollmentOwnerAuthorization: @escaping @MainActor () async -> Bool = {
+             let context = LAContext()
+             return (try? await context.evaluatePolicy(.deviceOwnerAuthentication,
+                 localizedReason: "Set up a face for Mac unlock in Notchy.")) == true
+         }) {
         self.store = store
         self.camera = camera
         self.checkTimeout = checkTimeout
+        self.enrollmentOwnerAuthorization = enrollmentOwnerAuthorization
         self.liveActivity = liveActivity ?? FaceCheckLiveActivity()
         preset = UserDefaults.standard.string(forKey: Self.presetKey).flatMap(FaceMatchPreset.init(rawValue:)) ?? .standard
         self.liveActivity.onRetry = { [weak self] in self?.retry() }
@@ -85,8 +104,14 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     }
 
     var samplesPerPose: Int { FaceEnrollmentRules.standard.samplesPerPose }
+    var matchingDistanceLimit: Float { recognitionProfile.maximumDistance(for: preset) }
+    var usesCalibratedThreshold: Bool { recognitionProfile.metric == .cosine }
+    var enrollmentInstruction: String {
+        if let problem { return problem }
+        return status.isEmpty ? FaceEnrollmentPresentation.instruction(for: .centre) : status
+    }
     var canFinishEnrolmentEarly: Bool {
-        enrollmentIsLive && (poseCounts[.centre] ?? 0) > 0
+        enrollmentIsLive && tracker?.isComplete == true
             && enrollmentLastFrame.map { ProcessInfo.processInfo.systemUptime - $0 < 1 } == true
     }
 
@@ -125,8 +150,9 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
             }
             let pipeline = self.pipeline
             self.camera.start(onFrame: { [weak self] image, capturedAt in
-                var analysis = await pipeline.analyze(image)
-                analysis.capturedAt = capturedAt
+                let enrolling = await self?.activity == .enrolling
+                let analysis = await pipeline.analyze(image, capturedAt: capturedAt, generation: current,
+                                                      enrolling: enrolling)
                 await self?.handle(analysis, generation: current)
             }, completion: { [weak self] running in
                 Task { @MainActor in
@@ -154,7 +180,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         let current = generation
         Task { [weak self] in
             guard let self, self.generation == current, self.cameraState == .off else { return }
-            await self.embedder.unload()
+            await self.pipeline.unload()
         }
     }
 
@@ -166,8 +192,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         problem = message
         if activity == .testing { finishTest(matched: nil, message: message) }
         else if activity == .enrolling {
-            cancelEnrolment()
-            status = message
+            endEnrolment(message: message)
         }
     }
 
@@ -208,8 +233,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         }
     }
 
-    /// An unreadable store can be reset after macOS authenticates the owner. The app never
-    /// stores or types a login password.
+    /// An unreadable store can be reset after macOS authenticates the owner.
+    /// Replacing the enrolled identity invalidates any separate Mac unlock credential binding.
     func deleteAllFaceData() {
         Task {
             let readable = await refreshIdentities()
@@ -254,76 +279,153 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     }
 
     private func rebuildMatcher() {
-        matcher = FaceMatcher(identities: identities, modelIdentifier: FaceEmbedder.modelIdentifier, maximumDistance: preset.maximumDistance)
+        matcher = FaceMatcher(identities: identities, profile: recognitionProfile,
+                              maximumDistance: recognitionProfile.maximumDistance(for: preset))
     }
 
     // MARK: Enrollment
 
     func startEnrolment(name: String) {
-        guard activity == .watching, !preparingRequest else { return }
+        guard activity == .watching, !preparingRequest, !isPreparingEnrollment else { return }
         authorize(reason: "Add a saved face", requiresEnrollment: false) { [weak self] allowed in
             guard allowed, let self else { return }
             self.beginEnrolment(name: name)
         }
     }
 
-    private func beginEnrolment(name: String) {
+    /// Changing an existing enrollment uses macOS owner authentication. It does not send
+    /// setup through the in-app face-verification presentation or trust an old template.
+    func startMacUnlockEnrolment(name: String = "Me") {
+        guard activity == .watching, !preparingRequest, !isPreparingEnrollment else { return }
+        cancelVerification()
+        isPreparingEnrollment = true
+        let token = enrollmentOwnerEpoch
+        enrollmentOwnerTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if enrollmentOwnerEpoch == token {
+                    isPreparingEnrollment = false
+                    enrollmentOwnerTask = nil
+                }
+            }
+            let readable = await refreshIdentities()
+            guard enrollmentOwnerEpoch == token, !Task.isCancelled else { return }
+            guard readable else { status = storeProblem ?? "Saved faces are unavailable."; return }
+            let allowed = identities.isEmpty ? true : await enrollmentOwnerAuthorization()
+            guard enrollmentOwnerEpoch == token, !Task.isCancelled else { return }
+            guard allowed else { status = "Face Unlock setup was cancelled."; return }
+            enrollmentOwnerGranted = true
+            beginEnrolment(name: name, forMacUnlock: true)
+        }
+    }
+
+    func cancelMacUnlockEnrolmentAuthorization() {
+        enrollmentOwnerEpoch &+= 1
+        enrollmentOwnerTask?.cancel()
+        enrollmentOwnerTask = nil
+        enrollmentOwnerGranted = false
+        isPreparingEnrollment = false
+    }
+
+    private func beginEnrolment(name: String, forMacUnlock: Bool = false) {
+        isMacUnlockEnrollment = forMacUnlock
         liveActivity.dismiss()
         retryReason = nil
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         enrolmentName = String((trimmed.isEmpty ? "Me" : trimmed).prefix(80))
-        tracker = FaceEnrollmentPoseTracker(modelIdentifier: FaceEmbedder.modelIdentifier)
-        enrollmentLiveness = FaceLivenessTracker(direction: Bool.random() ? .left : .right)
+        var rules = FaceEnrollmentRules.standard
+        rules.descriptorDimension = enrollmentProfile.dimension
+        rules.samePersonMaximumDistance = enrollmentProfile.enrollmentDistance
+        tracker = FaceEnrollmentPoseTracker(modelIdentifier: enrollmentProfile.identifier,
+                                             rules: rules, profile: enrollmentProfile)
         enrollmentAnchor = nil
+        enrollmentLegacyAnchor = nil
+        enrollmentLegacySamples = []
         enrollmentLastFrame = nil
         enrollmentIsLive = false
         poseCounts = [:]
         testOutcome = nil
         activity = .enrolling
         challengeStartedAt = ProcessInfo.processInfo.systemUptime
-        status = "Look straight at the camera, then blink."
+        lastEnrollmentLogAt = 0
+        lastEnrollmentLogState = ""
+        status = "Look straight at the camera"
+        logger.info("Guided face enrollment started")
         startCamera()
         onNeedsEnrollment?()
     }
 
     func cancelEnrolment() {
+        cancelMacUnlockEnrolmentAuthorization()
+        endEnrolment(message: nil)
+    }
+
+    func restartEnrolment() {
+        guard activity == .watching else { return }
+        if isMacUnlockEnrollment, enrollmentOwnerGranted {
+            beginEnrolment(name: enrolmentName, forMacUnlock: true)
+        } else if isMacUnlockEnrollment {
+            startMacUnlockEnrolment(name: enrolmentName)
+        } else { startEnrolment(name: enrolmentName) }
+    }
+
+    private func endEnrolment(message: String?) {
+        logger.info("Guided face enrollment ended: \(message ?? "cancelled", privacy: .public)")
         tracker = nil
         enrollmentAnchor = nil
+        enrollmentLegacyAnchor = nil
+        enrollmentLegacySamples = []
         enrollmentLastFrame = nil
         enrollmentIsLive = false
         poseCounts = [:]
         activity = .watching
-        status = ""
+        status = message ?? ""
+        onEnrollmentEnded?(message)
         stopCameraIfUnused()
     }
 
     func finishEnrolment() {
         guard let tracker, canFinishEnrolmentEarly, activity == .enrolling else { return }
-        let identity = tracker.makeIdentity(name: enrolmentName) ?? FaceIdentity(name: enrolmentName, samples: tracker.samples)
+        guard var identity = tracker.makeIdentity(name: enrolmentName),
+              enrollmentLegacySamples.count == tracker.requiredSampleCount else { return }
+        identity.samples += enrollmentLegacySamples
+        let forMacUnlock = isMacUnlockEnrollment
+        let ownerEpoch = enrollmentOwnerEpoch
         self.tracker = nil
         activity = .saving
         status = "Saving your face…"
         Task {
             guard let store = makeStore() else {
-                activity = .watching
+                endEnrolment(message: storeProblem ?? "Your face could not be saved. Please try again.")
                 return
             }
             do {
                 try await store.upsert(identity)
-                await refreshIdentities()
+                let readable = await refreshIdentities()
+                guard !forMacUnlock || enrollmentOwnerEpoch == ownerEpoch else {
+                    activity = .watching
+                    stopCameraIfUnused()
+                    return
+                }
+                guard readable, identities.contains(identity) else {
+                    endEnrolment(message: "Your saved face could not be loaded. Please try again.")
+                    return
+                }
                 activity = .watching
-                status = "Face saved. You can use Check now."
+                status = forMacUnlock ? (FaceUnlockModelPolicy.current.unavailableReason
+                    ?? "Face saved. Continue with your Mac password.") : "Face saved."
                 poseCounts = [:]
                 enrollmentIsLive = false
+                enrollmentAnchor = nil
+                enrollmentLegacyAnchor = nil
+                enrollmentLegacySamples = []
                 liveActivity.finish(saved: true, recognized: true, message: "Ready for your next check")
-                onSaved?()
+                onSaved?(identity)
                 stopCameraIfUnused()
                 logger.info("Face enrollment saved")
             } catch {
-                activity = .watching
                 storeProblem = "Could not save your face: \(error.localizedDescription)"
-                status = "Your face was not saved."
-                stopCameraIfUnused()
+                endEnrolment(message: "Your face was not saved. Please try again.")
             }
         }
     }
@@ -404,6 +506,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     }
 
     func cancelVerification() {
+        cancelMacUnlockEnrolmentAuthorization()
         attempt &+= 1
         deadline?.cancel()
         deadline = nil
@@ -437,7 +540,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         verification = nil
         let closest = matched ?? testClosest
         let name = matched.flatMap { score in identities.first { $0.id == score.identityID }?.name }
-        testOutcome = TestOutcome(matched: matched != nil, name: name, distance: closest?.templateDistance, limit: preset.maximumDistance)
+        testOutcome = TestOutcome(matched: matched != nil, name: name, distance: closest?.templateDistance,
+                                  limit: matchingDistanceLimit)
         activity = .watching
         status = message
         liveActivity.finish(recognized: matched != nil, message: message)
@@ -467,8 +571,11 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
                 if activity == .testing {
                     finishTest(matched: nil, message: "The camera was interrupted. Please retry.")
                 } else {
-                    _ = enrollmentLiveness.consume(nil, timestamp: now)
                     enrollmentIsLive = false
+                    enrollmentLastFrame = nil
+                    _ = tracker?.noFace()
+                    status = "Hold still while the camera catches up."
+                    logEnrollmentState("waiting: stale camera frame", at: now)
                 }
                 return
             }
@@ -501,77 +608,111 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
 
     private func feedEnrolment(_ analysis: FaceFrameAnalysis, timestamp: TimeInterval) {
         guard var tracker else { return }
+        if let problem = analysis.problem { endEnrolment(message: problem); return }
         if let denial = analysis.liveness?.denial {
-            cancelEnrolment()
-            status = denial.message
+            endEnrolment(message: denial.message)
             return
         }
         guard analysis.faceCount == 1, let face = analysis.face, let descriptor = analysis.descriptor,
-              FaceDescriptor.isUsable(descriptor), let yaw = face.yaw, let pitch = face.pitch,
-              face.quality >= 0.3 else {
-            _ = enrollmentLiveness.consume(nil, timestamp: timestamp)
+              analysis.captureGuidance == nil, FaceCaptureFraming.contains(face.bounds),
+              analysis.modelIdentifier == enrollmentProfile.identifier,
+              enrollmentProfile.prepared(descriptor) != nil, let yaw = face.yaw, let pitch = face.pitch,
+              let legacy = analysis.legacyDescriptor, FaceRecognitionProfile.legacy.prepared(legacy) != nil,
+              face.quality.isFinite, (0.3...1).contains(face.quality),
+              let cues = analysis.liveness, cues.geometry.isUsable, cues.glare.isUsable else {
             enrollmentIsLive = false
             enrollmentLastFrame = nil
             _ = tracker.noFace()
             self.tracker = tracker
-            status = analysis.faceCount > 1 ? "Only one person should be in view." : "Look at the camera in good light."
+            let wait = FaceEnrollmentGuidance.captureWait(for: analysis, profile: enrollmentProfile)
+            status = wait.instruction
+            logEnrollmentState("waiting: " + wait.reason, at: timestamp)
             return
         }
-        if let anchor = enrollmentAnchor, FaceDescriptor.distance(anchor, descriptor) > 0.6 {
-            cancelEnrolment()
-            status = "The face changed. Start a new scan."
+        if let anchor = enrollmentAnchor, enrollmentProfile.distance(anchor, descriptor) > enrollmentProfile.enrollmentDistance {
+            logger.info("Guided capture rejected: primary identity continuity")
+            endEnrolment(message: "The face changed. Start a new scan.")
+            return
+        }
+        if let anchor = enrollmentLegacyAnchor,
+           FaceRecognitionProfile.legacy.distance(anchor, legacy) > FaceRecognitionProfile.legacy.enrollmentDistance {
+            logger.info("Guided capture rejected: companion identity continuity")
+            endEnrolment(message: "The face changed. Start a new scan.")
+            return
+        }
+        guard let pad = analysis.pad, pad.capturedAt == timestamp, pad.generation == generation,
+              pad.isValid else { endEnrolment(message: "The live-face check is unavailable. Retry the scan."); return }
+        let qualification = pad.qualification(minimumLiveScore: FaceModelValidation.bundled?.minimumLiveScore ?? 0.90)
+        if qualification == .spoof {
+            endEnrolment(message: "A live face could not be verified. Retry in even lighting.")
+            return
+        }
+        guard abs(yaw) <= 25, abs(pitch) <= 25,
+              qualification == .live else {
+            enrollmentIsLive = false
+            enrollmentLastFrame = nil
+            _ = tracker.noFace()
+            self.tracker = tracker
+            if abs(yaw) > 25 || abs(pitch) > 25 {
+                status = "Turn your head a little less."
+                logEnrollmentState("waiting: head angle beyond capture range", at: timestamp)
+            } else {
+                status = "Checking for a live face. Hold still in even light."
+                logEnrollmentState("waiting: passive models uncertain", at: timestamp)
+            }
             return
         }
         if enrollmentAnchor == nil { enrollmentAnchor = descriptor }
-        switch enrollmentLiveness.consume(analysis.liveness, timestamp: timestamp) {
-        case .rejected(let failure):
-            cancelEnrolment()
-            status = failure.message
-            return
-        case .collecting(let prompt):
-            enrollmentIsLive = false
-            status = prompt.message
-            return
-        case .passed:
-            enrollmentIsLive = true
-            enrollmentLastFrame = timestamp
-        }
-        // Vision's positive pitch is a downward nod; the enrollment grid uses positive up.
+        if enrollmentLegacyAnchor == nil { enrollmentLegacyAnchor = legacy }
+        enrollmentIsLive = true
+        enrollmentLastFrame = timestamp
+        let previousCount = tracker.capturedSampleCount
+        // Vision's positive pitch is a downward nod; stored enrollment poses use positive up.
         let event = tracker.process(FaceEnrollmentFrame(yaw: yaw, pitch: -pitch, quality: face.quality, descriptor: descriptor, timestamp: timestamp))
+        let instruction = FaceEnrollmentGuidance.instruction(event: event, next: tracker.suggestedPose)
+        if tracker.capturedSampleCount != previousCount {
+            logger.info("Guided capture accepted: samples=\(tracker.capturedSampleCount) of \(tracker.requiredSampleCount)")
+        }
+        let expected = tracker.suggestedPose?.rawValue ?? "complete"
+        let observed = tracker.rules.bands.pose(yaw: yaw, pitch: -pitch)?.rawValue ?? "between poses"
+        // Keep tracker detail in diagnostics without replacing the on-screen direction.
+        let captureState: String = switch event {
+        case .noFace: "no face"
+        case .unusableDescriptor: "unusable input"
+        case .betweenPoses: "between poses"
+        case .lowQuality: "low quality"
+        case .centreFirst: "centre first"
+        case .settling: "settling"
+        case .wrongPose: "wrong pose"
+        case .poseAlreadyCaptured: "completed pose"
+        case .holding(_, let progress): "holding " + String(Int(progress * 100)) + "%"
+        case .waitingForVariation: "sample spacing"
+        case .differentFace: "identity mismatch"
+        case .captured: "captured"
+        case .complete: "complete"
+        }
+        logEnrollmentState("expected=" + expected + " observed=" + observed
+            + " samples=" + String(tracker.capturedSampleCount) + " state=" + captureState, at: timestamp)
+        if tracker.capturedSampleCount > previousCount, var sample = tracker.samples.last {
+            sample.descriptor = legacy
+            sample.modelIdentifier = FaceRecognitionProfile.legacy.identifier
+            enrollmentLegacySamples.append(sample)
+        }
         self.tracker = tracker
         poseCounts = Dictionary(uniqueKeysWithValues: FaceEnrollmentPose.allCases.map { ($0, tracker.capturedCount(for: $0)) })
-        status = Self.describe(event, next: tracker.suggestedPose)
+        status = instruction
         if tracker.isComplete { finishEnrolment() }
     }
 
+    /// Coarse capture states only; no images, measurements, descriptors or identity details.
+    private func logEnrollmentState(_ state: String, at timestamp: TimeInterval) {
+        guard state != lastEnrollmentLogState || timestamp - lastEnrollmentLogAt >= 2 else { return }
+        lastEnrollmentLogState = state
+        lastEnrollmentLogAt = timestamp
+        logger.debug("Guided capture: \(state, privacy: .public)")
+    }
+
     // MARK: Text
-
-    static func describe(_ event: FaceEnrollmentEvent, next: FaceEnrollmentPose?) -> String {
-        switch event {
-        case .noFace: "Looking for your face…"
-        case .unusableDescriptor: "Hold still…"
-        case .betweenPoses: "Keep turning slowly…"
-        case .lowQuality: "Move closer or into better light."
-        case .centreFirst: "Look straight at the camera first."
-        case .poseAlreadyCaptured: next.map { "Now \(instruction(for: $0))." } ?? "Almost done…"
-        case .holding: "Hold it…"
-        case .waitingForVariation: "Move a little…"
-        case .differentFace: "That doesn't look like the same face. Look straight at the camera."
-        case .captured: next.map { "Got it. Now \(instruction(for: $0))." } ?? "Got it."
-        case .complete: "All poses captured."
-        }
-    }
-
-    static func instruction(for pose: FaceEnrollmentPose) -> String {
-        switch pose {
-        case .centre: "look straight at the camera"
-        case .left, .right: "turn your head a little to the side"
-        case .up: "tilt your head up a little"
-        case .down: "tilt your head down a little"
-        case .upLeft, .upRight: "look up and to the side"
-        case .downLeft, .downRight: "look down and to the side"
-        }
-    }
 
     static func describe(_ reason: FaceEnrollmentUnreadableReason) -> String {
         switch reason {

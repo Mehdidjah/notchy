@@ -21,6 +21,7 @@ final class AppEnvironment {
     let menuBarController: MenuBarController
     private var cancellables: Set<AnyCancellable> = []
     private var faceCheckWindow: FaceCheckWindowController?
+    private var faceEnrollmentWindow: FaceEnrollmentWindowController?
 
     init() throws {
         settings = UserSettings()
@@ -168,28 +169,60 @@ final class AppEnvironment {
         let faceCheck = FaceCheckController.shared
         let faceWindow = FaceCheckWindowController(controller: faceCheck)
         faceCheckWindow = faceWindow
+        let enrollmentWindow = FaceEnrollmentWindowController(controller: faceCheck, settings: settings)
+        faceEnrollmentWindow = enrollmentWindow
+        enrollmentWindow.onPresentationChanged = { [weak panelController] presented in
+            panelController?.setPresentationSuppressed(presented)
+        }
         model.activityCenter.register(faceCheck.liveActivity)
         faceCheck.liveActivity.hapticsEnabled = { [weak settings] in settings?.hapticsEnabled ?? false }
-        faceCheck.onBeginCheck = { [weak model, weak faceWindow] in
+        faceCheck.onBeginCheck = { [weak model, weak faceWindow, weak enrollmentWindow] in
             guard let model else { return }
+            enrollmentWindow?.hide(immediately: true)
             model.collapseForFaceCheck()
             if model.state == .disabled || model.state == .retractedForFullscreen { faceWindow?.show() }
         }
-        faceCheck.onSaved = { [weak model] in model?.collapseForFaceCheck() }
-        faceCheck.onNeedsEnrollment = { [weak model, weak settings] in
+        faceCheck.onSaved = { [weak model, weak enrollmentWindow] identity in
+            if enrollmentWindow?.isPresented == true {
+                faceCheck.liveActivity.dismiss()
+                enrollmentWindow?.saved(identity: identity)
+            }
+            model?.collapseForFaceCheck()
+        }
+        faceCheck.onEnrollmentEnded = { [weak enrollmentWindow] message in enrollmentWindow?.ended(message: message) }
+        faceCheck.onNeedsEnrollment = { [weak model, weak settings, weak panelController, weak enrollmentWindow] in
+            if faceCheck.activity == .enrolling {
+                enrollmentWindow?.present(on: panelController?.currentScreen, forMacUnlock: faceCheck.isMacUnlockEnrollment)
+                model?.collapseForFaceCheck()
+                return
+            }
             settings?.showFaceTab = true
             model?.selectTab(.face)
             model?.openPinned()
         }
         faceCheck.loadIdentities()
+        // The lock-screen surface owns a separate scan; it never presents clipboard content.
+        if !PerfTabCycler.isRequested {
+            MacUnlockController.shared.onLock = { [weak model, weak faceWindow, weak enrollmentWindow] in
+                faceCheck.stopCamera()
+                enrollmentWindow?.hide(immediately: true)
+                faceWindow?.hide()
+                model?.lockSensitiveClips()
+            }
+            MacUnlockController.shared.start()
+            faceCheck.$identities.dropFirst().sink { identities in
+                MacUnlockController.shared.enrollmentsChanged(identities)
+            }.store(in: &cancellables)
+        }
         let workspaceEvents = NSWorkspace.shared.notificationCenter
         Publishers.Merge(
             workspaceEvents.publisher(for: NSWorkspace.sessionDidResignActiveNotification),
             workspaceEvents.publisher(for: NSWorkspace.willSleepNotification)
         )
         .receive(on: RunLoop.main)
-        .sink { [weak model] _ in
+        .sink { [weak model, weak enrollmentWindow] _ in
             faceCheck.stopCamera()
+            enrollmentWindow?.hide(immediately: true)
             model?.lockSensitiveClips()
         }
         .store(in: &cancellables)
@@ -216,6 +249,8 @@ final class AppEnvironment {
         OnboardingFeature.stop()
         UpdateChecker.shared.stop()
         FaceCheckController.shared.stopCamera()
+        faceEnrollmentWindow?.hide(immediately: true)
+        if !PerfTabCycler.isRequested { MacUnlockController.shared.stop() }
         faceCheckWindow?.hide()
         model.activityCenter.unregister(id: FaceCheckController.shared.liveActivity.activityID)
         ClaudeFeature.stop(model: model)

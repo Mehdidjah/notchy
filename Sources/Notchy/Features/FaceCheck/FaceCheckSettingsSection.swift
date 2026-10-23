@@ -17,7 +17,7 @@ struct FaceCheckSettingsSection: View {
     var body: some View {
         Group {
             Section {
-                Text("Face Check recognises your face with the camera, so Notchy can show hidden clipboard items and confirm actions without a password. Everything stays on this Mac: only face descriptors are saved, encrypted, never pictures. A photo or video of you can fool a webcam, so treat it as a convenience, not a lock.")
+                Text("Face Check recognises your face with the camera to reveal hidden clipboard items and confirm actions. You can also set up Mac Face Unlock below. Face descriptors stay encrypted on this Mac; camera pictures are never saved.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -55,7 +55,7 @@ struct FaceCheckSettingsSection: View {
                         Button("Enrol my face") { controller.startEnrolment(name: enrolName) }
                             .disabled(controller.activity != .watching)
                     }
-                    Text("Blink and follow the head-turn prompt first. Then slowly turn your head until the grid fills. Finish now is available after the live check and a straight-on sample.")
+                    Text("Follow the circular guide at the top of your screen. Blink when asked, then turn your head slowly until the ring fills. Your face saves automatically.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -73,10 +73,13 @@ struct FaceCheckSettingsSection: View {
                         Text("\(preset.title) (\(String(format: "%.2f", preset.maximumDistance)))").tag(preset)
                     }
                 }
+                .disabled(controller.usesCalibratedThreshold)
                 Text("Every check needs a face match, a blink, and a requested head turn. Lower distance means a stricter match; it never turns off the live check. Camera checks cannot guarantee protection against every photo or replayed video.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            MacUnlockSettingsSection(controller: .shared, faces: controller)
 
             Section("Saved faces") {
                 if let storeProblem = controller.storeProblem {
@@ -89,7 +92,10 @@ struct FaceCheckSettingsSection: View {
                         HStack {
                             Image(systemName: "person.crop.circle")
                             Text(identity.name)
-                            Text("\(identity.samples.count) samples").foregroundStyle(.secondary)
+                            Text("\(identity.capturedViewCount) captures").foregroundStyle(.secondary)
+                            if !identity.supportsPassiveUnlock {
+                                Text("Rescan for Face Unlock").font(.caption).foregroundStyle(.secondary)
+                            }
                             Spacer()
                             Button("Delete", role: .destructive) { controller.deleteIdentity(identity) }
                         }
@@ -151,7 +157,7 @@ struct FaceCheckSettingsSection: View {
                 Text("Quality \(String(format: "%.2f", face.quality))")
             }
             if let distance = controller.liveDistance {
-                let limit = controller.preset.maximumDistance
+                let limit = controller.matchingDistanceLimit
                 Text("Distance \(String(format: "%.2f", distance)) / \(String(format: "%.2f", limit))")
                     .foregroundStyle(distance <= limit ? .green : .orange)
             }
@@ -174,28 +180,15 @@ struct FaceCheckSettingsSection: View {
 
     private var enrolmentProgress: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(controller.status)
-            HStack(alignment: .center, spacing: 16) {
-                poseGrid
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("\(capturedTotal) of \(FaceEnrollmentPose.allCases.count * controller.samplesPerPose) samples")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack {
-                        Button("Finish now") { controller.finishEnrolment() }
-                            .disabled(!controller.canFinishEnrolmentEarly)
-                        Button("Cancel") { controller.cancelEnrolment() }
-                    }
-                }
-            }
+            Text("Follow the guide at the top of your screen.")
+            Text("\(capturedTotal) of \(FaceEnrollmentPose.allCases.count * controller.samplesPerPose) samples")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Cancel scan") { controller.cancelEnrolment() }
         }
     }
 
     private var capturedTotal: Int { controller.poseCounts.values.reduce(0, +) }
-
-    private var poseGrid: some View {
-        FaceEnrollmentGrid(counts: controller.poseCounts, samplesPerPose: controller.samplesPerPose, cell: 22)
-    }
 
     // MARK: Test
 
@@ -235,6 +228,7 @@ struct FaceCheckPreview: NSViewRepresentable {
     final class PreviewView: NSView {
         private let previewLayer: AVCaptureVideoPreviewLayer
         private let boxLayer = CAShapeLayer()
+        private var faceBounds: CGRect?
 
         init(session: AVCaptureSession) {
             previewLayer = AVCaptureVideoPreviewLayer(session: session)
@@ -247,7 +241,7 @@ struct FaceCheckPreview: NSViewRepresentable {
             boxLayer.fillColor = nil
             boxLayer.strokeColor = NSColor.systemGreen.cgColor
             boxLayer.lineWidth = 2
-            layer?.addSublayer(boxLayer)
+            previewLayer.addSublayer(boxLayer)
         }
 
         required init?(coder: NSCoder) { nil }
@@ -256,14 +250,18 @@ struct FaceCheckPreview: NSViewRepresentable {
             super.layout()
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            previewLayer.frame = bounds
-            boxLayer.frame = bounds
+            // frame is undefined for a transformed layer; place its untransformed bounds first.
+            previewLayer.bounds = CGRect(origin: .zero, size: bounds.size)
+            previewLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+            previewLayer.setAffineTransform(FacePreviewGeometry.mirrorTransform)
+            boxLayer.frame = previewLayer.bounds
             CATransaction.commit()
-            mirrorIfPossible()
+            showFace(faceBounds)
         }
 
         func showFace(_ bounds: CGRect?) {
-            mirrorIfPossible()
+            faceBounds = bounds
+            disableConnectionMirroring()
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             if let bounds {
@@ -276,10 +274,17 @@ struct FaceCheckPreview: NSViewRepresentable {
             CATransaction.commit()
         }
 
-        private func mirrorIfPossible() {
+        private func disableConnectionMirroring() {
             guard let connection = previewLayer.connection, connection.isVideoMirroringSupported else { return }
             if connection.automaticallyAdjustsVideoMirroring { connection.automaticallyAdjustsVideoMirroring = false }
-            if !connection.isVideoMirrored { connection.isVideoMirrored = true }
+            if connection.isVideoMirrored { connection.isVideoMirrored = false }
         }
+    }
+}
+
+enum FacePreviewGeometry {
+    static let mirrorTransform = CGAffineTransform(scaleX: -1, y: 1)
+    static func mirrored(_ point: CGPoint, in bounds: CGRect) -> CGPoint {
+        CGPoint(x: bounds.minX + bounds.maxX - point.x, y: point.y)
     }
 }
