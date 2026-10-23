@@ -12,6 +12,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
 UNIVERSAL="${UNIVERSAL:-0}"
 KEEP_RUNNING="${KEEP_RUNNING:-0}"
+# Explicit local-only testing option; ordinary builds still require model validation.
+EXPERIMENTAL_FACE_UNLOCK="${EXPERIMENTAL_FACE_UNLOCK:-0}"
+case "$EXPERIMENTAL_FACE_UNLOCK" in
+  0) FACE_UNLOCK_TESTING_PLIST="<false/>" ;;
+  1) FACE_UNLOCK_TESTING_PLIST="<true/>" ;;
+  *) echo "error: EXPERIMENTAL_FACE_UNLOCK must be 0 or 1" >&2; exit 2 ;;
+esac
 APP_VERSION="${APP_VERSION:-$(tr -d '[:space:]' <"$ROOT_DIR/VERSION")}"
 BUILD_NUMBER="${BUILD_NUMBER:-$(git -C "$ROOT_DIR" rev-list --count HEAD 2>/dev/null || echo 1)}"
 # Public GitHub repository (owner/name) whose releases the app checks for updates.
@@ -47,9 +54,8 @@ mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
-# Face Check's face-descriptor model (dlib's public-domain ResNet, converted by
-# script/face-model/convert.py) ships compiled in Resources with its licence note. Without
-# Xcode's coremlcompiler the app still builds, and Face Check reports the model as missing.
+# Compile local identity and passive-screening models, preserving their provenance and licenses.
+# Without Xcode's coremlcompiler the app reports the missing model at use time.
 install_face_model() {
   local model_dir="$ROOT_DIR/Sources/Notchy/Features/FaceCheck/Model"
   local resources="$APP_CONTENTS/Resources"
@@ -58,7 +64,23 @@ install_face_model() {
     return 0
   fi
   mkdir -p "$resources"
-  xcrun coremlcompiler compile "$model_dir/FaceDescriptor.mlpackage" "$resources" >/dev/null
+  for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+    if [[ ! -d "$model_dir/$model.mlpackage" ]]; then
+      echo "warning: $model is missing; see script/face-model/README.md" >&2
+      continue
+    fi
+    if ! xcrun coremlcompiler compile "$model_dir/$model.mlpackage" "$resources" >/dev/null; then
+      echo "error: failed to compile $model" >&2
+      return 1
+    fi
+  done
+  for notice in "$model_dir"/*LICENSE* "$model_dir"/*NOTICE* "$model_dir"/*APACHE* "$model_dir"/*manifest.json "$model_dir"/*VALIDATION.json; do
+    [[ -f "$notice" ]] && cp "$notice" "$resources/"
+  done
+  # Only real evaluation reports belong here; personal testing never generates one.
+  if [[ -f "$model_dir/FaceValidation.json" ]]; then
+    cp "$model_dir/FaceValidation.json" "$resources/FaceValidation.json"
+  fi
   cp "$model_dir/MODEL-LICENSE.md" "$resources/FaceDescriptor-LICENSE.md"
 }
 install_face_model
@@ -110,6 +132,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$BUILD_NUMBER</string>
   <key>NotchyUpdateRepository</key>
   <string>$UPDATE_REPOSITORY</string>
+  <key>NotchyExperimentalFaceUnlock</key>
+  $FACE_UNLOCK_TESTING_PLIST
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.utilities</string>
   <key>CFBundlePackageType</key>
@@ -133,7 +157,7 @@ cat >"$INFO_PLIST" <<PLIST
   <key>NSRemindersUsageDescription</key>
   <string>Notchy lists today's reminders beside your events.</string>
   <key>NSCameraUsageDescription</key>
-  <string>Notchy uses the camera for Face Check, to confirm it's you before showing hidden clips. Images stay on your Mac.</string>
+  <string>Notchy uses the camera for Face Check and optional Mac unlock. Camera images stay on your Mac and are not saved.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>Notchy shows when an app is using the microphone.</string>
   <key>NSAudioCaptureUsageDescription</key>
@@ -147,6 +171,12 @@ cat >"$INFO_PLIST" <<PLIST
 </dict>
 </plist>
 PLIST
+
+# Sign the completed bundle, including Info.plist and resources. The linker signature
+# only covers the executable and is not a valid app identity for privacy permissions.
+# Distribution builds replace this local ad-hoc signature in script/release.sh.
+/usr/bin/codesign --force --sign - --identifier "$BUNDLE_ID" "$APP_BUNDLE"
+/usr/bin/codesign --verify --strict "$APP_BUNDLE"
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

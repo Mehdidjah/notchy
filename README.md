@@ -29,9 +29,17 @@ Optional modes:
 swift test                             # unit tests
 ```
 
-The script builds the Swift package, stages `dist/Notchy.app`, stops any
-previous instance, and launches the new build. The bundle is unsigned, so the
-Accessibility grant used for pasting may need to be renewed after rebuilding.
+On a clean checkout, generate the pinned recognition model using
+[the model preparation guide](script/face-model/AURAFACE.md) before scanning a face
+or building a release. The smaller passive-screening models are included in the
+repository. Inference runs locally with Core ML.
+
+The script builds the Swift package, stages and ad-hoc signs the complete
+`dist/Notchy.app` bundle, stops any previous instance, and launches the new build.
+The Accessibility grant used for pasting and optional Mac unlock may need to be
+renewed after rebuilding. If Notchy is missing from the permissions list, use
+**+** to add the exact `.app` you are running; a copy in `~/Applications` is easier
+to find than a temporary build.
 
 The app icon comes from the square artwork in `Assets/AppIcon/artwork.png`.
 `./script/app-icon/make-icon.sh` splits it into the layers of a Liquid Glass icon
@@ -44,22 +52,27 @@ icon with Xcode 26's `actool` and falls back to the flat one without it.
 
 ## Releases
 
-Notchy is distributed as a disk image, `Notchy.dmg`, published as a GitHub
-release in this repository, `Mehdidjah/notchy` (set `UPDATE_REPOSITORY` to use
-another public repository).
+Notchy is distributed as a disk image, `Notchy.dmg`. Releases in
+`Mehdidjah/notchy` are currently private, so downloading them requires repository
+access. Automatic app update checks and the public website cannot access private
+releases. Set `UPDATE_REPOSITORY` to a public release host for public distribution.
 
-To release a version, raise `VERSION`, commit, and publish:
+To prepare a version, raise `VERSION`, commit, and build:
 
 ```sh
 ./script/release.sh            # build dist/release/Notchy-<version>.dmg to try first
-./script/release.sh --publish  # tag v<version> and upload it as the latest release
+RELEASE_NOTES=CHANGELOG.md ./script/release.sh --publish  # public repositories only
 ```
+
+For a private release, upload the verified installer through GitHub Releases
+under the fixed asset name `Notchy.dmg`, with `CHANGELOG.md` as the release notes.
+The publishing script deliberately requires a public host for automatic updates.
 
 The image opens on a window with the app, an arrow and the Applications
 folder. Finder lays that window out, so the first run asks to let the terminal
 control Finder.
 
-A website's download button can always link to
+With a public release host, a website can use its stable asset link:
 
 ```text
 https://github.com/Mehdidjah/notchy/releases/latest/download/Notchy.dmg
@@ -100,12 +113,24 @@ and notarize the image so it opens without that step.
 - **Windows.** Quick Paste panel, a full Clipboard Library window with grid,
   list and board views, and a Settings window (General, Capture, Notch, History,
   Privacy, Permissions).
-- **Face Check.** Scan in the Face tab, blink and follow the head-turn prompt,
-  then capture the enrollment poses. Successful storage plays a native “Face
-  saved” animation. “Check now” and protected clipboard actions open a scan in
-  the notch, followed by a recognized or retry state. Failed checks support
+- **Face Check.** Scan in the Face tab with a circular camera guide and blue
+  progress ring at the top of the screen. Follow nine ordered head positions,
+  with two stable captures per pose and passive photo/screen checks. Successful
+  storage plays a native “Face saved” animation. Protected clipboard actions open
+  a separate check in the notch, followed by a recognized or retry state. Failed checks support
   hover-to-retry for five seconds. A small check window appears if the notch is
   hidden. Camera processing and encrypted face descriptors stay on this Mac.
+- **Optional Mac Face Unlock.** Choose **Set up Face Unlock** in the Face tab.
+  The circular scan saves your face, then the same notch panel asks for your Mac
+  login password. **Save & enable** validates and encrypts it with system authentication.
+  Recapturing a face uses macOS owner authentication before scanning. A separate
+  lock-screen check verifies your face and passive photo/screen checks before entering the
+  encrypted password. Authorize once per Notchy launch and keep the app running.
+  The first login after restarting or logging out remains manual. Normal builds
+  require a passing live-camera evaluation report before password setup or unlock.
+  An explicit `EXPERIMENTAL_FACE_UNLOCK=1` local build enables personal testing
+  with the same face and photo/screen checks, marked experimental in the UI;
+  it does not count as validation and cannot be packaged by the release script.
 
 Sensitive clipboard items start hidden in every view. Face Check reveals an
 item for 60 seconds; app deactivation hides revealed content again.
@@ -114,7 +139,7 @@ Clearing history requires a fresh check when a face is enrolled. Adding or
 deleting saved faces also requires a check; unavailable face data can be reset
 through macOS owner authentication.
 
-Every match setting requires a fresh blink, a randomly requested head turn,
+Protected in-app checks require a fresh blink, a randomly requested head turn,
 non-planar nose motion, and a return to center. Large reflections on the face
 and enclosing device outlines reject the attempt. These RGB-camera heuristics
 need testing with the actual camera and lighting; they do not guarantee rejection

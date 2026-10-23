@@ -35,10 +35,33 @@ jobs:
       - name: Verify the matching Xcode toolchain
         run: |
           test -d "$DEVELOPER_DIR"
+          # Conversion dependencies use Apple silicon; the app is still universal.
+          test "$(uname -m)" = arm64
           xcodebuild -version
           swift --version
           xcrun --show-sdk-path
           git diff --exit-code
+
+      - name: Set up the pinned model-conversion interpreter
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: script/face-model/requirements-auraface.txt
+
+      - name: Generate and verify the pinned recognition model
+        run: |
+          python -m venv "$RUNNER_TEMP/notchy-model-venv"
+          MODEL_PYTHON="$RUNNER_TEMP/notchy-model-venv/bin/python"
+          "$MODEL_PYTHON" -m pip install -r script/face-model/requirements-auraface.txt
+          "$MODEL_PYTHON" -I script/face-model/convert_auraface.py \
+            --onnx "$RUNNER_TEMP/glintr100.onnx" --download \
+            --out Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage \
+            --precision fp32 --report "$RUNNER_TEMP/auraface-conversion.json"
+          "$MODEL_PYTHON" -I script/face-model/parity_auraface.py \
+            --onnx "$RUNNER_TEMP/glintr100.onnx" \
+            --package Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage \
+            --compute-units cpu --report "$RUNNER_TEMP/auraface-parity.json"
 
       - name: Build the installer without interactive Finder automation
         run: |
@@ -60,6 +83,7 @@ jobs:
           OUT="$RUNNER_TEMP/notchy-installer"
           mkdir -p "$OUT"
           cp "$DMG" "$OUT/Notchy.dmg"
+          cp "$RUNNER_TEMP/auraface-conversion.json" "$RUNNER_TEMP/auraface-parity.json" "$OUT/"
           (cd "$OUT" && shasum -a 256 Notchy.dmg > SHA256SUMS.txt)
           printf '{"name":"Notchy","version":"%s","build":"%s","sourceCommit":"%s","architectures":["arm64","x86_64"],"minimumMacOS":"14.0","notarized":false}\n' \
             "$VERSION" "$(git rev-list --count HEAD)" "$(git rev-parse HEAD)" > "$OUT/build-metadata.json"
@@ -77,7 +101,14 @@ jobs:
           codesign --verify --deep --strict "$APP"
           hdiutil verify "$DMG"
           test -s "$APP/Contents/Resources/AppIcon.icns"
-          test -d "$APP/Contents/Resources/FaceDescriptor.mlmodelc"
+          for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+            test -d "$APP/Contents/Resources/$model.mlmodelc"
+          done
+          for notice in AuraFace-LICENSE.md AuraFace-APACHE-2.0.txt MiniFASNet-LICENSE.txt MiniFASNet-NOTICE.md; do
+            test -s "$APP/Contents/Resources/$notice"
+          done
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyExperimentalFaceUnlock' "$APP/Contents/Info.plist")" = 'false'
           test -s "$APP/Contents/Resources/FaceDescriptor-LICENSE.md"
           test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")" = '14.0'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.local.Notchy'

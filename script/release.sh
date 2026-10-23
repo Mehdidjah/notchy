@@ -61,6 +61,8 @@ esac
 
 fail() { echo "error: $*" >&2; exit 1; }
 
+[[ "${EXPERIMENTAL_FACE_UNLOCK:-0}" == 0 ]] || fail "experimental Face Unlock is for personal testing; release builds require model validation"
+
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]] || fail "VERSION must look like 1.2 or 1.2.3 (found '$VERSION')"
 
 if [[ "$PUBLISH" == 1 ]]; then
@@ -77,6 +79,16 @@ if [[ "$PUBLISH" == 1 ]]; then
   fi
 fi
 [[ ! -e "/Volumes/$APP_NAME" ]] || fail "eject the mounted $APP_NAME disk image first"
+
+# Do not distribute an installer whose enrollment flow cannot load its models.
+MODEL_DIR="$ROOT_DIR/Sources/Notchy/Features/FaceCheck/Model"
+for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+  [[ -s "$MODEL_DIR/$model.mlpackage/Data/com.apple.CoreML/model.mlmodel" \
+     && -s "$MODEL_DIR/$model.mlpackage/Data/com.apple.CoreML/weights/weight.bin" \
+     && -s "$MODEL_DIR/$model.mlpackage/Manifest.json" ]] \
+    || fail "$model is missing or incomplete; follow script/face-model/AURAFACE.md before packaging"
+done
+xcrun --find coremlcompiler >/dev/null 2>&1 || fail "Xcode's coremlcompiler is required for a release"
 
 echo "==> Building $APP_NAME $VERSION (Apple silicon and Intel)"
 rm -rf "$RELEASE_DIR"
