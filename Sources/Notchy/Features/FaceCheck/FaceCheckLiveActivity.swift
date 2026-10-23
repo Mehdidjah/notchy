@@ -16,6 +16,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
     @Published private(set) var phase: Phase = .hidden
     @Published private(set) var prompt = "Look at the camera"
     @Published private(set) var reason = "Face Check"
+    @Published private(set) var retryAvailable = true
     var onRetry: (() -> Void)?
     var onCancel: (() -> Void)?
     var onExpired: (() -> Void)?
@@ -32,6 +33,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
     var activityDidChange: AnyPublisher<Void, Never> { changes.eraseToAnyPublisher() }
 
     func begin(reason: String) {
+        retryAvailable = true
         wasHovering = false
         sequence &+= 1
         let current = sequence
@@ -51,11 +53,12 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         self.prompt = prompt
     }
 
-    func finish(saved: Bool = false, recognized: Bool, message: String) {
+    func finish(saved: Bool = false, recognized: Bool, message: String, retryAvailable: Bool = true) {
         sequence &+= 1
         let current = sequence
         transition?.cancel()
         prompt = message
+        self.retryAvailable = retryAvailable
         setPhase(saved ? .saved : (recognized ? .recognized : .failed))
         if hapticsEnabled() { haptics.perform() }
         transition = Task { [weak self] in
@@ -78,7 +81,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         let entered = hovering && !wasHovering
         wasHovering = hovering
         guard isActivityVisible else { return false }
-        if entered, phase == .failed { onRetry?() }
+        if entered, phase == .failed, retryAvailable { onRetry?() }
         return true
     }
 
@@ -86,7 +89,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         isActivityVisible
     }
 
-    func retry() { if phase == .failed { onRetry?() } }
+    func retry() { if phase == .failed, retryAvailable { onRetry?() } }
     func cancel() { onCancel?() }
 
     private func setPhase(_ next: Phase) {
@@ -138,16 +141,19 @@ struct FaceCheckActivityView: View {
     var body: some View {
         VStack(spacing: 0) {
             FaceCheckEmblem(phase: activity.phase, animates: animates)
-                .id(activity.phase)
                 .frame(width: emblemSize, height: emblemSize)
                 .accessibilityHidden(true)
             Group {
                 if succeeded {
                     Text(activity.phase == .saved ? "Face saved" : "Recognized")
                 } else if activity.phase == .failed {
-                    Button("Hover to retry") { activity.retry() }
-                        .buttonStyle(.plain)
-                        .help(activity.prompt)
+                    if activity.retryAvailable {
+                        Button("Hover to retry") { activity.retry() }
+                            .buttonStyle(.plain)
+                            .help(activity.prompt)
+                    } else {
+                        Text("Enter your Mac password")
+                    }
                 } else {
                     Text(activity.prompt)
                 }
