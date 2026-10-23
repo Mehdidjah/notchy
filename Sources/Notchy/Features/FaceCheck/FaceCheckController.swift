@@ -9,7 +9,7 @@ import SwiftUI
 /// protected action until both identity and a fresh liveness challenge have passed.
 @MainActor
 final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
-    static let shared = FaceCheckController()
+    static let shared = FaceCheckController(preferences: .shared)
     enum CameraState: Equatable { case off, starting, on, denied, unavailable }
     enum Activity: Equatable { case watching, enrolling, testing, saving }
 
@@ -83,16 +83,21 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     private var enrollmentOwnerTask: Task<Void, Never>?
     private var enrollmentOwnerEpoch = 0
     private var enrollmentOwnerGranted = false
+    private var recapturingIdentity: FaceIdentity?
+    private let preferences: FaceCheckPreferences?
+    private var preferenceObserver: AnyCancellable?
 
     init(store: FaceEnrollmentStore? = nil, liveActivity: FaceCheckLiveActivity? = nil,
          camera: any FaceCheckCameraCapturing = FaceCheckCamera(),
          checkTimeout: Duration = .seconds(FaceCheckController.testDuration),
+         preferences: FaceCheckPreferences? = nil,
          enrollmentOwnerAuthorization: @escaping @MainActor () async -> Bool = {
              let context = LAContext()
              return (try? await context.evaluatePolicy(.deviceOwnerAuthentication,
                  localizedReason: "Set up a face for Mac unlock in Notchy.")) == true
          }) {
         self.store = store
+        self.preferences = preferences
         self.camera = camera
         self.checkTimeout = checkTimeout
         self.enrollmentOwnerAuthorization = enrollmentOwnerAuthorization
@@ -101,10 +106,25 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         self.liveActivity.onRetry = { [weak self] in self?.retry() }
         self.liveActivity.onCancel = { [weak self] in self?.cancelVerification() }
         self.liveActivity.onExpired = { [weak self] in self?.expireResult() }
+        preferenceObserver = preferences?.$options.dropFirst().sink { [weak self] _ in
+            guard let self else { return }
+            let wasPreviewing = cameraState == .on && activity == .watching && !previews.isEmpty
+            // Revoke old results synchronously; Published updates its stored value afterward.
+            stopCamera()
+            let token = generation
+            Task { @MainActor [weak self] in
+                guard let self, generation == token else { return }
+                rebuildMatcher()
+                if wasPreviewing, !previews.isEmpty { startCamera() }
+            }
+        }
     }
 
     var samplesPerPose: Int { FaceEnrollmentRules.standard.samplesPerPose }
-    var matchingDistanceLimit: Float { recognitionProfile.maximumDistance(for: preset) }
+    var matchingDistanceLimit: Float {
+        preferences?.options.maximumDistance(profile: recognitionProfile, validated: FaceModelValidation.bundled?.isAccepted == true)
+            ?? recognitionProfile.maximumDistance(for: preset)
+    }
     var usesCalibratedThreshold: Bool { recognitionProfile.metric == .cosine }
     var enrollmentInstruction: String {
         if let problem { return problem }
@@ -134,6 +154,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         let current = generation
         cameraState = .starting
         problem = nil
+        let options = preferences?.options ?? FaceCheckOptions()
+        camera.selectCamera(id: FaceCheckDisplay.cameraID(options: options))
         Task { [weak self] in
             guard let self else { return }
             let allowed: Bool
@@ -152,7 +174,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
             self.camera.start(onFrame: { [weak self] image, capturedAt in
                 let enrolling = await self?.activity == .enrolling
                 let analysis = await pipeline.analyze(image, capturedAt: capturedAt, generation: current,
-                                                      enrolling: enrolling)
+                                                      enrolling: enrolling, minimumFaceWidth: options.minimumFaceWidth)
                 await self?.handle(analysis, generation: current)
             }, completion: { [weak self] running in
                 Task { @MainActor in
@@ -221,15 +243,38 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     }
 
     func deleteIdentity(_ identity: FaceIdentity) {
+        if matcher?.hasComparableIdentities != true {
+            Task {
+                guard await enrollmentOwnerAuthorization() else { return }
+                await removeSavedIdentity(identity)
+            }
+            return
+        }
         authorize(reason: "Delete saved face", requiresEnrollment: true) { [weak self] allowed in
             guard allowed, let self else { return }
-            Task {
-                guard let store = self.makeStore() else { return }
-                do {
-                    try await store.removeIdentity(id: identity.id)
-                    await self.refreshIdentities()
-                } catch { self.storeProblem = "Could not delete the saved face: \(error.localizedDescription)" }
-            }
+            Task { await self.removeSavedIdentity(identity) }
+        }
+    }
+
+    private func removeSavedIdentity(_ identity: FaceIdentity) async {
+        guard let store = makeStore() else { return }
+        do {
+            try await store.removeIdentity(id: identity.id)
+            await refreshIdentities()
+        } catch { storeProblem = "Could not delete the saved face: \(error.localizedDescription)" }
+    }
+
+    func setIdentityEnabled(_ enabled: Bool, identity: FaceIdentity) {
+        guard activity == .watching, !isPreparingEnrollment else { return }
+        Task {
+            // Disabling is immediate; restoring an identity requires the account owner.
+            if enabled, !identity.isEnabled, !(await enrollmentOwnerAuthorization()) { return }
+            guard let store = makeStore() else { return }
+            do {
+                try await store.setEnabled(enabled, id: identity.id)
+                cancelVerification()
+                await refreshIdentities()
+            } catch { storeProblem = "Could not update the saved face: \(error.localizedDescription)" }
         }
     }
 
@@ -280,7 +325,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
 
     private func rebuildMatcher() {
         matcher = FaceMatcher(identities: identities, profile: recognitionProfile,
-                              maximumDistance: recognitionProfile.maximumDistance(for: preset))
+                              maximumDistance: matchingDistanceLimit)
     }
 
     // MARK: Enrollment
@@ -289,13 +334,14 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         guard activity == .watching, !preparingRequest, !isPreparingEnrollment else { return }
         authorize(reason: "Add a saved face", requiresEnrollment: false) { [weak self] allowed in
             guard allowed, let self else { return }
+            self.recapturingIdentity = nil
             self.beginEnrolment(name: name)
         }
     }
 
     /// Changing an existing enrollment uses macOS owner authentication. It does not send
     /// setup through the in-app face-verification presentation or trust an old template.
-    func startMacUnlockEnrolment(name: String = "Me") {
+    func startMacUnlockEnrolment(name: String = "Me", replacing identity: FaceIdentity? = nil) {
         guard activity == .watching, !preparingRequest, !isPreparingEnrollment else { return }
         cancelVerification()
         isPreparingEnrollment = true
@@ -314,6 +360,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
             let allowed = identities.isEmpty ? true : await enrollmentOwnerAuthorization()
             guard enrollmentOwnerEpoch == token, !Task.isCancelled else { return }
             guard allowed else { status = "Face Unlock setup was cancelled."; return }
+            recapturingIdentity = identity
             enrollmentOwnerGranted = true
             beginEnrolment(name: name, forMacUnlock: true)
         }
@@ -389,6 +436,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         guard var identity = tracker.makeIdentity(name: enrolmentName),
               enrollmentLegacySamples.count == tracker.requiredSampleCount else { return }
         identity.samples += enrollmentLegacySamples
+        let previous = recapturingIdentity
+        if let previous { identity.id = previous.id; identity.isEnabled = previous.isEnabled }
         let forMacUnlock = isMacUnlockEnrollment
         let ownerEpoch = enrollmentOwnerEpoch
         self.tracker = nil
@@ -400,7 +449,8 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
                 return
             }
             do {
-                try await store.upsert(identity)
+                if let previous { try await store.recapture(identity, replacing: previous) }
+                else { try await store.upsert(identity) }
                 let readable = await refreshIdentities()
                 guard !forMacUnlock || enrollmentOwnerEpoch == ownerEpoch else {
                     activity = .watching

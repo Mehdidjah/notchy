@@ -8,12 +8,14 @@ protocol FaceCheckCameraCapturing: Sendable {
     var session: AVCaptureSession { get }
     var authorizationStatus: AVAuthorizationStatus { get }
     func requestAuthorization() async -> Bool
+    func selectCamera(id: String)
     func start(onFrame: @escaping FaceCheckCamera.FrameHandler, completion: @escaping @Sendable (Bool) -> Void)
     func stop(completion: (@Sendable () -> Void)?)
 }
 
 extension FaceCheckCameraCapturing {
     func stop() { stop(completion: nil) }
+    func selectCamera(id: String) {}
 }
 
 /// The camera for Face Check: one `AVCaptureSession` with a preview for the settings page and a
@@ -60,6 +62,7 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     private let output = AVCaptureVideoDataOutput()
     /// Confined to `sessionQueue`.
     private var input: AVCaptureDeviceInput?
+    private var selectedCameraID = ""
     private let isBusy = OSAllocatedUnfairLock(initialState: false)
     private let handler = FrameCallbackStore()
 
@@ -72,7 +75,21 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     var authorizationStatus: AVAuthorizationStatus { Self.authorization }
     func requestAuthorization() async -> Bool { await Self.requestAccess() }
 
-    /// Opens the front camera and starts delivering frames to `onFrame`. Reports whether the
+    func selectCamera(id: String) {
+        sessionQueue.async { [self] in
+            guard selectedCameraID != id else { return }
+            selectedCameraID = id
+            if session.isRunning { session.stopRunning() }
+            if let input {
+                session.beginConfiguration()
+                session.removeInput(input)
+                session.commitConfiguration()
+                self.input = nil
+            }
+        }
+    }
+
+    /// Opens the selected camera and starts delivering frames to `onFrame`. Reports whether the
     /// session is running.
     func start(onFrame: @escaping FrameHandler, completion: @escaping @Sendable (Bool) -> Void) {
         handler.replace(with: onFrame)
@@ -100,7 +117,11 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
 
     private func startOnQueue() -> Bool {
         if input == nil {
-            guard let device = Self.preferredCamera() else { return false }
+            let devices = Self.availableDevices()
+            let device = selectedCameraID.isEmpty
+                ? (AVCaptureDevice.default(for: .video) ?? devices.first)
+                : devices.first { $0.uniqueID == selectedCameraID }
+            guard let device else { return false }
             session.beginConfiguration()
             if session.canSetSessionPreset(.high) { session.sessionPreset = .high }
             if let newInput = try? AVCaptureDeviceInput(device: device), session.canAddInput(newInput) {
@@ -125,17 +146,13 @@ final class FaceCheckCamera: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         return session.isRunning
     }
 
-    /// The built-in FaceTime camera when there is one, otherwise the first front-facing or
-    /// external camera. Desk View is skipped: it never shows a face straight on.
-    private static func preferredCamera() -> AVCaptureDevice? {
-        let devices = AVCaptureDevice.DiscoverySession(
+    /// Available face-facing and external cameras. Desk View is excluded from the choices.
+    static func availableDevices() -> [AVCaptureDevice] {
+        AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInWideAngleCamera, .continuityCamera, .external],
             mediaType: .video,
             position: .unspecified
         ).devices
-        return devices.first { $0.deviceType == .builtInWideAngleCamera }
-            ?? devices.first { $0.position == .front }
-            ?? devices.first
     }
 
     // MARK: Frames

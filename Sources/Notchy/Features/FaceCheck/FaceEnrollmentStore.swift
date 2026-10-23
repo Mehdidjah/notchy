@@ -165,6 +165,23 @@ actor FaceEnrollmentStore {
         try replaceAll(with: all.filter { $0.id != id })
     }
 
+    /// Mutates only current metadata; never writes stale samples back over a newer enrollment.
+    func setEnabled(_ enabled: Bool, id: UUID) throws {
+        var all = try identities()
+        guard let index = all.firstIndex(where: { $0.id == id }) else { return }
+        all[index].isEnabled = enabled
+        try replaceAll(with: all)
+    }
+
+    func recapture(_ identity: FaceIdentity, replacing previous: FaceIdentity) throws {
+        var all = try identities()
+        guard let index = all.firstIndex(of: previous), identity.id == previous.id else {
+            throw FaceEnrollmentStoreError.writeFailed("The saved face changed during capture. Start again.")
+        }
+        all[index] = identity
+        try replaceAll(with: all)
+    }
+
     /// Removes the file and then its key, whatever state the store is in. This is the way out of
     /// an `unreadable` file that will never open again (`requiresReenrolment`), and it should only
     /// run when the user asks for it. If only the key removal fails the faces are already gone, so

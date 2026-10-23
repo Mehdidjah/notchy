@@ -69,15 +69,16 @@ actor FaceCheckPipeline {
     }
 
     func analyze(_ frame: CGImage, capturedAt: TimeInterval = ProcessInfo.processInfo.systemUptime,
-                 generation: Int = 0, passive: Bool = false, enrolling: Bool = false) async -> FaceFrameAnalysis {
+                 generation: Int = 0, passive: Bool = false, enrolling: Bool = false,
+                 minimumFaceWidth: Double = 0) async -> FaceFrameAnalysis {
         var result = await analyzeFrame(frame, capturedAt: capturedAt, generation: generation,
-                                        passive: passive || enrolling, enrolling: enrolling)
+                                        passive: passive || enrolling, enrolling: enrolling, minimumFaceWidth: minimumFaceWidth)
         result.capturedAt = capturedAt
         return result
     }
 
     private func analyzeFrame(_ frame: CGImage, capturedAt: TimeInterval, generation: Int,
-                              passive: Bool, enrolling: Bool) async -> FaceFrameAnalysis {
+                              passive: Bool, enrolling: Bool, minimumFaceWidth: Double) async -> FaceFrameAnalysis {
         let embedder = enrolling ? (enrollmentEmbedder ?? embedder) : embedder
         let detection: (face: FaceFrameObservation?, count: Int, device: Bool)
         do {
@@ -101,6 +102,10 @@ actor FaceCheckPipeline {
         guard FaceCaptureFraming.contains(face.bounds) else {
             return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness,
                                      captureGuidance: FaceCaptureFraming.guidance)
+        }
+        if !enrolling, face.bounds.width < minimumFaceWidth {
+            return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness,
+                                     captureGuidance: "Move closer to the camera.")
         }
         let chip: CGImage?
         if embedder.profile.metric == .cosine {

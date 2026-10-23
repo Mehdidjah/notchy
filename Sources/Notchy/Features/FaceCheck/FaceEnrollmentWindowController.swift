@@ -46,7 +46,7 @@ final class FaceEnrollmentWindowController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self, self.isPresented else { return }
-                self.position(on: NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main)
+                self.position(on: FaceCheckDisplay.resolve(FaceCheckPreferences.shared.options.displayID))
             }
     }
 
