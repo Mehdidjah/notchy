@@ -5,3 +5,6 @@ dist/
 .codex/
 __pycache__/
 .claude/
+# The test suite and the docs stay on the developer's Mac, not in the repository.
+/Tests/
+/docs/

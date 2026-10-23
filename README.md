@@ -118,7 +118,7 @@ Every match setting requires a fresh blink, a randomly requested head turn,
 non-planar nose motion, and a return to center. Large reflections on the face
 and enclosing device outlines reject the attempt. These RGB-camera heuristics
 need testing with the actual camera and lighting; they do not guarantee rejection
-of every photo or replayed video. See [Face Check validation](docs/face-check.md).
+of every photo or replayed video.
 
 ## Layout
 
@@ -131,4 +131,4 @@ of every photo or replayed video. See [Face Check validation](docs/face-check.md
   window controllers, menu bar
 - `Sources/Notchy/Views` island shell, tabs, library, quick paste, settings
 - `Sources/Notchy/Features/<Feature>` self-contained feature tabs
-- `Tests/NotchyTests` Swift Testing suite
+- `Tests/NotchyTests` Swift Testing suite, kept on the developer's Mac and not in the repository
