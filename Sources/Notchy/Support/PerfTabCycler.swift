@@ -21,9 +21,31 @@ enum PerfTabCycler {
 
     private static var enrollmentOnly: Bool { ProcessInfo.processInfo.arguments.contains("--perf-face-enrollment") }
     private static var unlockOnly: Bool { ProcessInfo.processInfo.arguments.contains("--perf-mac-unlock") }
-    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains(argument) || enrollmentOnly || unlockOnly }
+    private static var originalUnlock: Bool { ProcessInfo.processInfo.arguments.contains("--perf-original-unlock") }
+    static var isRequested: Bool { ProcessInfo.processInfo.arguments.contains(argument) || enrollmentOnly || unlockOnly || originalUnlock }
 
     private static var recorder: FrameRecorder?
+
+    /// A standalone artwork profile avoids starting services, loading saved faces, and
+    /// touching credentials or owner preferences. Called before application setup.
+    static func startUnlockPreviewIfRequested() -> Bool {
+        guard unlockOnly || originalUnlock else { return false }
+        Task { @MainActor in
+            try? await Task.sleep(for: settleDelay)
+            let recorder = FrameRecorder()
+            Self.recorder = recorder
+            recorder.start()
+            let samples = await measureMacUnlock(model: nil, recorder: recorder)
+            recorder.stop()
+            let style = originalUnlock ? "original" : "minimal"
+            for name in samples.keys.sorted() {
+                print(summary(name: "unlock-\(style)-\(name)", windows: samples[name] ?? []))
+            }
+            fflush(stdout)
+            NSApp.terminate(nil)
+        }
+        return true
+    }
 
     static func startIfRequested(model: NotchViewModel) {
         guard isRequested else { return }
@@ -155,9 +177,9 @@ enum PerfTabCycler {
 
     /// Exercises the lock-screen artwork on an ordinary desktop panel. It never locks the
     /// session, opens the camera, accesses a credential, or invokes the window-space adapter.
-    private static func measureMacUnlock(model: NotchViewModel, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
+    private static func measureMacUnlock(model: NotchViewModel?, recorder: FrameRecorder) async -> [String: [FrameRecorder.Window]] {
         guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return [:] }
-        model.collapseForFaceCheck()
+        model?.collapseForFaceCheck()
         let activity = FaceCheckLiveActivity()
         activity.hapticsEnabled = { false }
         activity.onRetry = { [weak activity] in activity?.begin(reason: "Animation preview") }
@@ -168,7 +190,12 @@ enum PerfTabCycler {
         panel.hasShadow = false
         panel.ignoresMouseEvents = true
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 5)
-        panel.contentView = NSHostingView(rootView: MacUnlockOverlayView(activity: activity, geometry: .resolve(screen)))
+        if originalUnlock {
+            panel.contentView = NSHostingView(rootView: MacUnlockOriginalView(activity: activity,
+                topInset: MacUnlockGeometry.resolve(screen).closedSize.height))
+        } else {
+            panel.contentView = NSHostingView(rootView: MacUnlockOverlayView(activity: activity, geometry: .resolve(screen)))
+        }
         panel.orderFrontRegardless()
         defer { activity.dismiss(); panel.orderOut(nil); panel.contentView = nil }
         var samples: [String: [FrameRecorder.Window]] = [:]

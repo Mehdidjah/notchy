@@ -15,6 +15,14 @@ final class MacUnlockWindowController: MacUnlockPresenting {
     private var geometry: MacUnlockGeometry?
     private var displayObserver: NSObjectProtocol?
     private var showsHint = false
+    private var options = FaceCheckOptions()
+
+    func configure(options: FaceCheckOptions) { self.options = options }
+
+    private func windowSize(_ geometry: MacUnlockGeometry) -> CGSize {
+        options.animationStyle == .minimal ? geometry.windowSize
+            : CGSize(width: 320, height: geometry.closedSize.height + 240)
+    }
 
     func show(activity: FaceCheckLiveActivity) -> Bool {
         collapseTask?.cancel()
@@ -24,7 +32,7 @@ final class MacUnlockWindowController: MacUnlockPresenting {
         self.geometry = geometry
         self.activity = activity
         if panel == nil {
-            let panel = MacUnlockPanel(contentRect: CGRect(origin: .zero, size: geometry.windowSize),
+            let panel = MacUnlockPanel(contentRect: CGRect(origin: .zero, size: windowSize(geometry)),
                                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.isOpaque = false
             panel.backgroundColor = .clear
@@ -42,7 +50,7 @@ final class MacUnlockWindowController: MacUnlockPresenting {
         }
         guard let panel else { return false }
         showsHint = false
-        panel.setContentSize(geometry.windowSize)
+        panel.setContentSize(windowSize(geometry))
         panel.contentView = content(activity: activity, geometry: geometry)
         position(panel, on: screen)
         if space == nil { space = MacUnlockWindowSpace() }
@@ -90,7 +98,7 @@ final class MacUnlockWindowController: MacUnlockPresenting {
     }
 
     private func preferredScreen() -> NSScreen? {
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
+        FaceCheckDisplay.resolve(options.displayID)
     }
 
     private func updateDisplay() {
@@ -98,7 +106,7 @@ final class MacUnlockWindowController: MacUnlockPresenting {
         let next = MacUnlockGeometry.resolve(screen)
         if geometry != next {
             geometry = next
-            panel.setContentSize(next.windowSize)
+            panel.setContentSize(windowSize(next))
             panel.contentView = content(activity: activity, geometry: next)
         }
         position(panel, on: screen)
@@ -110,7 +118,10 @@ final class MacUnlockWindowController: MacUnlockPresenting {
     }
 
     private func content(activity: FaceCheckLiveActivity, geometry: MacUnlockGeometry) -> NSView {
-        NSHostingView(rootView: MacUnlockOverlayView(activity: activity, geometry: geometry) { [weak self] visible in
+        if options.animationStyle == .original {
+            return NSHostingView(rootView: MacUnlockOriginalView(activity: activity, topInset: geometry.closedSize.height))
+        }
+        return NSHostingView(rootView: MacUnlockOverlayView(activity: activity, geometry: geometry) { [weak self] visible in
             self?.showsHint = visible
             self?.updateMousePassthrough()
         })
@@ -118,6 +129,12 @@ final class MacUnlockWindowController: MacUnlockPresenting {
 
     private func updateMousePassthrough() {
         guard let panel, let activity, let geometry else { return }
+        if options.animationStyle == .original {
+            let area = CGRect(x: panel.frame.midX - 126, y: panel.frame.maxY - geometry.closedSize.height - 210,
+                              width: 252, height: geometry.closedSize.height + 210)
+            panel.ignoresMouseEvents = !area.contains(NSEvent.mouseLocation)
+            return
+        }
         let expanded = activity.phase != .preparing && activity.phase != .hidden
         let size = geometry.size(expanded: expanded, hovering: expanded)
         let top = panel.frame.maxY - geometry.topGap

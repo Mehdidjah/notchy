@@ -114,7 +114,8 @@ struct MacUnlockOverlayView: View {
             MacUnlockCompactView(phase: displayPhase, geometry: geometry, isExpanded: expanded,
                                  isHovering: hovering, animates: animates)
                 .onTapGesture { activity.retry() }
-                .help(activity.phase == .failed && activity.retryAvailable ? "Hover to retry" : activity.prompt)
+                .help(activity.phase == .failed && activity.retryAvailable
+                    ? (activity.retryOnHover() ? "Hover to retry" : "Click to retry") : activity.prompt)
             if showsHint {
                 HStack(spacing: 8) {
                     Text(activity.prompt)
@@ -163,6 +164,37 @@ struct MacUnlockOverlayView: View {
     private struct HintRequest: Equatable {
         let phase: FaceCheckLiveActivity.Phase
         let prompt: String
+    }
+}
+
+/// Expanded native presentation below the camera cutout, sharing the same attempt state.
+struct MacUnlockOriginalView: View {
+    @ObservedObject var activity: FaceCheckLiveActivity
+    var topInset: CGFloat = 32
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var expanded: Bool { activity.phase != .hidden && activity.phase != .preparing }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: topInset)
+            // Keep the artwork mounted so opening only changes its presentation.
+            FaceCheckActivityView(activity: activity, emblemSize: 140)
+                .frame(height: 210)
+                .opacity(expanded ? 1 : 0)
+                .scaleEffect(expanded || reduceMotion ? 1 : 0.9, anchor: .top)
+                .frame(height: expanded ? 210 : 0, alignment: .top)
+                .clipped()
+                .allowsHitTesting(expanded)
+                .accessibilityHidden(!expanded)
+        }
+        .frame(width: 252)
+        .background(.black, in: UnevenRoundedRectangle(bottomLeadingRadius: 38, bottomTrailingRadius: 38))
+        .onHover { _ = activity.handleHover($0) }
+        .onTapGesture { activity.retry() }
+        .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.85), value: expanded)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .accessibilityLabel("Mac unlock. \(activity.prompt)")
     }
 }
 

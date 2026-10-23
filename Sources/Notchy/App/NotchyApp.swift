@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var environment: AppEnvironment?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if PerfTabCycler.startUnlockPreviewIfRequested() { return }
         // Before anything reads settings or opens the clipboard store.
         LegacyDataMigration.run()
         do {
