@@ -10,9 +10,12 @@ enum MacUnlockScanResult: Equatable, Sendable {
 
 @MainActor
 protocol MacUnlockScanning: AnyObject {
+    func configure(options: FaceCheckOptions)
     func scan(identity: FaceIdentity, prompt: @escaping @MainActor (String) -> Void) async -> MacUnlockScanResult
     func cancel()
 }
+
+extension MacUnlockScanning { func configure(options: FaceCheckOptions) {} }
 
 /// A lock-screen check owns its camera independently of previews and in-app approvals.
 /// It never asks for camera permission while locked, and never exports camera images.
@@ -31,6 +34,9 @@ final class MacUnlockFaceScanner: MacUnlockScanning {
     private var prompt: (@MainActor (String) -> Void)?
     private var deadline: Task<Void, Never>?
     private var preparation: Task<Void, Never>?
+    private var options: FaceCheckOptions?
+
+    func configure(options: FaceCheckOptions) { self.options = options }
 
     init(camera: any FaceCheckCameraCapturing = FaceCheckCamera(), timeout: Duration = .seconds(10),
          modelPolicy: FaceUnlockModelPolicy = .current,
@@ -44,17 +50,23 @@ final class MacUnlockFaceScanner: MacUnlockScanning {
     func scan(identity: FaceIdentity, prompt: @escaping @MainActor (String) -> Void) async -> MacUnlockScanResult {
         cancel()
         guard !Task.isCancelled else { return .cancelled }
+        let options = options ?? FaceCheckOptions()
+        guard options.livenessEnabled else { return .failed("Turn on liveness detection to use Face Unlock.") }
         guard camera.authorizationStatus == .authorized else {
             return .failed("Allow camera access in Face Check settings first.")
         }
         guard identity.supportsPassiveUnlock else { return .failed("Scan your face again to use the new Face Unlock model.") }
         guard let profile = modelPolicy.recognitionProfile else { return .failed(FaceModelValidation.unavailableMessage) }
-        let matcher = FaceMatcher(identities: [identity], profile: profile)
+        let matcher = FaceMatcher(identities: [identity], profile: profile,
+            maximumDistance: options.maximumDistance(profile: profile, validated: modelPolicy.mode == .validated))
         guard matcher.hasComparableIdentities else { return .failed("Enroll your face again before enabling Mac unlock.") }
         epoch &+= 1
         let token = epoch
-        verification = FacePassiveVerificationSession(matcher: matcher, generation: token,
-                                                       configuration: modelPolicy.verificationConfiguration)
+        var configuration = modelPolicy.verificationConfiguration
+        configuration.requiresMotion = options.livenessStrength == .heavy
+        configuration.minimumFaceWidth = options.minimumFaceWidth
+        verification = FacePassiveVerificationSession(matcher: matcher, generation: token, configuration: configuration)
+        camera.selectCamera(id: FaceCheckDisplay.cameraID(options: options))
         startedAt = ProcessInfo.processInfo.systemUptime
         self.prompt = prompt
         return await withTaskCancellationHandler {
@@ -76,17 +88,20 @@ final class MacUnlockFaceScanner: MacUnlockScanning {
                     guard !Task.isCancelled, let self, epoch == token, self.continuation != nil else { return }
                     startedAt = ProcessInfo.processInfo.systemUptime
                     camera.start(onFrame: { [weak self] image, capturedAt in
-                        let frame = await pipeline.analyze(image, capturedAt: capturedAt, generation: token, passive: true)
+                        let frame = await pipeline.analyze(image, capturedAt: capturedAt, generation: token, passive: true,
+                                                           minimumFaceWidth: options.minimumFaceWidth)
                         await self?.consume(frame, token: token)
                     }, completion: { [weak self] started in
                         guard !started else { return }
                         Task { @MainActor in self?.finish(.failed("The camera is unavailable. Enter your password."), token: token) }
                     })
                 }
+                let timeout = self.options.map { Duration.seconds($0.scanDuration) } ?? timeout
                 deadline = Task { [weak self, timeout] in
                     try? await Task.sleep(for: timeout)
                     guard !Task.isCancelled else { return }
-                    self?.finish(.failed("Face not recognized. Hover to try again."), token: token)
+                    self?.finish(.failed(options.retryOnHover && options.showAnimation
+                        ? "Face not recognized. Hover to try again." : "Face not recognized. Enter your Mac password."), token: token)
                 }
             }
         } onCancel: {

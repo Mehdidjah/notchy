@@ -24,7 +24,10 @@ protocol MacUnlockCredentialAccess: AnyObject {
     func password(for binding: MacUnlockBinding) throws -> Data
     func disarm()
     func delete() throws
+    func recordSuccessfulUnlock()
 }
+
+extension MacUnlockCredentialAccess { func recordSuccessfulUnlock() {} }
 
 enum MacUnlockVaultError: Error, Equatable, LocalizedError {
     case secureEnclaveUnavailable, invalidPassword, passwordValidationFailed
@@ -100,12 +103,15 @@ final class MacUnlockCredentialVault: MacUnlockCredentialAccess {
         var key: SymmetricKey
         var binding: MacUnlockBinding
         var recordDigest: Data
+        var lastActivity: Date
     }
 
     private let store: any MacUnlockCredentialRecordStore
     private let keys: any MacUnlockCredentialKeyProvider
     private let validator: any MacUnlockPasswordValidating
     private let accountUID: () -> UInt32
+    private let now: () -> Date
+    private let authorizationLifetime: () -> TimeInterval?
     private var record: Record?
     private var session: AuthorizedSession?
     private var generation: UInt64 = 0
@@ -114,12 +120,16 @@ final class MacUnlockCredentialVault: MacUnlockCredentialAccess {
         store: any MacUnlockCredentialRecordStore,
         keys: any MacUnlockCredentialKeyProvider,
         validator: any MacUnlockPasswordValidating,
-        accountUID: @escaping () -> UInt32 = { UInt32(getuid()) }
+        accountUID: @escaping () -> UInt32 = { UInt32(getuid()) },
+        now: @escaping () -> Date = Date.init,
+        authorizationLifetime: @escaping () -> TimeInterval? = { 30 * 86_400 }
     ) {
         self.store = store
         self.keys = keys
         self.validator = validator
         self.accountUID = accountUID
+        self.now = now
+        self.authorizationLifetime = authorizationLifetime
     }
 
     static func standard(fileManager: FileManager = .default) throws -> MacUnlockCredentialVault {
@@ -130,13 +140,19 @@ final class MacUnlockCredentialVault: MacUnlockCredentialAccess {
             .appendingPathComponent("MacUnlock", isDirectory: true)
             .appendingPathComponent("credential.sealed", isDirectory: false)
         return MacUnlockCredentialVault(store: MacUnlockCredentialFileStore(fileURL: url),
-                                        keys: MacUnlockEnclaveKeyProvider(), validator: MacUnlockAccountPasswordValidator())
+                                        keys: MacUnlockEnclaveKeyProvider(), validator: MacUnlockAccountPasswordValidator(),
+                                        authorizationLifetime: { FaceCheckPreferences.shared.options.sessionLifetime.interval })
     }
 
     var binding: MacUnlockBinding? { record?.header.binding }
 
     var isArmed: Bool {
         guard let session else { return false }
+        if let limit = authorizationLifetime(),
+           !limit.isFinite || limit <= 0 || now().timeIntervalSince(session.lastActivity) >= limit {
+            disarm()
+            return false
+        }
         guard accountUID() == session.binding.accountUID else {
             disarm()
             return false
@@ -232,6 +248,11 @@ final class MacUnlockCredentialVault: MacUnlockCredentialAccess {
         keys.cancel()
     }
 
+    func recordSuccessfulUnlock() {
+        guard isArmed else { return }
+        session?.lastActivity = now()
+    }
+
     func delete() throws {
         disarm()
         record = nil
@@ -241,7 +262,7 @@ final class MacUnlockCredentialVault: MacUnlockCredentialAccess {
 
     private func authorize(_ key: SymmetricKey, for record: Record, data: Data) {
         session = AuthorizedSession(key: key, binding: record.header.binding,
-                                    recordDigest: Data(SHA256.hash(data: data)))
+                                    recordDigest: Data(SHA256.hash(data: data)), lastActivity: now())
     }
 
     private func requireCurrent(_ attempt: UInt64, binding: MacUnlockBinding) throws {

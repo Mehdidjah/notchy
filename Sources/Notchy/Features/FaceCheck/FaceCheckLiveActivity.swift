@@ -21,6 +21,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
     var onCancel: (() -> Void)?
     var onExpired: (() -> Void)?
     var hapticsEnabled: () -> Bool = { true }
+    var retryOnHover: () -> Bool = { true }
     private let haptics: HapticFeedbackPerforming
     private let changes = PassthroughSubject<Void, Never>()
     private var transition: Task<Void, Never>?
@@ -81,7 +82,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         let entered = hovering && !wasHovering
         wasHovering = hovering
         guard isActivityVisible else { return false }
-        if entered, phase == .failed, retryAvailable { onRetry?() }
+        if entered, phase == .failed, retryAvailable, retryOnHover() { onRetry?() }
         return true
     }
 
@@ -148,7 +149,7 @@ struct FaceCheckActivityView: View {
                     Text(activity.phase == .saved ? "Face saved" : "Recognized")
                 } else if activity.phase == .failed {
                     if activity.retryAvailable {
-                        Button("Hover to retry") { activity.retry() }
+                        Button(activity.retryOnHover() ? "Hover to retry" : "Click to retry") { activity.retry() }
                             .buttonStyle(.plain)
                             .help(activity.prompt)
                     } else {

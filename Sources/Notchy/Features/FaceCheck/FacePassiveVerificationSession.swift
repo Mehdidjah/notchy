@@ -13,6 +13,8 @@ struct FacePassiveVerificationSession {
         var minimumQuality = 0.3
         var maximumPose = 25.0
         var minimumLiveScore: Float = 0.90
+        var requiresMotion = false
+        var minimumFaceWidth = 0.0
 
         static let macUnlock = Self()
 
@@ -23,6 +25,7 @@ struct FacePassiveVerificationSession {
             maximumGap.isFinite && maximumGap > minimumSampleSpacing && maximumGap <= 0.5 &&
             minimumQuality.isFinite && (0.3...1).contains(minimumQuality) &&
             maximumPose.isFinite && maximumPose > 0 && maximumPose <= 25 &&
+            minimumFaceWidth.isFinite && (0...0.5).contains(minimumFaceWidth) &&
             minimumLiveScore.isFinite && (0.90...1).contains(minimumLiveScore)
         }
     }
@@ -37,6 +40,7 @@ struct FacePassiveVerificationSession {
     private(set) var matchingSamples = 0
     private(set) var closest: FaceMatchScore?
     private var terminal: Result?
+    private var motion = FaceLivenessTracker(direction: .left, requiresBlinkAndTurn: false)
 
     init(matcher: FaceMatcher, generation: Int = 0, configuration: Configuration = .macUnlock) {
         self.matcher = matcher
@@ -67,6 +71,10 @@ struct FacePassiveVerificationSession {
         guard FaceCaptureFraming.contains(face.bounds) else {
             reset()
             return .waiting(FaceCaptureFraming.guidance)
+        }
+        guard face.bounds.width >= configuration.minimumFaceWidth else {
+            reset()
+            return .waiting("Move closer to the camera.")
         }
         guard face.quality.isFinite, (configuration.minimumQuality...1).contains(face.quality),
               let yaw = face.yaw, let pitch = face.pitch, yaw.isFinite, pitch.isFinite,
@@ -101,6 +109,15 @@ struct FacePassiveVerificationSession {
         if let identityID, identityID != score.identityID { reset() }
         identityID = score.identityID
 
+        if configuration.requiresMotion {
+            switch motion.consume(analysis.liveness, timestamp: timestamp) {
+            case .collecting(let prompt):
+                return .waiting(prompt == .blink ? "Blink once or slowly turn your head." : prompt.message)
+            case .rejected(let failure): return finish(.rejected(failure.message))
+            case .passed: break
+            }
+        }
+
         // Validate every observed frame above, including frames too close together to count.
         if let lastSample, timestamp - lastSample + 1e-9 < configuration.minimumSampleSpacing {
             return .waiting("Checking your face…")
@@ -120,6 +137,7 @@ struct FacePassiveVerificationSession {
         lastSample = nil
         identityID = nil
         matchingSamples = 0
+        motion = FaceLivenessTracker(direction: .left, requiresBlinkAndTurn: false)
     }
 
     private mutating func finish(_ result: Result) -> Result {

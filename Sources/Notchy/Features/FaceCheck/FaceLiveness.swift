@@ -310,6 +310,7 @@ enum FaceLivenessResult: Equatable, Sendable {
 /// belong to the caller; missing frames must still be delivered here to break evidence continuity.
 struct FaceLivenessTracker: Sendable {
     let direction: FaceLivenessDirection
+    private let requiresBlinkAndTurn: Bool
     private enum Stage: Sendable { case baseline, blink, closed, turn, returning, passed }
     private var stage: Stage = .baseline
     private var baseline: FaceLivenessObservation?
@@ -319,7 +320,10 @@ struct FaceLivenessTracker: Sendable {
     private var holdFrames = 0
     private var rejection: FaceLivenessFailure?
 
-    init(direction: FaceLivenessDirection) { self.direction = direction }
+    init(direction: FaceLivenessDirection, requiresBlinkAndTurn: Bool = true) {
+        self.direction = direction
+        self.requiresBlinkAndTurn = requiresBlinkAndTurn
+    }
 
     mutating func consume(_ observation: FaceLivenessObservation?, timestamp: TimeInterval) -> FaceLivenessResult {
         if let rejection { return .rejected(rejection) }
@@ -364,6 +368,22 @@ struct FaceLivenessTracker: Sendable {
             return .collecting(.lookAtCamera)
         case .blink:
             guard let baseline else { clearEvidence(); return .collecting(.lookAtCamera) }
+            if !requiresBlinkAndTurn {
+                let movement = frame.yaw - baseline.yaw
+                let sign = movement < 0 ? -1.0 : 1.0
+                let residual = FaceLivenessGeometry.nonPlanarNoseMotion(from: baseline.geometry, to: eyes)
+                if abs(movement) >= 15, abs(movement) <= 30,
+                   (eyes.noseOffset - baseline.geometry.noseOffset) * sign >= 0.045,
+                   (residual.map { $0 * sign >= 0.035 } ?? false) {
+                    if held(at: timestamp, frames: 3, duration: 0.22) {
+                        advance(to: .passed, at: timestamp)
+                        return .passed
+                    }
+                    return .collecting(.blink)
+                }
+                resetHold()
+                if abs(frame.yaw) > 9 { return .collecting(.blink) }
+            }
             guard abs(frame.yaw) <= 9 else { clearEvidence(); return .collecting(.lookAtCamera) }
             let ratios = eyeRatios(eyes, baseline.geometry)
             if ratios.0 <= 0.58, ratios.1 <= 0.58 {
@@ -375,6 +395,7 @@ struct FaceLivenessTracker: Sendable {
                   timestamp - stageStarted <= 0.9 else { clearEvidence(); return .collecting(.lookAtCamera) }
             let ratios = eyeRatios(eyes, baseline.geometry)
             if ratios.0 >= 0.82, ratios.1 >= 0.82, timestamp - stageStarted >= 0.045 {
+                if !requiresBlinkAndTurn { advance(to: .passed, at: timestamp); return .passed }
                 advance(to: .turn, at: timestamp)
                 return .collecting(.turn(direction))
             }

@@ -5,15 +5,19 @@ import os
 
 @MainActor
 protocol MacUnlockPresenting: AnyObject {
+    func configure(options: FaceCheckOptions)
     func show(activity: FaceCheckLiveActivity) -> Bool
     func didUnlock()
     func hide()
     func collapse()
 }
 
-extension MacUnlockPresenting { func collapse() { hide() } }
+extension MacUnlockPresenting {
+    func collapse() { hide() }
+    func configure(options: FaceCheckOptions) {}
+}
 
-enum MacUnlockEvent { case poll, lock, unlock, wake, sleep, sessionChanged }
+enum MacUnlockEvent { case poll, lock, unlock, wake, sleep, sessionChanged, space }
 
 /// Separate from in-app authorization: a successful clipboard check can never type a password.
 @MainActor
@@ -55,6 +59,11 @@ final class MacUnlockController: ObservableObject {
     private var sleeping = false
     private var lastWake = -Double.infinity
     private var running = false
+    private var options: FaceCheckOptions
+    private var preferenceObserver: AnyCancellable?
+    private var automaticRetryTask: Task<Void, Never>?
+    private var automaticRetryUsed = false
+    private let automaticRetryDelay: Duration
     var onLock: (() -> Void)?
     var boundIdentityID: UUID? { vault?.binding?.identityID }
     var canRemovePassword: Bool {
@@ -68,7 +77,8 @@ final class MacUnlockController: ObservableObject {
          scanner: any MacUnlockScanning, enrollments: any MacUnlockEnrollmentReading,
          presenter: any MacUnlockPresenting, enabled: Bool = false,
          confirmationTimeout: Duration = .seconds(4), persistEnabled: @escaping (Bool) -> Void = { _ in },
-         modelPolicy: FaceUnlockModelPolicy = .current) {
+         modelPolicy: FaceUnlockModelPolicy = .current, preferences: FaceCheckPreferences? = nil,
+         automaticRetryDelay: Duration = .seconds(1)) {
         self.vault = vault
         self.platform = platform
         self.scanner = scanner
@@ -78,13 +88,24 @@ final class MacUnlockController: ObservableObject {
         self.confirmationTimeout = confirmationTimeout
         self.persistEnabled = persistEnabled
         self.modelPolicy = modelPolicy
-        activity.hapticsEnabled = { false }
+        self.options = preferences?.options ?? FaceCheckOptions()
+        self.automaticRetryDelay = automaticRetryDelay
+        activity.hapticsEnabled = { [weak self] in self?.options.haptics == true }
+        activity.retryOnHover = { [weak self] in self?.options.retryOnHover == true }
         activity.onRetry = { [weak self] in self?.retry() }
         activity.onCancel = { [weak self] in self?.cancelScan() }
         activity.onExpired = { [weak self] in
             guard let self else { return }
             self.presenter.collapse()
             if self.state == .unlocked { self.state = .ready; self.refreshReadiness() }
+        }
+        preferenceObserver = preferences?.$options.dropFirst().sink { [weak self] next in
+            guard let self, next != options else { return }
+            options = next
+            // A pending result belongs to its original settings, including a camera choice.
+            invalidateAttempt()
+            state = .ready
+            refreshReadiness()
         }
     }
 
@@ -96,7 +117,7 @@ final class MacUnlockController: ObservableObject {
             enrollments: MacUnlockEnrollmentReader(modelPolicy: policy), presenter: MacUnlockWindowController(),
             enabled: defaults.bool(forKey: "faceCheck.macUnlockEnabled"),
             persistEnabled: { defaults.set($0, forKey: "faceCheck.macUnlockEnabled") },
-            modelPolicy: policy)
+            modelPolicy: policy, preferences: .shared)
     }
 
     func start() {
@@ -132,9 +153,11 @@ final class MacUnlockController: ObservableObject {
         if case .failed = state { return }
         if isEnabled, let reason = setupUnavailableReason { state = .failed(reason); return }
         state = !isEnabled ? .off : (!hasPassword ? .needsSetup : (!isAuthorized ? .needsAuthorization : .ready))
+        if isEnabled, !options.livenessEnabled { state = .failed("Turn on liveness detection to resume Face Unlock.") }
     }
 
     func save(password: String, identity: FaceIdentity) async {
+        guard !Task.isCancelled else { return }
         if let reason = setupUnavailableReason { state = .failed(reason); return }
         if !identity.isEnabled || !identity.supportsPassiveUnlock {
             state = .failed("Scan your face again before saving a password for Face Unlock.")
@@ -177,6 +200,7 @@ final class MacUnlockController: ObservableObject {
     }
 
     func authorizeSession() async {
+        guard !Task.isCancelled else { return }
         if let reason = setupUnavailableReason { state = .failed(reason); return }
         guard !isBusy, let vault, hasPassword else { return }
         guard let session = unlockedSetupSession(action: "authorizing") else { return }
@@ -237,6 +261,14 @@ final class MacUnlockController: ObservableObject {
         refreshReadiness()
     }
 
+    func lockAuthorization() {
+        cancelSetup()
+        invalidateAttempt()
+        vault?.disarm()
+        state = .needsAuthorization
+        refreshReadiness()
+    }
+
     /// Revokes only an in-flight setup operation. Closing an idle setup surface does not
     /// pause a credential the owner has already saved and authorized.
     func cancelSetup() {
@@ -273,6 +305,11 @@ final class MacUnlockController: ObservableObject {
 
     /// Notifications only request a fresh read. They never authorize the camera or credentials.
     func handle(_ event: MacUnlockEvent) {
+        defer {
+            let listen = running && !sleeping && options.onSpace && options.livenessEnabled
+                && isEnabled && vault?.isArmed == true && lockedSession != nil
+            monitor?.setSpaceEnabled(listen)
+        }
         if event == .sleep {
             sleeping = true
             invalidateAttempt()
@@ -308,17 +345,20 @@ final class MacUnlockController: ObservableObject {
             attemptedAutomatic = false
             submittedThisLock = false
             scansThisLock = 0
+            automaticRetryUsed = false
             refreshReadiness()
         case .locked(let session):
+            let discoveredLock = lockedSession != session
             if lockedSession != session {
                 invalidateAttempt()
                 lockedSession = session
                 attemptedAutomatic = false
                 submittedThisLock = false
                 scansThisLock = 0
+                automaticRetryUsed = false
                 onLock?()
             }
-            guard modelPolicy.allowsUnlock, isEnabled, !isBusy, isAuthorized,
+            guard modelPolicy.allowsUnlock, options.livenessEnabled, isEnabled, !isBusy, isAuthorized,
                   vault?.binding?.accountUID == session.userID else {
                 if state == .scanning || state == .submitting { invalidateAttempt() }
                 refreshReadiness()
@@ -329,7 +369,15 @@ final class MacUnlockController: ObservableObject {
                 state = .failed("Allow Accessibility in System Settings to enable Mac unlock.")
                 return
             }
-            // A poll can discover a missed lock; each lock/wake gets at most one automatic scan.
+            if event == .space {
+                if options.onSpace { attemptedAutomatic = true; retry() }
+                return
+            }
+            let wakeTrigger = options.onWake && (event == .wake ||
+                (discoveredLock && ProcessInfo.processInfo.systemUptime - lastWake < 3))
+            let lockTrigger = options.onLock && (discoveredLock || event == .lock)
+            guard wakeTrigger || lockTrigger else { return }
+            // A poll can discover a missed lock, but cannot override a disabled trigger.
             guard !attemptedAutomatic, !submittedThisLock, state != .scanning, state != .submitting else { return }
             attemptedAutomatic = true
             beginScan(session: session)
@@ -337,7 +385,7 @@ final class MacUnlockController: ObservableObject {
     }
 
     func retry() {
-        guard modelPolicy.allowsUnlock, !isBusy, !submittedThisLock, scansThisLock < 3,
+        guard modelPolicy.allowsUnlock, options.livenessEnabled, !isBusy, !submittedThisLock, scansThisLock < 3,
               case .locked(let session) = platform.screenState,
               lockedSession == session, isEnabled, vault?.isArmed == true,
               state != .scanning, state != .submitting else { return }
@@ -355,6 +403,8 @@ final class MacUnlockController: ObservableObject {
         invalidateAttempt()
         scansThisLock += 1
         let token = generation
+        scanner.configure(options: options)
+        presenter.configure(options: options)
         state = .scanning
         logger.info("Mac unlock scan started")
         attemptTask = Task { [weak self] in
@@ -362,7 +412,7 @@ final class MacUnlockController: ObservableObject {
             do {
                 let identity = try await enrollments.identity(for: binding)
                 guard valid(token, session: session, binding: binding) else { abandon(token); return }
-                guard presenter.show(activity: activity) else {
+                guard !options.showAnimation || presenter.show(activity: activity) else {
                     fail("The lock-screen animation is unavailable on this version of macOS.", retry: false, token: token)
                     return
                 }
@@ -413,7 +463,7 @@ final class MacUnlockController: ObservableObject {
     }
 
     private func valid(_ token: Int, session: MacUnlockSession, binding: MacUnlockBinding) -> Bool {
-        modelPolicy.allowsUnlock && generation == token && !Task.isCancelled && !sleeping
+        modelPolicy.allowsUnlock && options.livenessEnabled && generation == token && !Task.isCancelled && !sleeping
             && isEnabled && vault?.isArmed == true
             && vault?.binding == binding && platform.accessibilityGranted
             && platform.screenState == .locked(session)
@@ -421,6 +471,8 @@ final class MacUnlockController: ObservableObject {
 
     private func invalidateAttempt() {
         generation &+= 1
+        automaticRetryTask?.cancel()
+        automaticRetryTask = nil
         attemptTask?.cancel()
         attemptTask = nil
         scanner.cancel()
@@ -442,6 +494,14 @@ final class MacUnlockController: ObservableObject {
         state = .failed(message)
         activity.finish(recognized: false, message: message, retryAvailable: retry)
         if submittedThisLock { vault?.disarm(); isAuthorized = false }
+        if retry, options.autoRetry, !automaticRetryUsed, !submittedThisLock {
+            automaticRetryUsed = true
+            automaticRetryTask = Task { [weak self, automaticRetryDelay] in
+                try? await Task.sleep(for: automaticRetryDelay)
+                guard !Task.isCancelled, let self, generation == token else { return }
+                self.retry()
+            }
+        }
     }
 
     private func finishUnlock() {
@@ -454,6 +514,7 @@ final class MacUnlockController: ObservableObject {
         submittedThisLock = false
         scansThisLock = 0
         state = .unlocked
+        vault?.recordSuccessfulUnlock()
         logger.info("Mac unlock observed for the original session")
         presenter.didUnlock()
         activity.finish(recognized: true, message: "Mac unlocked")
@@ -466,6 +527,7 @@ private final class MacUnlockMonitor {
     private let callback: (MacUnlockEvent) -> Void
     private var observers: [(NotificationCenter, NSObjectProtocol)] = []
     private var timer: Timer?
+    private lazy var spaceTrigger = MacUnlockSpaceTrigger { [weak self] in self?.callback(.space) }
     init(callback: @escaping (MacUnlockEvent) -> Void) { self.callback = callback }
 
     func start() {
@@ -491,11 +553,18 @@ private final class MacUnlockMonitor {
     }
 
     func stop() {
+        spaceTrigger.stop()
         timer?.invalidate()
         timer = nil
         for (center, observer) in observers { center.removeObserver(observer) }
         observers.removeAll()
     }
+
+    func setSpaceEnabled(_ enabled: Bool) {
+        if enabled { spaceTrigger.start() } else { spaceTrigger.stop() }
+    }
+
+    isolated deinit { stop() }
 
     private func observe(_ center: NotificationCenter, name: Notification.Name, event: MacUnlockEvent) {
         let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
