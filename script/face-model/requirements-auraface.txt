@@ -1,0 +1,8 @@
+# Reproducible conversion/parity environment; Python 3.14 on Apple Silicon.
+# Install in an isolated environment, never the system interpreter.
+coremltools==9.1.dev1
+numpy==2.5.4
+pillow==13.0.0
+onnx==1.23.2
+onnxruntime==1.31.0
+protobuf==7.37.0rc1

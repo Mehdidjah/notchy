@@ -5,17 +5,9 @@ import CoreVideo
 import Foundation
 import OSLog
 
-/// Turns an aligned 150x150 face chip into a 128-number face descriptor.
-///
-/// The network is dlib's public-domain face-recognition ResNet
-/// (`dlib_face_recognition_resnet_model_v1`), converted to a Core ML program by
-/// `script/face-model/convert.py`. The build script compiles it into the app's Resources as
-/// `FaceDescriptor.mlmodelc`. Descriptors of the same person usually lie closer together
-/// than `sameFaceDistance` (Euclidean), the radius the network was trained with; Face Check
-/// still calibrates its own threshold.
-///
-/// The chip must already be aligned the way dlib's 5-point face chip is (150 px, 0.25
-/// padding); this type does no detection or resizing, since either would change the result.
+/// Turns an aligned face chip into the descriptor specified by its recognition profile.
+/// Each profile owns its dimensions, preprocessing, metric, and source-weight identity.
+/// This type does no detection, alignment or resizing.
 /// The model loads on first use (or `prepare()`), and every load and prediction runs on the
 /// actor's own serial queue, so neither the main actor nor the shared cooperative threads
 /// wait on Core ML.
@@ -29,7 +21,7 @@ actor FaceEmbedder {
         case modelPackage(URL)
     }
 
-    enum Failure: Error, Equatable {
+    enum Failure: LocalizedError, Equatable {
         /// The model file is not where it should be; Face Check should show itself as
         /// unavailable rather than fail silently.
         case modelMissing
@@ -40,6 +32,21 @@ actor FaceEmbedder {
         case unsupportedPixelFormat(OSType)
         case pixelBufferUnavailable
         case unexpectedOutput
+
+        var errorDescription: String? {
+            switch self {
+            case .modelMissing, .wrongModel:
+                "The face model is unavailable. Reopen Notchy and retry."
+            case .modelLoadFailed:
+                "Face recognition couldn't start. Reopen Notchy and retry."
+            case .wrongChipSize:
+                "Face alignment failed. Restart the scan."
+            case .unsupportedPixelFormat, .pixelBufferUnavailable:
+                "The camera image couldn't be prepared. Restart the scan."
+            case .unexpectedOutput:
+                "Face recognition returned an invalid result. Restart the scan."
+            }
+        }
     }
 
     static let chipSize = 150
@@ -57,19 +64,23 @@ actor FaceEmbedder {
     private static let logger = Logger(subsystem: "com.local.Notchy", category: "FaceCheck")
 
     private let location: ModelLocation
+    nonisolated let profile: FaceRecognitionProfile
     private let computeUnits: MLComputeUnits
     private let queue: DispatchSerialQueue
     private var model: MLModel?
     private var compileTask: Task<URL, any Error>?
     private var temporaryCompiledURL: URL?
+    private var loadGeneration = 0
 
     nonisolated var unownedExecutor: UnownedSerialExecutor {
         queue.asUnownedSerialExecutor()
     }
 
     /// `computeUnits` defaults to CPU and Neural Engine so the GPU stays free for the island.
-    init(location: ModelLocation = .appBundle, computeUnits: MLComputeUnits = .cpuAndNeuralEngine) {
+    init(location: ModelLocation = .appBundle, computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
+         profile: FaceRecognitionProfile = .legacy) {
         self.location = location
+        self.profile = profile
         self.computeUnits = computeUnits
         self.queue = DispatchSerialQueue(label: "com.local.Notchy.FaceEmbedder", qos: .userInitiated)
     }
@@ -94,6 +105,9 @@ actor FaceEmbedder {
 
     /// Drops the model (and any temporary compiled copy) to give the memory back.
     func unload() {
+        loadGeneration &+= 1
+        compileTask?.cancel()
+        compileTask = nil
         model = nil
         if let temporaryCompiledURL {
             try? FileManager.default.removeItem(at: temporaryCompiledURL)
@@ -101,22 +115,22 @@ actor FaceEmbedder {
         }
     }
 
-    /// Descriptor for a 150x150 chip. RGB images are read in their own colour space, so the
+    /// Descriptor for a profile-sized chip. RGB images are read in their own colour space, so the
     /// pixel values reach the model unchanged.
     func descriptor(for chip: CGImage) async throws -> [Float] {
-        guard chip.width == Self.chipSize, chip.height == Self.chipSize else {
+        guard chip.width == profile.chipSize, chip.height == profile.chipSize else {
             throw Failure.wrongChipSize(width: chip.width, height: chip.height)
         }
         let buffer = try Self.makePixelBuffer(from: chip)
         let model = try await loadedModel()
-        return try Self.predict(with: model, chip: buffer)
+        return try predict(with: model, chip: buffer)
     }
 
-    /// Descriptor for a 150x150 chip in a 32BGRA or 32ARGB pixel buffer.
+    /// Descriptor for a profile-sized chip in a 32BGRA or 32ARGB pixel buffer.
     func descriptor(for chip: CVPixelBuffer) async throws -> [Float] {
         let width = CVPixelBufferGetWidth(chip)
         let height = CVPixelBufferGetHeight(chip)
-        guard width == Self.chipSize, height == Self.chipSize else {
+        guard width == profile.chipSize, height == profile.chipSize else {
             throw Failure.wrongChipSize(width: width, height: height)
         }
         let format = CVPixelBufferGetPixelFormatType(chip)
@@ -124,7 +138,7 @@ actor FaceEmbedder {
             throw Failure.unsupportedPixelFormat(format)
         }
         let model = try await loadedModel()
-        return try Self.predict(with: model, chip: chip)
+        return try predict(with: model, chip: chip)
     }
 
     /// Euclidean distance, the measure the network was trained with.
@@ -137,7 +151,9 @@ actor FaceEmbedder {
 
     private func loadedModel() async throws -> MLModel {
         if let model { return model }
+        let generation = loadGeneration
         let compiledURL = try await compiledModelURL()
+        guard generation == loadGeneration, !Task.isCancelled else { throw CancellationError() }
         // Another call may have finished loading while this one waited for the compiler.
         if let model { return model }
 
@@ -153,8 +169,19 @@ actor FaceEmbedder {
         }
         let metadata = loaded.modelDescription.metadata[.creatorDefinedKey] as? [String: String]
         let identifier = metadata?[Self.identifierMetadataKey]
-        guard identifier == Self.modelIdentifier else {
+        guard identifier == profile.identifier,
+              metadata?["notchy.faceModel.sourceSHA256"] == profile.sourceSHA256 else {
             throw Failure.wrongModel(identifier: identifier)
+        }
+        if profile.metric == .cosine {
+            guard metadata?["notchy.faceModel.precision"] == profile.precision,
+                  metadata?["notchy.faceModel.alignment"] == profile.alignmentIdentifier,
+                  metadata?["notchy.faceModel.sourceRevision"] == profile.sourceRevision,
+                  metadata?["notchy.faceModel.inputNormalization"] == profile.inputNormalization,
+                  metadata?["notchy.faceModel.outputNormalization"] == profile.outputNormalization,
+                  metadata?["notchy.faceModel.descriptorLength"] == String(profile.dimension) else {
+                throw Failure.wrongModel(identifier: identifier)
+            }
         }
         model = loaded
         let elapsed = ContinuousClock.now - started
@@ -165,8 +192,8 @@ actor FaceEmbedder {
     private func compiledModelURL() async throws -> URL {
         switch location {
         case .appBundle:
-            guard let url = Self.bundledModelURL else {
-                Self.logger.error("FaceDescriptor.mlmodelc is missing from the app bundle")
+            guard let url = Bundle.main.url(forResource: profile.modelName, withExtension: "mlmodelc") else {
+                Self.logger.error("A required face model is missing from the app bundle")
                 throw Failure.modelMissing
             }
             return url
@@ -177,10 +204,15 @@ actor FaceEmbedder {
             if let temporaryCompiledURL { return temporaryCompiledURL }
             guard FileManager.default.fileExists(atPath: url.path) else { throw Failure.modelMissing }
             let task = compileTask ?? Task { try await MLModel.compileModel(at: url) }
+            let generation = loadGeneration
             compileTask = task
-            defer { compileTask = nil }
+            defer { if generation == loadGeneration { compileTask = nil } }
             do {
                 let compiled = try await task.value
+                guard generation == loadGeneration, !Task.isCancelled else {
+                    if temporaryCompiledURL != compiled { try? FileManager.default.removeItem(at: compiled) }
+                    throw CancellationError()
+                }
                 temporaryCompiledURL = compiled
                 return compiled
             } catch {
@@ -191,16 +223,16 @@ actor FaceEmbedder {
 
     // MARK: - Prediction
 
-    private static func predict(with model: MLModel, chip: CVPixelBuffer) throws -> [Float] {
-        let input = try MLDictionaryFeatureProvider(dictionary: [inputName: MLFeatureValue(pixelBuffer: chip)])
+    private func predict(with model: MLModel, chip: CVPixelBuffer) throws -> [Float] {
+        let input = try MLDictionaryFeatureProvider(dictionary: [Self.inputName: MLFeatureValue(pixelBuffer: chip)])
         let output = try model.prediction(from: input)
-        guard let values = output.featureValue(for: outputName)?.multiArrayValue,
-              values.count == descriptorLength
+        guard let values = output.featureValue(for: Self.outputName)?.multiArrayValue,
+              let descriptor = profile.prepared(Self.floats(from: values))
         else { throw Failure.unexpectedOutput }
-        return floats(from: values)
+        return descriptor
     }
 
-    /// Reads a 1x128 (or 128) output, honouring its strides.
+    /// Reads a descriptor output, honouring its strides.
     static func floats(from array: MLMultiArray) -> [Float] {
         let count = array.count
         let step = array.strides.last?.intValue ?? 1
@@ -213,11 +245,12 @@ actor FaceEmbedder {
         return (0..<count).map { array[leading + [NSNumber(value: $0)]].floatValue }
     }
 
-    /// Copies a 150x150 image into a new 32BGRA buffer without changing its pixel values:
+    /// Copies a square image into a new 32BGRA buffer without changing its pixel values:
     /// the context uses the image's own RGB colour space and a plain copy, so no colour
     /// matching or blending happens. Transparent pixels become black.
     static func makePixelBuffer(from image: CGImage) throws -> CVPixelBuffer {
-        let side = chipSize
+        let side = image.width
+        guard image.height == side, side > 0 else { throw Failure.wrongChipSize(width: side, height: image.height) }
         let attributes: [CFString: Any] = [
             kCVPixelBufferCGImageCompatibilityKey: true,
             kCVPixelBufferCGBitmapContextCompatibilityKey: true,

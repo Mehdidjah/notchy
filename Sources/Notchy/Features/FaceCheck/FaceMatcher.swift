@@ -125,6 +125,7 @@ struct FaceMatcher: Sendable {
     let modelIdentifier: String
     let maximumDistance: Float
     let dimension: Int
+    private let profile: FaceRecognitionProfile?
     /// Enabled identities with no usable sample from `modelIdentifier`: they need re-enrolling
     /// before Face Check can recognise them.
     let identitiesNeedingReenrolment: [UUID]
@@ -134,11 +135,13 @@ struct FaceMatcher: Sendable {
         identities: [FaceIdentity],
         modelIdentifier: String,
         maximumDistance: Float = FaceMatchPreset.standard.maximumDistance,
-        dimension: Int = FaceDescriptor.dimension
+        dimension: Int = FaceDescriptor.dimension,
+        profile: FaceRecognitionProfile? = nil
     ) {
         self.modelIdentifier = modelIdentifier
         self.maximumDistance = maximumDistance
         self.dimension = dimension
+        self.profile = profile
 
         var candidates: [Candidate] = []
         var stale: [UUID] = []
@@ -147,11 +150,13 @@ struct FaceMatcher: Sendable {
                 .filter { $0.modelIdentifier == modelIdentifier }
                 .map(\.descriptor)
                 .filter { FaceDescriptor.isUsable($0, dimension: dimension) }
-            guard let template = FaceDescriptor.mean(of: usable) else {
+            let prepared = profile.map { selected in usable.compactMap(selected.prepared) } ?? usable
+            guard let mean = FaceDescriptor.mean(of: prepared),
+                  let template = profile == nil ? mean : profile?.prepared(mean) else {
                 stale.append(identity.id)
                 continue
             }
-            candidates.append(Candidate(identityID: identity.id, template: template, samples: usable))
+            candidates.append(Candidate(identityID: identity.id, template: template, samples: prepared))
         }
         self.candidates = candidates
         identitiesNeedingReenrolment = stale
@@ -166,8 +171,8 @@ struct FaceMatcher: Sendable {
         let scores = candidates.map { candidate in
             FaceMatchScore(
                 identityID: candidate.identityID,
-                templateDistance: FaceDescriptor.distance(probe, candidate.template),
-                closestSampleDistance: candidate.samples.map { FaceDescriptor.distance(probe, $0) }.min() ?? .infinity,
+                templateDistance: distance(probe, candidate.template),
+                closestSampleDistance: candidate.samples.map { distance(probe, $0) }.min() ?? .infinity,
                 sampleCount: candidate.samples.count
             )
         }
@@ -182,5 +187,15 @@ struct FaceMatcher: Sendable {
             return FaceMatchResult(decision: .matched(match), scores: scores)
         }
         return FaceMatchResult(decision: .notMatched(closest: closest), scores: scores)
+    }
+
+    init(identities: [FaceIdentity], profile: FaceRecognitionProfile, maximumDistance: Float? = nil) {
+        self.init(identities: identities, modelIdentifier: profile.identifier,
+                  maximumDistance: maximumDistance ?? profile.strictDistance,
+                  dimension: profile.dimension, profile: profile)
+    }
+
+    private func distance(_ lhs: [Float], _ rhs: [Float]) -> Float {
+        profile?.distance(lhs, rhs) ?? FaceDescriptor.distance(lhs, rhs)
     }
 }

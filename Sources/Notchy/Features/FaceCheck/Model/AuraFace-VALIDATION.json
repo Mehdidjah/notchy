@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "conversion-parity-and-local-runtime-only",
+  "modelIdentifier": "auraface-v1-r1",
+  "sourceRevision": "af6d057c9b0ec4071d4c49c80e3539258798b609",
+  "sourceSHA256": "a7933ea5330113b01c9b60351d8f4c33003f145d8470ac5f0e52ee2effe25c60",
+  "selectedPrecision": "fp32",
+  "selectedPackage": "Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage",
+  "selectedPackageFilesSHA256": {
+    "Data/com.apple.CoreML/model.mlmodel": "a1b602885844bd6d2d32e02977d621433857d9a7527fc411f7d2ce372a283ed4",
+    "Data/com.apple.CoreML/weights/weight.bin": "612cbfe69545711fd08a3f95352838ff4cf9efa605eae3cd461eee02b17165ad",
+    "Manifest.json": "09e5ea4368fdb2faea80153ed073c07004dedcfd2b58f2ba5da74a052455bd3b"
+  },
+  "selectionReason": "FP32 passed the predeclared conversion gate; FP16 failed its 0.9999 minimum-cosine gate and is not shipped.",
+  "conversionParityValidated": true,
+  "recognitionCalibrationValidated": false,
+  "passivePADValidated": false,
+  "automaticUnlockValidated": false,
+  "limitation": "Synthetic input parity does not validate identity thresholds, genuine/impostor accuracy, passive liveness or password release. No real face corpus, owner camera or credentials were used.",
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "generatedAt": "2026-10-22T22:47:32.845287+00:00",
+      "modelIdentifier": "auraface-v1-r1",
+      "sourceRevision": "af6d057c9b0ec4071d4c49c80e3539258798b609",
+      "sourceSHA256": "a7933ea5330113b01c9b60351d8f4c33003f145d8470ac5f0e52ee2effe25c60",
+      "package": "Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage",
+      "precision": "fp32",
+      "packageFilesSHA256": {
+        "Data/com.apple.CoreML/model.mlmodel": "a1b602885844bd6d2d32e02977d621433857d9a7527fc411f7d2ce372a283ed4",
+        "Data/com.apple.CoreML/weights/weight.bin": "612cbfe69545711fd08a3f95352838ff4cf9efa605eae3cd461eee02b17165ad",
+        "Manifest.json": "09e5ea4368fdb2faea80153ed073c07004dedcfd2b58f2ba5da74a052455bd3b"
+      },
+      "input": {
+        "name": "image",
+        "width": 112,
+        "height": 112,
+        "channels": "RGB",
+        "normalization": "(value - 127.5) / 127.5"
+      },
+      "output": {
+        "name": "descriptor",
+        "length": 512,
+        "normalization": "external L2"
+      },
+      "evidence": {
+        "purpose": "conversion-parity-and-local-runtime",
+        "syntheticCaseCount": 12,
+        "providedCropCount": 0,
+        "recognitionCalibrationValidated": false,
+        "passivePADValidated": false,
+        "automaticUnlockValidated": false
+      },
+      "parity": {
+        "passed": true,
+        "minimumRequiredCosine": 0.99999,
+        "minimumMeasuredCosine": 0.9999999993395842,
+        "maximumPairwiseCosineDifference": 6.885859534955241e-06,
+        "cases": [
+          {
+            "case": "solid-0",
+            "rgbSHA256": "064472034d4d30eef4b30d1f71db4d142ab7f646582e44e062fe897d0b5b7e23",
+            "cosine": 0.9999999998420339,
+            "maximumAbsoluteError": 1.3142824172973633e-05,
+            "normalizedL2Error": 1.7774500135411922e-05,
+            "passed": true
+          },
+          {
+            "case": "solid-127",
+            "rgbSHA256": "07b9bffbcdbff41876fc9b4910c9589b5689252a1988daeab0300579bf4d2a33",
+            "cosine": 0.9999999999048071,
+            "maximumAbsoluteError": 3.17692756652832e-05,
+            "normalizedL2Error": 1.3798054263188617e-05,
+            "passed": true
+          },
+          {
+            "case": "solid-255",
+            "rgbSHA256": "f278d511427329d16ae4ea3daa35f191dfed66e46f958b60abc6d0fb32289cd9",
+            "cosine": 0.9999999998576772,
+            "maximumAbsoluteError": 2.919137477874756e-05,
+            "normalizedL2Error": 1.687143800330191e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-0",
+            "rgbSHA256": "7d3fd5a1a64a8ad3b3c03ca7b0480b6f043511672f91b591490c700a1728b8a9",
+            "cosine": 0.9999999998409163,
+            "maximumAbsoluteError": 2.73287296295166e-05,
+            "normalizedL2Error": 1.7837268927727027e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-1",
+            "rgbSHA256": "95a063525b93601dce272c364510ef91939a39acb07bbe0da19d1cdf8937f826",
+            "cosine": 0.9999999997904182,
+            "maximumAbsoluteError": 2.3603439331054688e-05,
+            "normalizedL2Error": 2.0473498421119927e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-2",
+            "rgbSHA256": "3493be9120048d25cac1dd1ce7510b7d75a8e8dfbf0be77883029475e8ff0321",
+            "cosine": 0.9999999998602707,
+            "maximumAbsoluteError": 2.1696090698242188e-05,
+            "normalizedL2Error": 1.6717027014787186e-05,
+            "passed": true
+          },
+          {
+            "case": "gradient",
+            "rgbSHA256": "3b64e9e196e76ffd3427fff9d655eff2d5911b14c66b952d0d47c119f4ecc7c9",
+            "cosine": 0.9999999997685814,
+            "maximumAbsoluteError": 2.7805566787719727e-05,
+            "normalizedL2Error": 2.1513658624349434e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-1",
+            "rgbSHA256": "714e3edfefe9064bdfa6b88eab1fc122f1b52d7005e38d9bed8f8ffe7f181a6d",
+            "cosine": 0.9999999995711659,
+            "maximumAbsoluteError": 4.526972770690918e-05,
+            "normalizedL2Error": 2.9285987011652183e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-23",
+            "rgbSHA256": "574ddc2f2f1bc576c04a18abd8490f28c57e8620a6cd7fe5fceeb9f9e907eb08",
+            "cosine": 0.9999999995733085,
+            "maximumAbsoluteError": 5.6862831115722656e-05,
+            "normalizedL2Error": 2.9212729540391565e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-123456789",
+            "rgbSHA256": "21718f1aa0f47ce929cd5c5f2d111bfa769ae77c2059fbbe5e7ad72f91905b78",
+            "cosine": 0.9999999994171932,
+            "maximumAbsoluteError": 5.774199962615967e-05,
+            "normalizedL2Error": 3.4141087935615363e-05,
+            "passed": true
+          },
+          {
+            "case": "checker",
+            "rgbSHA256": "4a96ec7d47f562d0707386c7dad4730f936ca97d1b369372857031174cb3edf6",
+            "cosine": 0.9999999993395842,
+            "maximumAbsoluteError": 4.476308822631836e-05,
+            "normalizedL2Error": 3.634324943129215e-05,
+            "passed": true
+          },
+          {
+            "case": "rings",
+            "rgbSHA256": "80292f6908431195e58dd072524bfd9ffa39242905af27af531e10f0ecfa6a33",
+            "cosine": 0.9999999998494308,
+            "maximumAbsoluteError": 3.445148468017578e-05,
+            "normalizedL2Error": 1.7353360633032343e-05,
+            "passed": true
+          }
+        ]
+      },
+      "runtime": {
+        "computeUnits": "cpu",
+        "coreMLLoadMilliseconds": 802.2117500659078,
+        "coreMLFirstPredictionMilliseconds": 61.744040925987065,
+        "warmInference": {
+          "count": 40,
+          "p50Milliseconds": 20.57029097341001,
+          "p95Milliseconds": 24.329889367800202,
+          "maximumMilliseconds": 25.475375005044043
+        },
+        "referenceONNXLoadMilliseconds": 145.69895796012133,
+        "referenceONNXInference": {
+          "count": 12,
+          "p50Milliseconds": 262.7412915462628,
+          "p95Milliseconds": 274.71921063261107,
+          "maximumMilliseconds": 280.5430000880733
+        },
+        "processPeakResidentBytes": 1061421056,
+        "peakMemoryIncludesBothRuntimes": true,
+        "warmP95BudgetMilliseconds": 200,
+        "warmP95BudgetPassed": true,
+        "loadMeasurement": "first MLModel load in this process; persistent compilation-cache state uncontrolled"
+      },
+      "machine": {
+        "system": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "architecture": "arm64",
+        "processor": "Apple M3 Max",
+        "physicalMemoryBytes": 38654705664
+      },
+      "dependencies": {
+        "coremltools": "9.1.dev1",
+        "numpy": "2.5.4",
+        "onnx": "1.23.2",
+        "onnxruntime": "1.31.0",
+        "pillow": "13.0.0"
+      },
+      "runIdentifier": "fp32-cpu",
+      "description": "FP32 reference conversion, CPU"
+    },
+    {
+      "schemaVersion": 1,
+      "generatedAt": "2026-10-22T22:50:33.282394+00:00",
+      "modelIdentifier": "auraface-v1-r1",
+      "sourceRevision": "af6d057c9b0ec4071d4c49c80e3539258798b609",
+      "sourceSHA256": "a7933ea5330113b01c9b60351d8f4c33003f145d8470ac5f0e52ee2effe25c60",
+      "package": "rejected-fp16-candidate-not-shipped",
+      "precision": "fp16",
+      "packageFilesSHA256": {
+        "Data/com.apple.CoreML/model.mlmodel": "4799070400a148bedcd0c0c244240d8cea5a2cd0c1895d09f54424349fe4653f",
+        "Data/com.apple.CoreML/weights/weight.bin": "8468d57557dd13e12f3000c23729eaa0289766eaff45d542e5433231498a06a2",
+        "Manifest.json": "5db190559519f69274a149c6c64b60db27c4a142bd4ac1d95076067827c04f70"
+      },
+      "input": {
+        "name": "image",
+        "width": 112,
+        "height": 112,
+        "channels": "RGB",
+        "normalization": "(value - 127.5) / 127.5"
+      },
+      "output": {
+        "name": "descriptor",
+        "length": 512,
+        "normalization": "external L2"
+      },
+      "evidence": {
+        "purpose": "conversion-parity-and-local-runtime",
+        "syntheticCaseCount": 12,
+        "providedCropCount": 0,
+        "recognitionCalibrationValidated": false,
+        "passivePADValidated": false,
+        "automaticUnlockValidated": false
+      },
+      "parity": {
+        "passed": false,
+        "minimumRequiredCosine": 0.9999,
+        "minimumMeasuredCosine": 0.9997808141323555,
+        "maximumPairwiseCosineDifference": 0.002518176527470384,
+        "cases": [
+          {
+            "case": "solid-0",
+            "rgbSHA256": "064472034d4d30eef4b30d1f71db4d142ab7f646582e44e062fe897d0b5b7e23",
+            "cosine": 0.9997808141323555,
+            "maximumAbsoluteError": 0.016540735960006714,
+            "normalizedL2Error": 0.020937328752484323,
+            "passed": false
+          },
+          {
+            "case": "solid-127",
+            "rgbSHA256": "07b9bffbcdbff41876fc9b4910c9589b5689252a1988daeab0300579bf4d2a33",
+            "cosine": 0.9999393495687915,
+            "maximumAbsoluteError": 0.018469929695129395,
+            "normalizedL2Error": 0.011013667074021764,
+            "passed": true
+          },
+          {
+            "case": "solid-255",
+            "rgbSHA256": "f278d511427329d16ae4ea3daa35f191dfed66e46f958b60abc6d0fb32289cd9",
+            "cosine": 0.9999155553588537,
+            "maximumAbsoluteError": 0.02204751968383789,
+            "normalizedL2Error": 0.012995740928962104,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-0",
+            "rgbSHA256": "7d3fd5a1a64a8ad3b3c03ca7b0480b6f043511672f91b591490c700a1728b8a9",
+            "cosine": 0.9998802430941386,
+            "maximumAbsoluteError": 0.02227190136909485,
+            "normalizedL2Error": 0.015476233770630426,
+            "passed": false
+          },
+          {
+            "case": "channel-ramp-1",
+            "rgbSHA256": "95a063525b93601dce272c364510ef91939a39acb07bbe0da19d1cdf8937f826",
+            "cosine": 0.9998745779206282,
+            "maximumAbsoluteError": 0.01921248435974121,
+            "normalizedL2Error": 0.015838060447672962,
+            "passed": false
+          },
+          {
+            "case": "channel-ramp-2",
+            "rgbSHA256": "3493be9120048d25cac1dd1ce7510b7d75a8e8dfbf0be77883029475e8ff0321",
+            "cosine": 0.9999109886928356,
+            "maximumAbsoluteError": 0.017555654048919678,
+            "normalizedL2Error": 0.013342511545025021,
+            "passed": true
+          },
+          {
+            "case": "gradient",
+            "rgbSHA256": "3b64e9e196e76ffd3427fff9d655eff2d5911b14c66b952d0d47c119f4ecc7c9",
+            "cosine": 0.9998929055647683,
+            "maximumAbsoluteError": 0.018581092357635498,
+            "normalizedL2Error": 0.014635192874148235,
+            "passed": false
+          },
+          {
+            "case": "xorshift32-1",
+            "rgbSHA256": "714e3edfefe9064bdfa6b88eab1fc122f1b52d7005e38d9bed8f8ffe7f181a6d",
+            "cosine": 0.9999231239459451,
+            "maximumAbsoluteError": 0.02075183391571045,
+            "normalizedL2Error": 0.012399681774573486,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-23",
+            "rgbSHA256": "574ddc2f2f1bc576c04a18abd8490f28c57e8620a6cd7fe5fceeb9f9e907eb08",
+            "cosine": 0.9999275878854358,
+            "maximumAbsoluteError": 0.019587799906730652,
+            "normalizedL2Error": 0.012034293877445272,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-123456789",
+            "rgbSHA256": "21718f1aa0f47ce929cd5c5f2d111bfa769ae77c2059fbbe5e7ad72f91905b78",
+            "cosine": 0.999924495496636,
+            "maximumAbsoluteError": 0.01891458034515381,
+            "normalizedL2Error": 0.012288572200556024,
+            "passed": true
+          },
+          {
+            "case": "checker",
+            "rgbSHA256": "4a96ec7d47f562d0707386c7dad4730f936ca97d1b369372857031174cb3edf6",
+            "cosine": 0.9999174777569215,
+            "maximumAbsoluteError": 0.017176732420921326,
+            "normalizedL2Error": 0.01284696408327572,
+            "passed": true
+          },
+          {
+            "case": "rings",
+            "rgbSHA256": "80292f6908431195e58dd072524bfd9ffa39242905af27af531e10f0ecfa6a33",
+            "cosine": 0.9999575123634129,
+            "maximumAbsoluteError": 0.019398152828216553,
+            "normalizedL2Error": 0.009218203359337035,
+            "passed": true
+          }
+        ]
+      },
+      "runtime": {
+        "computeUnits": "cpu-ne",
+        "coreMLLoadMilliseconds": 2337.953290902078,
+        "coreMLFirstPredictionMilliseconds": 13.844624976627529,
+        "warmInference": {
+          "count": 40,
+          "p50Milliseconds": 2.9661250300705433,
+          "p95Milliseconds": 3.5127379989717156,
+          "maximumMilliseconds": 3.649958991445601
+        },
+        "referenceONNXLoadMilliseconds": 199.38887492753565,
+        "referenceONNXInference": {
+          "count": 12,
+          "p50Milliseconds": 275.6560625275597,
+          "p95Milliseconds": 301.4757999917492,
+          "maximumMilliseconds": 314.5157500403002
+        },
+        "processPeakResidentBytes": 634208256,
+        "peakMemoryIncludesBothRuntimes": true,
+        "warmP95BudgetMilliseconds": 200,
+        "warmP95BudgetPassed": true,
+        "loadMeasurement": "first MLModel load in this process; persistent compilation-cache state uncontrolled"
+      },
+      "machine": {
+        "system": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "architecture": "arm64",
+        "processor": "Apple M3 Max",
+        "physicalMemoryBytes": 38654705664
+      },
+      "dependencies": {
+        "coremltools": "9.1.dev1",
+        "numpy": "2.5.4",
+        "onnx": "1.23.2",
+        "onnxruntime": "1.31.0",
+        "pillow": "13.0.0"
+      },
+      "runIdentifier": "fp16-cpu-ne-rejected",
+      "description": "Rejected FP16 candidate, CPU plus Neural Engine"
+    },
+    {
+      "schemaVersion": 1,
+      "generatedAt": "2026-10-22T22:53:10.856214+00:00",
+      "modelIdentifier": "auraface-v1-r1",
+      "sourceRevision": "af6d057c9b0ec4071d4c49c80e3539258798b609",
+      "sourceSHA256": "a7933ea5330113b01c9b60351d8f4c33003f145d8470ac5f0e52ee2effe25c60",
+      "package": "Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage",
+      "precision": "fp32",
+      "packageFilesSHA256": {
+        "Data/com.apple.CoreML/model.mlmodel": "a1b602885844bd6d2d32e02977d621433857d9a7527fc411f7d2ce372a283ed4",
+        "Data/com.apple.CoreML/weights/weight.bin": "612cbfe69545711fd08a3f95352838ff4cf9efa605eae3cd461eee02b17165ad",
+        "Manifest.json": "09e5ea4368fdb2faea80153ed073c07004dedcfd2b58f2ba5da74a052455bd3b"
+      },
+      "input": {
+        "name": "image",
+        "width": 112,
+        "height": 112,
+        "channels": "RGB",
+        "normalization": "(value - 127.5) / 127.5"
+      },
+      "output": {
+        "name": "descriptor",
+        "length": 512,
+        "normalization": "external L2"
+      },
+      "evidence": {
+        "purpose": "conversion-parity-and-local-runtime",
+        "syntheticCaseCount": 12,
+        "providedCropCount": 0,
+        "recognitionCalibrationValidated": false,
+        "passivePADValidated": false,
+        "automaticUnlockValidated": false
+      },
+      "parity": {
+        "passed": true,
+        "minimumRequiredCosine": 0.99999,
+        "minimumMeasuredCosine": 0.9999999993395842,
+        "maximumPairwiseCosineDifference": 6.885859534955241e-06,
+        "cases": [
+          {
+            "case": "solid-0",
+            "rgbSHA256": "064472034d4d30eef4b30d1f71db4d142ab7f646582e44e062fe897d0b5b7e23",
+            "cosine": 0.9999999998420339,
+            "maximumAbsoluteError": 1.3142824172973633e-05,
+            "normalizedL2Error": 1.7774500135411922e-05,
+            "passed": true
+          },
+          {
+            "case": "solid-127",
+            "rgbSHA256": "07b9bffbcdbff41876fc9b4910c9589b5689252a1988daeab0300579bf4d2a33",
+            "cosine": 0.9999999999048071,
+            "maximumAbsoluteError": 3.17692756652832e-05,
+            "normalizedL2Error": 1.3798054263188617e-05,
+            "passed": true
+          },
+          {
+            "case": "solid-255",
+            "rgbSHA256": "f278d511427329d16ae4ea3daa35f191dfed66e46f958b60abc6d0fb32289cd9",
+            "cosine": 0.9999999998576772,
+            "maximumAbsoluteError": 2.919137477874756e-05,
+            "normalizedL2Error": 1.687143800330191e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-0",
+            "rgbSHA256": "7d3fd5a1a64a8ad3b3c03ca7b0480b6f043511672f91b591490c700a1728b8a9",
+            "cosine": 0.9999999998409163,
+            "maximumAbsoluteError": 2.73287296295166e-05,
+            "normalizedL2Error": 1.7837268927727027e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-1",
+            "rgbSHA256": "95a063525b93601dce272c364510ef91939a39acb07bbe0da19d1cdf8937f826",
+            "cosine": 0.9999999997904182,
+            "maximumAbsoluteError": 2.3603439331054688e-05,
+            "normalizedL2Error": 2.0473498421119927e-05,
+            "passed": true
+          },
+          {
+            "case": "channel-ramp-2",
+            "rgbSHA256": "3493be9120048d25cac1dd1ce7510b7d75a8e8dfbf0be77883029475e8ff0321",
+            "cosine": 0.9999999998602707,
+            "maximumAbsoluteError": 2.1696090698242188e-05,
+            "normalizedL2Error": 1.6717027014787186e-05,
+            "passed": true
+          },
+          {
+            "case": "gradient",
+            "rgbSHA256": "3b64e9e196e76ffd3427fff9d655eff2d5911b14c66b952d0d47c119f4ecc7c9",
+            "cosine": 0.9999999997685814,
+            "maximumAbsoluteError": 2.7805566787719727e-05,
+            "normalizedL2Error": 2.1513658624349434e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-1",
+            "rgbSHA256": "714e3edfefe9064bdfa6b88eab1fc122f1b52d7005e38d9bed8f8ffe7f181a6d",
+            "cosine": 0.9999999995711659,
+            "maximumAbsoluteError": 4.526972770690918e-05,
+            "normalizedL2Error": 2.9285987011652183e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-23",
+            "rgbSHA256": "574ddc2f2f1bc576c04a18abd8490f28c57e8620a6cd7fe5fceeb9f9e907eb08",
+            "cosine": 0.9999999995733085,
+            "maximumAbsoluteError": 5.6862831115722656e-05,
+            "normalizedL2Error": 2.9212729540391565e-05,
+            "passed": true
+          },
+          {
+            "case": "xorshift32-123456789",
+            "rgbSHA256": "21718f1aa0f47ce929cd5c5f2d111bfa769ae77c2059fbbe5e7ad72f91905b78",
+            "cosine": 0.9999999994171932,
+            "maximumAbsoluteError": 5.774199962615967e-05,
+            "normalizedL2Error": 3.4141087935615363e-05,
+            "passed": true
+          },
+          {
+            "case": "checker",
+            "rgbSHA256": "4a96ec7d47f562d0707386c7dad4730f936ca97d1b369372857031174cb3edf6",
+            "cosine": 0.9999999993395842,
+            "maximumAbsoluteError": 4.476308822631836e-05,
+            "normalizedL2Error": 3.634324943129215e-05,
+            "passed": true
+          },
+          {
+            "case": "rings",
+            "rgbSHA256": "80292f6908431195e58dd072524bfd9ffa39242905af27af531e10f0ecfa6a33",
+            "cosine": 0.9999999998494308,
+            "maximumAbsoluteError": 3.445148468017578e-05,
+            "normalizedL2Error": 1.7353360633032343e-05,
+            "passed": true
+          }
+        ]
+      },
+      "runtime": {
+        "computeUnits": "cpu-ne",
+        "coreMLLoadMilliseconds": 987.3210829682648,
+        "coreMLFirstPredictionMilliseconds": 35.05854099057615,
+        "warmInference": {
+          "count": 40,
+          "p50Milliseconds": 20.80587501404807,
+          "p95Milliseconds": 27.756846230477095,
+          "maximumMilliseconds": 32.676749979145825
+        },
+        "referenceONNXLoadMilliseconds": 172.73949994705617,
+        "referenceONNXInference": {
+          "count": 12,
+          "p50Milliseconds": 271.0520629771054,
+          "p95Milliseconds": 326.00354620954016,
+          "maximumMilliseconds": 373.91262501478195
+        },
+        "processPeakResidentBytes": 1004421120,
+        "peakMemoryIncludesBothRuntimes": true,
+        "warmP95BudgetMilliseconds": 200,
+        "warmP95BudgetPassed": true,
+        "loadMeasurement": "first MLModel load in this process; persistent compilation-cache state uncontrolled"
+      },
+      "machine": {
+        "system": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "architecture": "arm64",
+        "processor": "Apple M3 Max",
+        "physicalMemoryBytes": 38654705664
+      },
+      "dependencies": {
+        "coremltools": "9.1.dev1",
+        "numpy": "2.5.4",
+        "onnx": "1.23.2",
+        "onnxruntime": "1.31.0",
+        "pillow": "13.0.0"
+      },
+      "runIdentifier": "selected-fp32-cpu-ne",
+      "description": "Selected FP32 package, CPU plus Neural Engine"
+    }
+  ]
+}

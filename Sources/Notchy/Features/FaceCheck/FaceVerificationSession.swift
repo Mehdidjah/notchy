@@ -39,7 +39,12 @@ struct FaceVerificationSession {
         lastFrame = timestamp
         if let denial = analysis.liveness?.denial { return finish(.rejected(denial.message)) }
         if let problem = analysis.problem { return finish(.rejected(problem)) }
+        if let guidance = analysis.captureGuidance {
+            reset(timestamp: timestamp)
+            return .waiting(guidance)
+        }
         guard analysis.faceCount == 1, let face = analysis.face, face.quality >= 0.3,
+              FaceCaptureFraming.contains(face.bounds),
               let descriptor = analysis.descriptor,
               case .matched(let score) = matcher.match(descriptor).decision else {
             reset(timestamp: timestamp)

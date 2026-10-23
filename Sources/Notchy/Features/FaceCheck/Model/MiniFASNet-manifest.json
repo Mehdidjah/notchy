@@ -1,0 +1,60 @@
+{
+  "identifier": "minifasnet-v2-v1se-b6d5f04-fp32-v1",
+  "sourceCommit": "b6d5f04ad78778917853b25c778acef6d5626d15",
+  "sourceRepository": "https://github.com/minivision-ai/Silent-Face-Anti-Spoofing",
+  "architectureSHA256": "e498c4ec5e1ddfaba62b941a126c19d65aa564999f3309661fe43ee8bf38acd7",
+  "precision": "fp32",
+  "input": {
+    "name": "image",
+    "shape": [
+      1,
+      3,
+      80,
+      80
+    ],
+    "channels": "BGR",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "output": {
+    "name": "logits",
+    "classCount": 3,
+    "liveClass": 1
+  },
+  "tools": {
+    "coremltools": "9.1.dev1",
+    "torch": "2.14.1",
+    "numpy": "2.5.4",
+    "opencv": "5.0.0"
+  },
+  "parityTolerance": 0.001,
+  "models": [
+    {
+      "name": "MiniFASNetV2",
+      "checkpoint": "2.7_80x80_MiniFASNetV2.pth",
+      "checkpointSHA256": "a5eb02e1843f19b5386b953cc4c9f011c3f985d0ee2bb9819eea9a142099bec0",
+      "cropScale": 2.7,
+      "packageFiles": {
+        "Data/com.apple.CoreML/model.mlmodel": "49f1fb2efe484bf245c72037093a6783badd1eebba653c18381f78a2b40dcb89",
+        "Data/com.apple.CoreML/weights/weight.bin": "5836f7cabcf20c18f12b5f4b14eed29cd9211b5ec6a84032b2a70b8730c65a88",
+        "Manifest.json": "66b2fa64c4164b2724e07f0ae996bb2d6512305a8778c7f8479fdcb7fc8c2129"
+      },
+      "maximumSyntheticProbabilityDifference": 2.205371856689453e-06
+    },
+    {
+      "name": "MiniFASNetV1SE",
+      "checkpoint": "4_0_0_80x80_MiniFASNetV1SE.pth",
+      "checkpointSHA256": "84ee1d37d96894d5e82de5a57df044ef80a58be2b218b5ed7cdfd875ec2f5990",
+      "cropScale": 4.0,
+      "packageFiles": {
+        "Data/com.apple.CoreML/model.mlmodel": "cb7206b3208c7eb61905af56e2b403ccdc203107157d4a2f3430ec2e72c10d01",
+        "Data/com.apple.CoreML/weights/weight.bin": "15b7a8e96c891e0f270fa62c60b3ca6fe754c3d6975ffd802e1d9269fb4919ff",
+        "Manifest.json": "ecf2f886a896e65b50c4164e6aec348e604ced2a37c8b21d6a91447cd60caf97"
+      },
+      "maximumSyntheticProbabilityDifference": 4.112720489501953e-06
+    }
+  ],
+  "validation": "Synthetic conversion parity only; no biometric/PAD accuracy or live-camera validation."
+}

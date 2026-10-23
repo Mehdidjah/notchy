@@ -26,16 +26,50 @@ struct FaceIdentity: Codable, Equatable, Identifiable, Sendable {
     /// A disabled identity stays stored but is never matched.
     var isEnabled: Bool
     var samples: [FaceSample]
+    var capturePolicyVersion: Int
 
-    init(id: UUID = UUID(), name: String, isEnabled: Bool = true, samples: [FaceSample] = []) {
+    init(id: UUID = UUID(), name: String, isEnabled: Bool = true, samples: [FaceSample] = [],
+         capturePolicyVersion: Int = 1) {
         self.id = id
         self.name = name
         self.isEnabled = isEnabled
         self.samples = samples
+        self.capturePolicyVersion = capturePolicyVersion
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, name, isEnabled, samples, capturePolicyVersion }
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        isEnabled = try values.decode(Bool.self, forKey: .isEnabled)
+        samples = try values.decode([FaceSample].self, forKey: .samples)
+        capturePolicyVersion = try values.decodeIfPresent(Int.self, forKey: .capturePolicyVersion) ?? 1
+    }
+
+    var supportsPassiveUnlock: Bool {
+        let current = samples(forModel: FaceRecognitionProfile.auraFace.identifier)
+        guard capturePolicyVersion == 2, current.count == 18 else { return false }
+        var counts: [FaceEnrollmentPose: Int] = [:]
+        for sample in current {
+            guard FaceRecognitionProfile.auraFace.prepared(sample.descriptor) != nil,
+                  sample.quality.isFinite, (0.3...1).contains(sample.quality),
+                  abs(sample.yaw) <= 25, abs(sample.pitch) <= 25,
+                  sample.date.timeIntervalSince1970.isFinite,
+                  let pose = FaceEnrollmentPoseBands().pose(yaw: sample.yaw, pitch: sample.pitch) else { return false }
+            counts[pose, default: 0] += 1
+        }
+        return FaceEnrollmentPose.allCases.allSatisfy { counts[$0] == 2 }
     }
 
     func samples(forModel modelIdentifier: String) -> [FaceSample] {
         samples.filter { $0.modelIdentifier == modelIdentifier }
+    }
+
+    /// Companion model descriptors describe the same captured views, not extra camera samples.
+    var capturedViewCount: Int {
+        let current = samples(forModel: FaceRecognitionProfile.auraFace.identifier)
+        return current.isEmpty ? samples.count : current.count
     }
 
     /// True when none of the samples came from `modelIdentifier`, so the face has to be enrolled
@@ -63,7 +97,7 @@ enum FaceEnrollmentPose: String, CaseIterable, Codable, Sendable {
     /// The centre first, because later samples are checked against it, then once around the
     /// circle so the guide never asks for a jump across the face.
     static let guidedOrder: [FaceEnrollmentPose] = [
-        .centre, .left, .upLeft, .up, .upRight, .right, .downRight, .down, .downLeft
+        .centre, .right, .upRight, .up, .upLeft, .left, .downLeft, .down, .downRight
     ]
 }
 
@@ -74,10 +108,12 @@ enum FaceEnrollmentPose: String, CaseIterable, Codable, Sendable {
 /// a sample is never filed under the wrong one. Beyond the turned band the face is too far round
 /// for a useful descriptor. Angles are in degrees; tune them against real webcam captures.
 struct FaceEnrollmentPoseBands: Equatable, Sendable {
-    var centredYaw: Double = 8
-    var centredPitch: Double = 7
-    var turnedYaw: ClosedRange<Double> = 15...40
-    var turnedPitch: ClosedRange<Double> = 12...30
+    // Fixed camera-pose tolerances, converted from radians once. The centre and
+    // turned bands stay disjoint; elapsed time never widens them.
+    var centredYaw: Double = 0.18 * 180 / .pi
+    var centredPitch: Double = 0.15 * 180 / .pi
+    var turnedYaw: ClosedRange<Double> = (0.24 * 180 / .pi)...40
+    var turnedPitch: ClosedRange<Double> = (0.17 * 180 / .pi)...30
 
     func pose(yaw: Double, pitch: Double) -> FaceEnrollmentPose? {
         guard let horizontal = Self.zone(yaw, centred: centredYaw, turned: turnedYaw),
@@ -117,11 +153,14 @@ struct FaceEnrollmentRules: Equatable, Sendable {
     var holdFrames = 3
     /// ...and for at least this long, so a head sweeping through a band is not captured.
     var holdDuration: TimeInterval = 0.5
+    /// A dropped/stalled stream cannot make unrelated frames count as a continuous hold.
+    var maximumFrameGap: TimeInterval = 0.5
     /// Vision's face capture quality below which a frame is ignored (blur, poor light, occlusion).
     var minimumQuality = 0.3
     var samplesPerPose = 2
+    var initialCaptureDelay: TimeInterval = 1.5
     /// A further sample of the same pose needs this much time since the previous one...
-    var repeatSampleSpacing: TimeInterval = 1.0
+    var repeatSampleSpacing: TimeInterval = 0
     /// ...or this much head movement (degrees of yaw or pitch), so the two are not near-copies.
     var repeatSamplePoseChange = 3.0
     /// A sample further than this from the centre-pose samples is treated as someone else.
@@ -160,6 +199,8 @@ enum FaceEnrollmentEvent: Equatable, Sendable {
     case lowQuality
     /// A turned pose while the centre still needs samples; the centre comes first.
     case centreFirst(FaceEnrollmentPose)
+    case settling
+    case wrongPose(expected: FaceEnrollmentPose)
     /// This pose already has all its samples.
     case poseAlreadyCaptured(FaceEnrollmentPose)
     /// Holding a pose; `progress` runs 0...1 towards a capture.
@@ -180,8 +221,9 @@ enum FaceEnrollmentEvent: Equatable, Sendable {
 /// 1. The frame must carry a usable descriptor, sit inside one pose's band and meet the quality
 ///    floor; any frame that does not breaks the current hold.
 /// 2. The centre pose is collected first, because it is the reference for rule 5.
-/// 3. A pose is captured after `holdFrames` consecutive frames in it spanning `holdDuration`.
-///    Each capture ends the hold, so every sample needs a hold of its own.
+/// 3. A pose is captured after `holdFrames` consecutive frames and `holdDuration`.
+///    A continuous second sample starts at the previous capture, with a fresh frame count.
+///    Leaving the pose, a poor frame or a camera gap discards that continuity.
 /// 4. A pose's second sample needs either time or a little movement since its first, so the two
 ///    describe different moments rather than one frame twice.
 /// 5. Every sample after the first is compared with the centre-pose samples; a face that is too
@@ -208,11 +250,14 @@ struct FaceEnrollmentPoseTracker: Sendable {
     private var hold: Hold?
     private var firstTimestamp: TimeInterval?
     private var lastTimestamp: TimeInterval?
+    private let profile: FaceRecognitionProfile?
 
-    init(modelIdentifier: String, startDate: Date = Date(), rules: FaceEnrollmentRules = .standard) {
+    init(modelIdentifier: String, startDate: Date = Date(), rules: FaceEnrollmentRules = .standard,
+         profile: FaceRecognitionProfile? = nil) {
         self.modelIdentifier = modelIdentifier
         self.startDate = startDate
         self.rules = rules
+        self.profile = profile
     }
 
     // MARK: Progress
@@ -240,13 +285,14 @@ struct FaceEnrollmentPoseTracker: Sendable {
 
     /// The mean of the centre-pose samples, which later samples must stay close to.
     var centreReference: [Float]? {
-        FaceDescriptor.mean(of: (samplesByPose[.centre] ?? []).map(\.descriptor))
+        guard let mean = FaceDescriptor.mean(of: (samplesByPose[.centre] ?? []).map(\.descriptor)) else { return nil }
+        return profile?.prepared(mean) ?? mean
     }
 
     /// A new identity holding every sample, once enrolment is complete.
     func makeIdentity(name: String, id: UUID = UUID()) -> FaceIdentity? {
         guard isComplete else { return nil }
-        return FaceIdentity(id: id, name: name, isEnabled: true, samples: samples)
+        return FaceIdentity(id: id, name: name, isEnabled: true, samples: samples, capturePolicyVersion: 2)
     }
 
     // MARK: Frames
@@ -260,8 +306,10 @@ struct FaceEnrollmentPoseTracker: Sendable {
     mutating func process(_ frame: FaceEnrollmentFrame) -> FaceEnrollmentEvent {
         guard !isComplete else { return .complete }
 
-        // A clock that runs backwards means a new capture session; start the hold afresh.
-        if let lastTimestamp, frame.timestamp < lastTimestamp { hold = nil }
+        guard frame.timestamp.isFinite else { hold = nil; return .unusableDescriptor }
+        // Duplicate/reordered frames must not count towards either a hold or a new sample.
+        if let lastTimestamp, frame.timestamp <= lastTimestamp { hold = nil; return .settling }
+        if let lastTimestamp, frame.timestamp - lastTimestamp > rules.maximumFrameGap + 1e-9 { hold = nil }
         lastTimestamp = frame.timestamp
         if firstTimestamp == nil { firstTimestamp = frame.timestamp }
 
@@ -285,6 +333,14 @@ struct FaceEnrollmentPoseTracker: Sendable {
             hold = nil
             return .poseAlreadyCaptured(pose)
         }
+        guard let expected = suggestedPose, pose == expected else {
+            hold = nil
+            return .wrongPose(expected: suggestedPose ?? .centre)
+        }
+        guard frame.timestamp - (firstTimestamp ?? frame.timestamp) >= rules.initialCaptureDelay else {
+            hold = nil
+            return .settling
+        }
 
         var current = hold.flatMap { $0.pose == pose ? $0 : nil }
             ?? Hold(pose: pose, startedAt: frame.timestamp, frameCount: 0)
@@ -307,7 +363,7 @@ struct FaceEnrollmentPoseTracker: Sendable {
         }
 
         if let reference = centreReference {
-            let distance = FaceDescriptor.distance(frame.descriptor, reference)
+            let distance = profile?.distance(frame.descriptor, reference) ?? FaceDescriptor.distance(frame.descriptor, reference)
             guard distance <= rules.samePersonMaximumDistance else {
                 hold = nil
                 differentFaceCount += 1
@@ -325,7 +381,10 @@ struct FaceEnrollmentPoseTracker: Sendable {
         )
         samplesByPose[pose, default: []].append(sample)
         sampleTimestamps[pose, default: []].append(frame.timestamp)
-        hold = nil
+        // The face is already settled. Keep the capture boundary as the beginning
+        // of the next half-second, but require fresh valid frames for that sample.
+        hold = capturedCount(for: pose) < rules.samplesPerPose
+            ? Hold(pose: pose, startedAt: frame.timestamp, frameCount: 0) : nil
         return isComplete ? .complete : .captured(pose, sampleNumber: capturedCount(for: pose))
     }
 }

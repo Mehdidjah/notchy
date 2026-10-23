@@ -1,5 +1,12 @@
 # Face Check model tools
 
+New guided enrollment uses the pinned AuraFace-v1 FP32 package described in
+[AURAFACE.md](AURAFACE.md), with separate MiniFASNet passive screening. Conversion
+parity does not validate face matching or photo/video rejection; automatic unlock
+remains gated by `FaceModelValidation` in normal builds. The following
+section documents the legacy model retained for existing in-app checks and paired
+enrollment descriptors.
+
 These scripts turn dlib's public-domain face-recognition network
 (`dlib_face_recognition_resnet_model_v1`) into the Core ML model that Face Check ships, and
 check it against dlib. Origin, licence and training-data notes are in
@@ -14,8 +21,8 @@ check it against dlib. Origin, licence and training-data notes are in
 ## What is checked in, and how it ships
 
 - `Sources/Notchy/Features/FaceCheck/Model/FaceDescriptor.mlpackage` is the **float16**
-  conversion (11.2 MB of weights). It is checked in, so building Notchy needs no Python, no
-  download and no conversion. Package.swift excludes the folder from the target.
+  conversion (11.2 MB of weights). It is checked in, so this legacy model needs no Python,
+  download or conversion when building. Package.swift excludes the folder from the target.
 - `script/build_and_run.sh` compiles it with `xcrun coremlcompiler` into
   `Notchy.app/Contents/Resources/FaceDescriptor.mlmodelc` and copies the licence note next to
   it. `FaceEmbedder` loads it from there with `Bundle.main`.

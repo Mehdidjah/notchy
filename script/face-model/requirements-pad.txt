@@ -1,0 +1,5 @@
+# Isolated conversion environment; runtime needs only native Core ML.
+coremltools==9.1.dev1
+torch==2.14.1
+numpy==2.5.4
+opencv-python-headless==5.0.0.93

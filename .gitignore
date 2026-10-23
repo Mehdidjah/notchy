@@ -4,6 +4,8 @@ dist/
 *.xcuserstate
 .codex/
 __pycache__/
+# Reproducible third-party model (261 MB); build with script/face-model/convert_auraface.py.
+Sources/Notchy/Features/FaceCheck/Model/AuraFace.mlpackage/
 .claude/
 # The test suite, the docs and the handoff notes stay on the developer's Mac, not in the repository.
 /Tests/

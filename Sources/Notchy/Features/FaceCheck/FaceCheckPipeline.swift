@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import OSLog
 import Vision
 
 /// One face found in a camera frame, as plain values that can leave the pipeline.
@@ -18,13 +19,19 @@ struct FaceFrameObservation: Equatable, Sendable {
 struct FaceFrameAnalysis: Sendable {
     var capturedAt: TimeInterval?
     var face: FaceFrameObservation?
-    /// The 150×150 chip the model saw, for the settings page.
+    /// The aligned chip the selected model saw, for the settings page.
     var chip: CGImage?
     var descriptor: [Float]?
     var problem: String?
     var faceCount: Int = 0
     /// Deny cues remain available even if alignment or embedding failed.
     var liveness: FaceLivenessObservation?
+    var pad: FacePADObservation? = nil
+    var modelIdentifier: String? = nil
+    /// A companion descriptor from the same enrollment frame, preserving existing in-app checks.
+    var legacyDescriptor: [Float]? = nil
+    /// A recoverable positioning issue. It must not carry matching or PAD evidence.
+    var captureGuidance: String? = nil
 }
 
 /// Turns camera frames into face descriptors: Vision finds the face and its landmarks, the
@@ -33,16 +40,45 @@ struct FaceFrameAnalysis: Sendable {
 /// Runs on its own serial queue so Vision's synchronous requests never take a thread from the
 /// main actor or the shared pool; the embedder has its own queue as well.
 actor FaceCheckPipeline {
+    private static let logger = Logger(subsystem: "com.local.Notchy", category: "FaceCheck")
     private let queue = DispatchSerialQueue(label: "Notchy.FaceCheck.Pipeline", qos: .userInitiated)
     let embedder: FaceEmbedder
+    private let enrollmentEmbedder: FaceEmbedder?
+    private let legacyEnrollmentEmbedder: FaceEmbedder
+    private let padModel: FacePADModel
 
     nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
 
-    init(embedder: FaceEmbedder) {
+    init(embedder: FaceEmbedder, enrollmentEmbedder: FaceEmbedder? = nil, padModel: FacePADModel = FacePADModel()) {
         self.embedder = embedder
+        self.enrollmentEmbedder = enrollmentEmbedder
+        self.padModel = padModel
+        legacyEnrollmentEmbedder = embedder.profile == .legacy ? embedder : FaceEmbedder(profile: .legacy)
     }
 
-    func analyze(_ frame: CGImage) async -> FaceFrameAnalysis {
+    func prepare(passive: Bool = false) async throws {
+        try await embedder.prepare()
+        if passive { try await padModel.prepare() }
+    }
+
+    func unload() async {
+        await embedder.unload()
+        await enrollmentEmbedder?.unload()
+        await legacyEnrollmentEmbedder.unload()
+        await padModel.unload()
+    }
+
+    func analyze(_ frame: CGImage, capturedAt: TimeInterval = ProcessInfo.processInfo.systemUptime,
+                 generation: Int = 0, passive: Bool = false, enrolling: Bool = false) async -> FaceFrameAnalysis {
+        var result = await analyzeFrame(frame, capturedAt: capturedAt, generation: generation,
+                                        passive: passive || enrolling, enrolling: enrolling)
+        result.capturedAt = capturedAt
+        return result
+    }
+
+    private func analyzeFrame(_ frame: CGImage, capturedAt: TimeInterval, generation: Int,
+                              passive: Bool, enrolling: Bool) async -> FaceFrameAnalysis {
+        let embedder = enrolling ? (enrollmentEmbedder ?? embedder) : embedder
         let detection: (face: FaceFrameObservation?, count: Int, device: Bool)
         do {
             detection = try Self.detectFrame(in: frame)
@@ -62,20 +98,47 @@ actor FaceCheckPipeline {
         guard detection.count == 1 else {
             return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness)
         }
-        guard let alignment = FaceChipAligner.alignment(for: face.landmarks),
-              let chip = FaceChipRenderer.renderImage(frame, alignment: alignment)
-        else {
+        guard FaceCaptureFraming.contains(face.bounds) else {
+            return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness,
+                                     captureGuidance: FaceCaptureFraming.guidance)
+        }
+        let chip: CGImage?
+        if embedder.profile.metric == .cosine {
+            chip = FaceCanonicalChip.render(frame, landmarks: face.landmarks)
+        } else {
+            chip = FaceChipAligner.alignment(for: face.landmarks).flatMap { FaceChipRenderer.renderImage(frame, alignment: $0) }
+        }
+        guard let chip else {
             return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness)
         }
+        var stage = "recognition"
         do {
             let descriptor = try await embedder.descriptor(for: chip)
+            var legacyDescriptor: [Float]?
+            if enrolling,
+               let alignment = FaceChipAligner.alignment(for: face.landmarks),
+               let legacyChip = FaceChipRenderer.renderImage(frame, alignment: alignment) {
+                stage = "companion recognition"
+                legacyDescriptor = try await legacyEnrollmentEmbedder.descriptor(for: legacyChip)
+            }
+            stage = "photo and screen check"
+            let pad = passive ? try await padModel.evaluate(frame: frame, faceBounds: face.bounds,
+                capturedAt: capturedAt, generation: generation) : nil
             return FaceFrameAnalysis(face: face, chip: chip, descriptor: descriptor,
-                                     faceCount: detection.count, liveness: liveness)
+                                     faceCount: detection.count, liveness: liveness, pad: pad,
+                                     modelIdentifier: embedder.profile.identifier, legacyDescriptor: legacyDescriptor)
         } catch FaceEmbedder.Failure.modelMissing {
             return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model is missing from the app.",
                                      faceCount: detection.count, liveness: liveness)
         } catch {
-            return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model failed: \(error.localizedDescription)",
+            let message = (error as? FaceEmbedder.Failure)?.errorDescription
+                ?? (error as? FacePADModel.Failure)?.errorDescription
+                ?? "The \(stage) couldn't finish. Restart the scan."
+            // Fixed messages and error codes only: never log camera pixels, embeddings,
+            // identity names, credentials, or an inference error's feature-value payload.
+            let diagnostic = error as NSError
+            Self.logger.error("Face scan failed at \(stage, privacy: .public): \(message, privacy: .public) [\(diagnostic.domain, privacy: .public):\(diagnostic.code)]")
+            return FaceFrameAnalysis(face: face, chip: chip, problem: message,
                                      faceCount: detection.count, liveness: liveness)
         }
     }
