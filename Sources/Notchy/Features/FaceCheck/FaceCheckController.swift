@@ -99,6 +99,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         self.checkTimeout = checkTimeout
         self.enrollmentOwnerAuthorization = enrollmentOwnerAuthorization
         self.liveActivity = liveActivity ?? FaceCheckLiveActivity()
+        self.liveActivity.previewSession = camera.session
         preset = UserDefaults.standard.string(forKey: Self.presetKey).flatMap(FaceMatchPreset.init(rawValue:)) ?? .standard
         self.liveActivity.onRetry = { [weak self] in self?.retry() }
         self.liveActivity.onCancel = { [weak self] in self?.cancelVerification() }

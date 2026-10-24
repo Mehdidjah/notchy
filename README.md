@@ -116,8 +116,8 @@ and notarize the image so it opens without that step.
 - **Face Check.** Scan in the Face tab with a circular camera guide and blue
   progress ring at the top of the screen. Follow nine ordered head positions,
   with two stable captures per pose and passive photo/screen checks. Successful
-  storage plays a native “Face saved” animation. Protected clipboard actions open
-  a separate check in the notch, followed by a recognized or retry state. Failed checks support
+  storage plays a native “Face saved” animation. Protected clipboard actions use
+  the same circular camera presentation with a recognized or retry state. Failed checks support
   hover-to-retry for five seconds. A small check window appears if the notch is
   hidden. AuraFace handles all recognition; the retired model is no longer bundled.
   Existing AuraFace captures remain usable; older faces require recapture in Settings.

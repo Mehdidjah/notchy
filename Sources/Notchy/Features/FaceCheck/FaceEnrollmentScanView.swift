@@ -147,7 +147,7 @@ struct FaceEnrollmentSilhouette: Shape {
     }
 }
 
-private struct FaceEnrollmentCheckmark: Shape {
+struct FaceEnrollmentCheckmark: Shape {
     func path(in rect: CGRect) -> Path {
         Path { path in
             path.move(to: CGPoint(x: rect.minX + 4, y: rect.midY))

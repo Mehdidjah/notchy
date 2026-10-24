@@ -1,3 +1,4 @@
+@preconcurrency import AVFoundation
 import Combine
 import SwiftUI
 
@@ -22,6 +23,8 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
     var onExpired: (() -> Void)?
     var hapticsEnabled: () -> Bool = { true }
     var retryOnHover: () -> Bool = { true }
+    /// Only in-app verification supplies a preview. Lock-screen feedback owns no camera lease.
+    var previewSession: AVCaptureSession?
     private let haptics: HapticFeedbackPerforming
     private let changes = PassthroughSubject<Void, Never>()
     private var transition: Task<Void, Never>?
@@ -110,11 +113,11 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         let width: CGFloat
         let height: CGFloat
         if context.hasHardwareNotch {
-            width = expanded ? max(252, context.notchWidth + 32) : context.notchWidth + padding
-            height = expanded ? max(200, context.closedHeight + 164) : context.closedHeight
+            width = expanded ? max(FaceEnrollmentPresentation.bodyWidth, context.notchWidth + 32) : context.notchWidth + padding
+            height = expanded ? max(FaceEnrollmentPresentation.height, context.closedHeight + 300) : context.closedHeight
         } else {
-            width = expanded ? 180 : 80
-            height = expanded ? 180 : 24
+            width = expanded ? FaceEnrollmentPresentation.bodyWidth : 80
+            height = expanded ? FaceEnrollmentPresentation.height : 24
         }
         return ClosedActivityLayout(
             leftWidth: 0, centerWidth: width + hover - padding,
@@ -127,7 +130,7 @@ final class FaceCheckLiveActivity: ObservableObject, ClosedLiveActivity {
         let topInset = context.hasHardwareNotch ? context.closedHeight : 8
         return AnyView(VStack(spacing: 0) {
             Color.clear.frame(height: topInset)
-            FaceCheckActivityView(activity: self, emblemSize: context.hasHardwareNotch ? 140 : 116)
+            FaceCheckActivityView(activity: self, emblemSize: FaceEnrollmentPresentation.ringDiameter)
                 .frame(height: layout(in: context).outerHeight - topInset)
         })
     }
@@ -140,8 +143,19 @@ struct FaceCheckActivityView: View {
     private var succeeded: Bool { activity.phase == .saved || activity.phase == .recognized }
 
     var body: some View {
-        VStack(spacing: 0) {
-            FaceCheckEmblem(phase: activity.phase, animates: animates)
+        VStack(spacing: 8) {
+            FaceVerificationCircle(phase: activity.phase, animates: animates) {
+                if let session = activity.previewSession {
+                    FaceCheckPreview(session: session, faceBounds: nil)
+                } else {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 36, weight: .light))
+                        .foregroundStyle(FaceEnrollmentPresentation.accent)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+                .frame(width: FaceEnrollmentPresentation.ringDiameter, height: FaceEnrollmentPresentation.ringDiameter)
+                .scaleEffect(emblemSize / FaceEnrollmentPresentation.ringDiameter)
                 .frame(width: emblemSize, height: emblemSize)
                 .accessibilityHidden(true)
             Group {
@@ -149,9 +163,12 @@ struct FaceCheckActivityView: View {
                     Text(activity.phase == .saved ? "Face saved" : "Recognized")
                 } else if activity.phase == .failed {
                     if activity.retryAvailable {
-                        Button(activity.retryOnHover() ? "Hover to retry" : "Click to retry") { activity.retry() }
-                            .buttonStyle(.plain)
-                            .help(activity.prompt)
+                        VStack(spacing: 4) {
+                            Text(activity.prompt).lineLimit(2)
+                            Button("Try again") { activity.retry() }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(FaceEnrollmentPresentation.accent)
+                        }
                     } else {
                         Text("Enter your Mac password")
                     }
@@ -159,11 +176,11 @@ struct FaceCheckActivityView: View {
                     Text(activity.prompt)
                 }
             }
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.white.opacity(0.6))
+            .font(.system(size: emblemSize >= 200 ? 15 : 10, weight: .medium))
+            .foregroundStyle(.white.opacity(0.85))
             .multilineTextAlignment(.center)
             .lineLimit(2)
-            .frame(height: 24)
+            .frame(height: emblemSize >= 200 ? 48 : 36)
             .padding(.horizontal, 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

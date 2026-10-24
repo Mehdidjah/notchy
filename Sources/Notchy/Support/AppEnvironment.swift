@@ -168,7 +168,7 @@ final class AppEnvironment {
 
         // The camera and model load only for a preview, enrollment, or an explicit check.
         let faceCheck = FaceCheckController.shared
-        let faceWindow = FaceCheckWindowController(controller: faceCheck)
+        let faceWindow = FaceCheckWindowController(controller: faceCheck, settings: settings)
         faceCheckWindow = faceWindow
         let enrollmentWindow = FaceEnrollmentWindowController(controller: faceCheck, settings: settings)
         faceEnrollmentWindow = enrollmentWindow
