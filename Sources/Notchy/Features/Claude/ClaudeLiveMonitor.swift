@@ -92,6 +92,7 @@ final class ClaudeLiveMonitor: ObservableObject {
     /// Reads the open sessions once and announces the ones that just finished.
     func poll() async {
         let sessions = await loadSessions()
+        guard !Task.isCancelled else { return }
         let plan = await loadPlan()
         guard !Task.isCancelled else { return }
         usage.receive(plan)

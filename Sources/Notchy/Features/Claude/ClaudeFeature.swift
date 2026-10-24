@@ -30,27 +30,50 @@ enum ClaudeFeature {
         model.activityCenter.register(activity)
 
         monitor.onFinished = { [weak model] session in
-            guard settings.announcesFinish else { return }
+            guard model?.selectedTab == .claude, userSettings.showClaudeTab,
+                  settings.announcesFinish else { return }
             model?.activityCenter.requestSneakPeek(finishedPeek(for: session))
         }
         attention.onNewAlerts = { [weak model] alerts in
-            guard settings.warnsAboutLimits, let alert = alerts.first else { return }
+            guard model?.selectedTab == .claude, userSettings.showClaudeTab,
+                  settings.warnsAboutLimits, let alert = alerts.first else { return }
             model?.activityCenter.requestSneakPeek(ClaudeAlerts.peek(for: alert))
         }
-        attention.start()
 
-        // Watch the open sessions only while something uses them.
-        settings.$closedNotch.combineLatest(settings.$announcesFinish, settings.$warnsAboutLimits)
-            .map { mode, announces, warns in mode != .never || announces || warns }
-            .removeDuplicates()
-            .sink { needed in
-                if needed { monitor.start() } else { monitor.stop() }
-            }
+        bindMonitoring(model: model, userSettings: userSettings, settings: settings,
+                       monitor: monitor, attention: attention)
             .store(in: &cancellables)
 
         SettingsSectionRegistry.shared.register(.claude, id: "claude") {
             ClaudeSettingsSection(userSettings: userSettings)
         }
+    }
+
+    /// The selected tab owns the session indicator, polling and alert timer. Observe the
+    /// incoming selection synchronously so leaving the tab clears its activity immediately.
+    static func bindMonitoring(
+        model: NotchViewModel,
+        userSettings: UserSettings,
+        settings: ClaudeSettings,
+        monitor: ClaudeLiveMonitor,
+        attention: ClaudeAttention,
+        chat: ClaudeChatController = .shared
+    ) -> AnyCancellable {
+        settings.$closedNotch.combineLatest(settings.$announcesFinish, settings.$warnsAboutLimits)
+            .map { mode, announces, warns in mode != .never || announces || warns }
+            .combineLatest(model.$selectedTab, userSettings.$showClaudeTab)
+            .map { needed, tab, shown in needed && shown && tab == .claude }
+            .removeDuplicates()
+            .sink { [weak model] needed in
+                if needed {
+                    attention.start()
+                    monitor.start(chat: chat)
+                } else {
+                    attention.stop()
+                    monitor.stop()
+                }
+                model?.activityCenter.reevaluate()
+            }
     }
 
     static func stop(model: NotchViewModel) {
@@ -67,8 +90,9 @@ enum ClaudeFeature {
 
     /// The tab the island opens on while Claude is working on the closed notch. Asked on every
     /// hover too, so it only answers; it changes nothing.
-    static func liveActivityTab(activeActivityID: String?) -> NotchTab? {
-        guard activeActivityID == ClaudeClosedActivity.id, ClaudeLiveMonitor.shared.snapshot.isWorking else { return nil }
+    static func liveActivityTab(activeActivityID: String?, selectedTab: NotchTab?) -> NotchTab? {
+        guard selectedTab == .claude, activeActivityID == ClaudeClosedActivity.id,
+              ClaudeLiveMonitor.shared.snapshot.isWorking else { return nil }
         return .claude
     }
 
@@ -125,6 +149,9 @@ struct ClaudeSettingsSection: View {
                 }
             }
             Toggle("Say when Claude finishes", isOn: $settings.announcesFinish)
+            Text("The session indicator and finish or limit notices are active only while the AI tools tab is selected. Switching to another tab stops monitoring and clears the indicator.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Text("Claude Code's mark hops while Claude works. Beside it, a ring shows how full the context of the session you're in is: the one Claude is working in, or else the one you used last. Click it to see your sessions.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

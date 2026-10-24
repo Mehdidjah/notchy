@@ -117,7 +117,8 @@ final class AppEnvironment {
     private func startFeatures() {
         TimerFeature.start()
         model.liveActivityTabProvider = { [weak model] in
-            if let tab = ClaudeFeature.liveActivityTab(activeActivityID: model?.activityCenter.activeActivityID) { return tab }
+            if let tab = ClaudeFeature.liveActivityTab(activeActivityID: model?.activityCenter.activeActivityID,
+                                                     selectedTab: model?.selectedTab) { return tab }
             return TimerManager.shared.isActive ? .timer : nil
         }
 
