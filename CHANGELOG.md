@@ -1,3 +1,31 @@
+# Notchy 1.0.3
+
+- Show the session indicator only while the AI tools tab is selected. Switching
+  away stops background session monitoring and clears its indicator.
+- Remove the duplicate Mac Face Unlock settings sheet. Manage and password
+  shortcuts now open the existing Settings → Face Check pane.
+- Replace the old face-symbol scanner with the circular live-camera view,
+  completion ring, and clear retry state for protected in-app checks.
+- Use AuraFace for all face recognition and remove the retired model and its
+  companion enrollment captures. Enrollment still records all nine positions.
+- Preserve encrypted saved faces and existing password bindings. Current AuraFace
+  captures remain usable; legacy-only enrollments need recapture in Face Check.
+- Reject verification frames from a changed or unknown recognition model and
+  apply screen-capture privacy to the fallback check window.
+
+Automatic Mac Face Unlock remains restricted to explicitly enabled personal
+testing builds until recognition and photo/video validation trials pass.
+It is not enabled in this standard 1.0.3 installer. Protected in-app Face Check
+continues to use prompted liveness checks.
+
+This installer supports Apple silicon and Intel Macs running macOS 14 or later.
+Quit Notchy before replacing an installed copy. This build is ad-hoc signed and
+not notarized; first launch may require Open Anyway in System Settings → Privacy
+& Security, and Camera or Accessibility permission may need to be renewed.
+
+This release is public. Installed copies can discover it through their update
+check; updating requires downloading and installing the new app.
+
 # Notchy 1.0.2
 
 - Integrated face, camera, recognition and password controls into the existing
