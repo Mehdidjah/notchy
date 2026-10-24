@@ -19,12 +19,8 @@ struct FaceRecognitionProfile: Equatable, Sendable {
     var precision: String { metric == .cosine ? "fp32" : "fp16" }
     var sourceRevision: String? { metric == .cosine ? "af6d057c9b0ec4071d4c49c80e3539258798b609" : nil }
 
-    static let legacy = FaceRecognitionProfile(
-        identifier: "dlib-face-resnet-v1", modelName: "FaceDescriptor",
-        sourceSHA256: "55533b28a95800a551ba546ba62fe69625c7e95a7061c338adffead08719da30",
-        chipSize: 150, dimension: 128, metric: .euclidean, strictDistance: 0.5, enrollmentDistance: 0.6)
     /// These evaluation defaults are also used by explicitly selected personal testing builds.
-    /// Normal builds need a passing validation report with a frozen production threshold.
+    /// Automatic Mac unlocking in normal builds needs a passing validation report with a frozen threshold.
     static let auraFace = FaceRecognitionProfile(
         identifier: "auraface-v1-r1", modelName: "AuraFace",
         sourceSHA256: "a7933ea5330113b01c9b60351d8f4c33003f145d8470ac5f0e52ee2effe25c60",

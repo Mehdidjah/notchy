@@ -13,7 +13,7 @@ import OSLog
 /// wait on Core ML.
 actor FaceEmbedder {
     enum ModelLocation: Sendable, Equatable {
-        /// `FaceDescriptor.mlmodelc` in the app bundle's Resources (see script/build_and_run.sh).
+        /// The profile's compiled model in the app bundle's Resources.
         case appBundle
         /// A compiled `.mlmodelc` directory.
         case compiledModel(URL)
@@ -49,14 +49,10 @@ actor FaceEmbedder {
         }
     }
 
-    static let chipSize = 150
-    static let descriptorLength = 128
-    /// dlib's same-person radius for this network (Euclidean distance between descriptors).
-    static let sameFaceDistance: Float = 0.6
     /// Stored next to every saved descriptor, so descriptors from another model are never
     /// compared with this one's.
-    static let modelIdentifier = "dlib-face-resnet-v1"
-    static let bundledModelName = "FaceDescriptor"
+    static let modelIdentifier = FaceRecognitionProfile.auraFace.identifier
+    static let bundledModelName = FaceRecognitionProfile.auraFace.modelName
 
     private static let inputName = "image"
     private static let outputName = "descriptor"
@@ -78,7 +74,7 @@ actor FaceEmbedder {
 
     /// `computeUnits` defaults to CPU and Neural Engine so the GPU stays free for the island.
     init(location: ModelLocation = .appBundle, computeUnits: MLComputeUnits = .cpuAndNeuralEngine,
-         profile: FaceRecognitionProfile = .legacy) {
+         profile: FaceRecognitionProfile = .auraFace) {
         self.location = location
         self.profile = profile
         self.computeUnits = computeUnits

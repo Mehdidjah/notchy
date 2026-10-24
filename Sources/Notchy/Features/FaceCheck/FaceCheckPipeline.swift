@@ -28,8 +28,6 @@ struct FaceFrameAnalysis: Sendable {
     var liveness: FaceLivenessObservation?
     var pad: FacePADObservation? = nil
     var modelIdentifier: String? = nil
-    /// A companion descriptor from the same enrollment frame, preserving existing in-app checks.
-    var legacyDescriptor: [Float]? = nil
     /// A recoverable positioning issue. It must not carry matching or PAD evidence.
     var captureGuidance: String? = nil
 }
@@ -43,17 +41,13 @@ actor FaceCheckPipeline {
     private static let logger = Logger(subsystem: "com.local.Notchy", category: "FaceCheck")
     private let queue = DispatchSerialQueue(label: "Notchy.FaceCheck.Pipeline", qos: .userInitiated)
     let embedder: FaceEmbedder
-    private let enrollmentEmbedder: FaceEmbedder?
-    private let legacyEnrollmentEmbedder: FaceEmbedder
     private let padModel: FacePADModel
 
     nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
 
-    init(embedder: FaceEmbedder, enrollmentEmbedder: FaceEmbedder? = nil, padModel: FacePADModel = FacePADModel()) {
+    init(embedder: FaceEmbedder, padModel: FacePADModel = FacePADModel()) {
         self.embedder = embedder
-        self.enrollmentEmbedder = enrollmentEmbedder
         self.padModel = padModel
-        legacyEnrollmentEmbedder = embedder.profile == .legacy ? embedder : FaceEmbedder(profile: .legacy)
     }
 
     func prepare(passive: Bool = false) async throws {
@@ -63,8 +57,6 @@ actor FaceCheckPipeline {
 
     func unload() async {
         await embedder.unload()
-        await enrollmentEmbedder?.unload()
-        await legacyEnrollmentEmbedder.unload()
         await padModel.unload()
     }
 
@@ -79,7 +71,6 @@ actor FaceCheckPipeline {
 
     private func analyzeFrame(_ frame: CGImage, capturedAt: TimeInterval, generation: Int,
                               passive: Bool, enrolling: Bool, minimumFaceWidth: Double) async -> FaceFrameAnalysis {
-        let embedder = enrolling ? (enrollmentEmbedder ?? embedder) : embedder
         let detection: (face: FaceFrameObservation?, count: Int, device: Bool)
         do {
             detection = try Self.detectFrame(in: frame)
@@ -107,31 +98,18 @@ actor FaceCheckPipeline {
             return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness,
                                      captureGuidance: "Move closer to the camera.")
         }
-        let chip: CGImage?
-        if embedder.profile.metric == .cosine {
-            chip = FaceCanonicalChip.render(frame, landmarks: face.landmarks)
-        } else {
-            chip = FaceChipAligner.alignment(for: face.landmarks).flatMap { FaceChipRenderer.renderImage(frame, alignment: $0) }
-        }
-        guard let chip else {
+        guard let chip = FaceCanonicalChip.render(frame, landmarks: face.landmarks) else {
             return FaceFrameAnalysis(face: face, faceCount: detection.count, liveness: liveness)
         }
         var stage = "recognition"
         do {
             let descriptor = try await embedder.descriptor(for: chip)
-            var legacyDescriptor: [Float]?
-            if enrolling,
-               let alignment = FaceChipAligner.alignment(for: face.landmarks),
-               let legacyChip = FaceChipRenderer.renderImage(frame, alignment: alignment) {
-                stage = "companion recognition"
-                legacyDescriptor = try await legacyEnrollmentEmbedder.descriptor(for: legacyChip)
-            }
             stage = "photo and screen check"
             let pad = passive ? try await padModel.evaluate(frame: frame, faceBounds: face.bounds,
                 capturedAt: capturedAt, generation: generation) : nil
             return FaceFrameAnalysis(face: face, chip: chip, descriptor: descriptor,
                                      faceCount: detection.count, liveness: liveness, pad: pad,
-                                     modelIdentifier: embedder.profile.identifier, legacyDescriptor: legacyDescriptor)
+                                     modelIdentifier: embedder.profile.identifier)
         } catch FaceEmbedder.Failure.modelMissing {
             return FaceFrameAnalysis(face: face, chip: chip, problem: "The face model is missing from the app.",
                                      faceCount: detection.count, liveness: liveness)

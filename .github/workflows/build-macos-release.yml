@@ -101,7 +101,7 @@ jobs:
           codesign --verify --deep --strict "$APP"
           hdiutil verify "$DMG"
           test -s "$APP/Contents/Resources/AppIcon.icns"
-          for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+          for model in AuraFace MiniFASNetV2 MiniFASNetV1SE; do
             test -d "$APP/Contents/Resources/$model.mlmodelc"
           done
           for notice in AuraFace-LICENSE.md AuraFace-APACHE-2.0.txt MiniFASNet-LICENSE.txt MiniFASNet-NOTICE.md; do
@@ -109,7 +109,7 @@ jobs:
           done
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$VERSION"
           test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyExperimentalFaceUnlock' "$APP/Contents/Info.plist")" = 'false'
-          test -s "$APP/Contents/Resources/FaceDescriptor-LICENSE.md"
+          test ! -e "$APP/Contents/Resources/FaceDescriptor.mlmodelc"
           test "$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist")" = '14.0'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = 'com.local.Notchy'
           test "$(/usr/libexec/PlistBuddy -c 'Print :NotchyUpdateRepository' "$APP/Contents/Info.plist")" = "$UPDATE_REPOSITORY"

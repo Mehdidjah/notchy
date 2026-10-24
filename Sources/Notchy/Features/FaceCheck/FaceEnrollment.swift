@@ -66,7 +66,7 @@ struct FaceIdentity: Codable, Equatable, Identifiable, Sendable {
         samples.filter { $0.modelIdentifier == modelIdentifier }
     }
 
-    /// Companion model descriptors describe the same captured views, not extra camera samples.
+    /// Older records may contain companion descriptors for the same captured views.
     var capturedViewCount: Int {
         let current = samples(forModel: FaceRecognitionProfile.auraFace.identifier)
         return current.isEmpty ? samples.count : current.count
@@ -164,8 +164,7 @@ struct FaceEnrollmentRules: Equatable, Sendable {
     /// ...or this much head movement (degrees of yaw or pitch), so the two are not near-copies.
     var repeatSamplePoseChange = 3.0
     /// A sample further than this from the centre-pose samples is treated as someone else.
-    /// dlib's same-person distance, looser than the matching presets because turned poses sit
-    /// further from the centre ones than a second centre view would.
+    /// The controller sets this to the active profile's enrollment distance.
     var samePersonMaximumDistance: Float = 0.6
     var descriptorDimension = FaceDescriptor.dimension
 

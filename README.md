@@ -119,7 +119,9 @@ and notarize the image so it opens without that step.
   storage plays a native “Face saved” animation. Protected clipboard actions open
   a separate check in the notch, followed by a recognized or retry state. Failed checks support
   hover-to-retry for five seconds. A small check window appears if the notch is
-  hidden. Camera processing and encrypted face descriptors stay on this Mac.
+  hidden. AuraFace handles all recognition; the retired model is no longer bundled.
+  Existing AuraFace captures remain usable; older faces require recapture in Settings.
+  Camera processing and encrypted face descriptors stay on this Mac.
 - **Optional Mac Face Unlock.** Choose **Set up Face Unlock** in the Face tab.
   The circular scan saves your face, then the same notch panel asks for your Mac
   login password. **Save & enable** validates and encrypts it with system authentication.

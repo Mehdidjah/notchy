@@ -39,6 +39,9 @@ struct FaceVerificationSession {
         lastFrame = timestamp
         if let denial = analysis.liveness?.denial { return finish(.rejected(denial.message)) }
         if let problem = analysis.problem { return finish(.rejected(problem)) }
+        if analysis.descriptor != nil, analysis.modelIdentifier != matcher.modelIdentifier {
+            return finish(.rejected("The face model changed. Retry the check."))
+        }
         if let guidance = analysis.captureGuidance {
             reset(timestamp: timestamp)
             return .waiting(guidance)

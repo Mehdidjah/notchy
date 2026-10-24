@@ -64,7 +64,7 @@ install_face_model() {
     return 0
   fi
   mkdir -p "$resources"
-  for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+  for model in AuraFace MiniFASNetV2 MiniFASNetV1SE; do
     if [[ ! -d "$model_dir/$model.mlpackage" ]]; then
       echo "warning: $model is missing; see script/face-model/README.md" >&2
       continue
@@ -81,7 +81,6 @@ install_face_model() {
   if [[ -f "$model_dir/FaceValidation.json" ]]; then
     cp "$model_dir/FaceValidation.json" "$resources/FaceValidation.json"
   fi
-  cp "$model_dir/MODEL-LICENSE.md" "$resources/FaceDescriptor-LICENSE.md"
 }
 install_face_model
 

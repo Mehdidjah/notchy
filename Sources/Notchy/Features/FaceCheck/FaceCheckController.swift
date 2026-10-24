@@ -55,14 +55,11 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
     private let recognitionProfile = FaceModelValidation.activeProfile
     private let enrollmentProfile = FaceRecognitionProfile.auraFace
     private let embedder = FaceEmbedder(profile: FaceModelValidation.activeProfile)
-    private let enrollmentEmbedder = FaceEmbedder(profile: .auraFace)
-    private lazy var pipeline = FaceCheckPipeline(embedder: embedder, enrollmentEmbedder: enrollmentEmbedder)
+    private lazy var pipeline = FaceCheckPipeline(embedder: embedder)
     private var store: FaceEnrollmentStore?
     private var matcher: FaceMatcher?
     private var tracker: FaceEnrollmentPoseTracker?
     private var enrollmentAnchor: [Float]?
-    private var enrollmentLegacyAnchor: [Float]?
-    private var enrollmentLegacySamples: [FaceSample] = []
     private var enrollmentLastFrame: TimeInterval?
     private var lastEnrollmentLogAt: TimeInterval = 0
     private var lastEnrollmentLogState = ""
@@ -125,7 +122,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         preferences?.options.maximumDistance(profile: recognitionProfile, validated: FaceModelValidation.bundled?.isAccepted == true)
             ?? recognitionProfile.maximumDistance(for: preset)
     }
-    var usesCalibratedThreshold: Bool { recognitionProfile.metric == .cosine }
+    var usesCalibratedThreshold: Bool { FaceModelValidation.bundled != nil }
     var enrollmentInstruction: String {
         if let problem { return problem }
         return status.isEmpty ? FaceEnrollmentPresentation.instruction(for: .centre) : status
@@ -386,8 +383,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         tracker = FaceEnrollmentPoseTracker(modelIdentifier: enrollmentProfile.identifier,
                                              rules: rules, profile: enrollmentProfile)
         enrollmentAnchor = nil
-        enrollmentLegacyAnchor = nil
-        enrollmentLegacySamples = []
         enrollmentLastFrame = nil
         enrollmentIsLive = false
         poseCounts = [:]
@@ -420,8 +415,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         logger.info("Guided face enrollment ended: \(message ?? "cancelled", privacy: .public)")
         tracker = nil
         enrollmentAnchor = nil
-        enrollmentLegacyAnchor = nil
-        enrollmentLegacySamples = []
         enrollmentLastFrame = nil
         enrollmentIsLive = false
         poseCounts = [:]
@@ -433,9 +426,7 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
 
     func finishEnrolment() {
         guard let tracker, canFinishEnrolmentEarly, activity == .enrolling else { return }
-        guard var identity = tracker.makeIdentity(name: enrolmentName),
-              enrollmentLegacySamples.count == tracker.requiredSampleCount else { return }
-        identity.samples += enrollmentLegacySamples
+        guard var identity = tracker.makeIdentity(name: enrolmentName) else { return }
         let previous = recapturingIdentity
         if let previous { identity.id = previous.id; identity.isEnabled = previous.isEnabled }
         let forMacUnlock = isMacUnlockEnrollment
@@ -467,8 +458,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
                 poseCounts = [:]
                 enrollmentIsLive = false
                 enrollmentAnchor = nil
-                enrollmentLegacyAnchor = nil
-                enrollmentLegacySamples = []
                 liveActivity.finish(saved: true, recognized: true, message: "Ready for your next check")
                 onSaved?(identity)
                 stopCameraIfUnused()
@@ -505,14 +494,15 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
             }
             guard self.matcher?.hasComparableIdentities == true else {
                 if requiresEnrollment {
-                    self.status = "Save your face in the Face tab first."
+                    self.status = self.identities.isEmpty ? "Save your face in the Face tab first."
+                        : "Recapture an enabled face in Settings → Face Check to use the current recognition model."
                     self.resolveAuthorization(false)
                     self.onNeedsEnrollment?()
                 } else if self.identities.isEmpty {
                     self.resolveAuthorization(true)
                 } else {
                     // An incompatible or disabled enrollment is not an empty store.
-                    self.status = "Reset saved faces in Face Check settings, then enroll again."
+                    self.status = "Recapture an enabled face in Settings → Face Check to use the current recognition model."
                     self.resolveAuthorization(false)
                 }
                 return
@@ -667,7 +657,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
               analysis.captureGuidance == nil, FaceCaptureFraming.contains(face.bounds),
               analysis.modelIdentifier == enrollmentProfile.identifier,
               enrollmentProfile.prepared(descriptor) != nil, let yaw = face.yaw, let pitch = face.pitch,
-              let legacy = analysis.legacyDescriptor, FaceRecognitionProfile.legacy.prepared(legacy) != nil,
               face.quality.isFinite, (0.3...1).contains(face.quality),
               let cues = analysis.liveness, cues.geometry.isUsable, cues.glare.isUsable else {
             enrollmentIsLive = false
@@ -681,12 +670,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         }
         if let anchor = enrollmentAnchor, enrollmentProfile.distance(anchor, descriptor) > enrollmentProfile.enrollmentDistance {
             logger.info("Guided capture rejected: primary identity continuity")
-            endEnrolment(message: "The face changed. Start a new scan.")
-            return
-        }
-        if let anchor = enrollmentLegacyAnchor,
-           FaceRecognitionProfile.legacy.distance(anchor, legacy) > FaceRecognitionProfile.legacy.enrollmentDistance {
-            logger.info("Guided capture rejected: companion identity continuity")
             endEnrolment(message: "The face changed. Start a new scan.")
             return
         }
@@ -713,7 +696,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
             return
         }
         if enrollmentAnchor == nil { enrollmentAnchor = descriptor }
-        if enrollmentLegacyAnchor == nil { enrollmentLegacyAnchor = legacy }
         enrollmentIsLive = true
         enrollmentLastFrame = timestamp
         let previousCount = tracker.capturedSampleCount
@@ -743,11 +725,6 @@ final class FaceCheckController: ObservableObject, FaceCheckAuthorizing {
         }
         logEnrollmentState("expected=" + expected + " observed=" + observed
             + " samples=" + String(tracker.capturedSampleCount) + " state=" + captureState, at: timestamp)
-        if tracker.capturedSampleCount > previousCount, var sample = tracker.samples.last {
-            sample.descriptor = legacy
-            sample.modelIdentifier = FaceRecognitionProfile.legacy.identifier
-            enrollmentLegacySamples.append(sample)
-        }
         self.tracker = tracker
         poseCounts = Dictionary(uniqueKeysWithValues: FaceEnrollmentPose.allCases.map { ($0, tracker.capturedCount(for: $0)) })
         status = instruction

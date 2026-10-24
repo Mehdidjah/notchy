@@ -82,7 +82,7 @@ fi
 
 # Do not distribute an installer whose enrollment flow cannot load its models.
 MODEL_DIR="$ROOT_DIR/Sources/Notchy/Features/FaceCheck/Model"
-for model in FaceDescriptor AuraFace MiniFASNetV2 MiniFASNetV1SE; do
+for model in AuraFace MiniFASNetV2 MiniFASNetV1SE; do
   [[ -s "$MODEL_DIR/$model.mlpackage/Data/com.apple.CoreML/model.mlmodel" \
      && -s "$MODEL_DIR/$model.mlpackage/Data/com.apple.CoreML/weights/weight.bin" \
      && -s "$MODEL_DIR/$model.mlpackage/Manifest.json" ]] \

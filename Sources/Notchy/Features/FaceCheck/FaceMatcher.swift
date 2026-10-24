@@ -1,13 +1,10 @@
 import Accelerate
 import Foundation
 
-/// Face descriptors: the 128 numbers dlib's network produces for one aligned face chip.
-///
-/// Two chips of the same person land close together in Euclidean distance, two different people
-/// further apart. dlib calls a pair the same person below 0.6. The vectors are not normalised, so
-/// distances are taken on the raw values.
+/// Numeric helpers for descriptors. Runtime matching supplies the recognition profile's
+/// dimensions, normalization and cosine distance; old records keep their original metadata.
 enum FaceDescriptor {
-    static let dimension = 128
+    static let dimension = FaceRecognitionProfile.auraFace.dimension
 
     /// A descriptor the matcher can use: the expected length and only finite numbers.
     static func isUsable(_ descriptor: [Float], dimension: Int = dimension) -> Bool {
@@ -38,9 +35,8 @@ enum FaceDescriptor {
 /// How close a face has to be to count as a match. Named presets rather than a free slider, and
 /// the default is one of them, so the settings picker always shows which one is in force.
 ///
-/// The distances are dlib's scale: 0.6 is dlib's own same-person line for single pairs. Face
-/// Check is stricter by default because both its gates must pass (see `FaceMatcher`), but these
-/// values are starting points to re-check against measured genuine and impostor distances.
+/// The raw distance values are retained for reading old presets and offline baseline tests.
+/// Runtime comparisons always use the active recognition profile's threshold.
 enum FaceMatchPreset: String, CaseIterable, Codable, Sendable {
     case strict
     case balanced

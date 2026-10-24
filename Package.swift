@@ -7,8 +7,8 @@ var targets: [Target] = [
     .executableTarget(
         name: "Notchy",
         path: "Sources/Notchy",
-        // Face Check's Core ML model and its licence note. script/build_and_run.sh
-        // compiles the model into the app's Resources; SwiftPM leaves the folder alone.
+        // Face Check's Core ML models and license/provenance files. script/build_and_run.sh
+        // compiles the models into the app's Resources; SwiftPM leaves the folder alone.
         exclude: ["Features/FaceCheck/Model"]
     )
 ]

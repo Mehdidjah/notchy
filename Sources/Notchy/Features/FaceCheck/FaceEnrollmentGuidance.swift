@@ -33,9 +33,7 @@ enum FaceEnrollmentGuidance {
             return ("framing", FaceCaptureFraming.guidance)
         }
         guard let descriptor = analysis.descriptor, analysis.modelIdentifier == profile.identifier,
-              profile.prepared(descriptor) != nil,
-              let companion = analysis.legacyDescriptor,
-              FaceRecognitionProfile.legacy.prepared(companion) != nil else {
+              profile.prepared(descriptor) != nil else {
             return ("recognition input", "Keep your whole face visible and hold still.")
         }
         guard face.yaw != nil, face.pitch != nil else {

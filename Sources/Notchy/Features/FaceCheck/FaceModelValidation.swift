@@ -66,5 +66,5 @@ struct FaceModelValidation: Codable, Equatable, Sendable {
         return report
     }()
 
-    static var activeProfile: FaceRecognitionProfile { bundled?.recognitionProfile ?? .legacy }
+    static var activeProfile: FaceRecognitionProfile { bundled?.recognitionProfile ?? .auraFace }
 }

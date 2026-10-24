@@ -2,7 +2,8 @@
 
 `convert_auraface.py` translates one pinned, Apache-2.0 AuraFace-v1 weight into a
 native Core ML ML Program. The app requires no ONNX, Python, OpenCV, or InsightFace
-runtime. The existing dlib converter and model remain separate.
+runtime. AuraFace is the recognition model for enrollment, protected in-app checks,
+and Mac unlocking; legacy model weights are no longer bundled.
 
 Create an isolated Python 3.14 environment and install
 `requirements-auraface.txt`. The dependency versions match the verified local run;

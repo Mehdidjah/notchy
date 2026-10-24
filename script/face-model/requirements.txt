@@ -1,7 +1,0 @@
-# Converter and parity check for Face Check's model (see README.md).
-# coremltools only has a Python 3.14 wheel as a pre-release, so install with --pre on 3.14.
-coremltools==9.1.dev1
-numpy>=2.0
-pillow>=11.0
-# Reference descriptors for parity.py; builds from source with cmake.
-dlib==20.0.1
