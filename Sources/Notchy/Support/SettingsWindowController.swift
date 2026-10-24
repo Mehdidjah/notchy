@@ -10,10 +10,12 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let makeContent: () -> NSView
+    private let navigation = SettingsNavigation()
 
     init(model: NotchViewModel, settings: UserSettings, permissions: PermissionManager) {
-        makeContent = {
-            NSHostingView(rootView: SettingsView(model: model, settings: settings, permissions: permissions))
+        makeContent = { [navigation] in
+            NSHostingView(rootView: SettingsView(model: model, settings: settings, permissions: permissions,
+                                                navigation: navigation))
         }
         let window = NSWindow(
             contentRect: CGRect(x: 0, y: 0, width: 700, height: 600),
@@ -35,9 +37,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     required init?(coder: NSCoder) { nil }
 
-    func show() {
+    func show(pane: SettingsPane? = nil) {
         if window?.contentView is NSHostingView<SettingsView> == false {
+            navigation.select(pane ?? .general)
             window?.contentView = makeContent()
+        } else if let pane {
+            navigation.select(pane)
         }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()

@@ -6,7 +6,6 @@ struct NotchFaceTabView: View {
     let model: NotchViewModel
     @ObservedObject private var controller: FaceCheckController
     @ObservedObject private var unlock: MacUnlockController
-    @State private var showUnlockSettings = false
 
     init(model: NotchViewModel, controller: FaceCheckController = .shared,
          unlock: MacUnlockController = .shared) {
@@ -46,13 +45,15 @@ struct NotchFaceTabView: View {
                     }
                     if unlock.hasPassword {
                         IslandActionButton(title: "Manage", systemImage: "slider.horizontal.3") {
-                            showUnlockSettings = true
+                            model.requestSettings(pane: .faceCheck)
                         }
                     }
                 }
                 .disabled(controller.isPreparingEnrollment || controller.activity != .watching || unlock.isBusy)
                 if !unlock.hasPassword && !controller.identities.isEmpty {
-                    Button(unlock.setupUnavailableReason == nil ? "Set Mac password…" : "Use a saved face…") { showUnlockSettings = true }
+                    Button(unlock.setupUnavailableReason == nil ? "Set Mac password…" : "Use a saved face…") {
+                        model.requestSettings(pane: .faceCheck)
+                    }
                         .font(.system(size: 11.island, weight: .medium))
                         .buttonStyle(.plain)
                         .foregroundStyle(.white.opacity(0.6))
@@ -68,12 +69,6 @@ struct NotchFaceTabView: View {
             guard !PerfTabCycler.isRequested else { return }
             controller.loadIdentities()
             unlock.refreshReadiness()
-        }
-        .onDisappear { model.releaseHold(reason: "macUnlockSetup") }
-        .sheet(isPresented: $showUnlockSettings) { MacUnlockSetupView() }
-        .onChange(of: showUnlockSettings) { _, showing in
-            if showing { model.holdOpen(reason: "macUnlockSetup") }
-            else { model.releaseHold(reason: "macUnlockSetup") }
         }
     }
 

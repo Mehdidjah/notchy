@@ -1,5 +1,20 @@
 import SwiftUI
 
+enum FaceSettingsAnchor: Hashable {
+    case password
+}
+
+private struct FacePasswordSettingsActionKey: EnvironmentKey {
+    static let defaultValue: @MainActor () -> Void = {}
+}
+
+extension EnvironmentValues {
+    var openFacePasswordSettings: @MainActor () -> Void {
+        get { self[FacePasswordSettingsActionKey.self] }
+        set { self[FacePasswordSettingsActionKey.self] = newValue }
+    }
+}
+
 /// Sections within the existing Face Check settings pane. Cameras open only on request.
 struct FaceCheckSettingsSection: View {
     let controller: FaceCheckController
@@ -7,7 +22,7 @@ struct FaceCheckSettingsSection: View {
     let preferences: FaceCheckPreferences
     let userSettings: UserSettings
     @StateObject private var devices = FaceCheckDeviceCatalog()
-    @State private var passwordSetup = false
+    @Environment(\.openFacePasswordSettings) private var openPassword
     @Environment(\.scenePhase) private var scenePhase
 
     init(userSettings: UserSettings, controller: FaceCheckController = .shared,
@@ -29,11 +44,8 @@ struct FaceCheckSettingsSection: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { unlock.refreshReadiness(); devices.refresh() }
             }
-            .sheet(isPresented: $passwordSetup) {
-                MacUnlockSetupView(controller: unlock, faces: controller, preferences: preferences)
-            }
             FaceGeneralSettingsSection(preferences: preferences, unlock: unlock,
-                                       appSettings: userSettings, devices: devices) { passwordSetup = true }
+                                       appSettings: userSettings, devices: devices, openPassword: openPassword)
             FaceIdentitiesSettingsSection(controller: controller, unlock: unlock)
             MacUnlockSettingsSection(controller: unlock, faces: controller, preferences: preferences)
             FaceCameraSettingsSection(controller: controller, preferences: preferences, devices: devices)

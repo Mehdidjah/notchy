@@ -41,7 +41,7 @@ final class NotchViewModel: ObservableObject {
 
     var onStateChange: ((NotchState) -> Void)?
     var onOpenLibrary: (() -> Void)?
-    var onOpenSettings: (() -> Void)?
+    var onOpenSettings: ((SettingsPane?) -> Void)?
     var onOpenQuickPaste: (() -> Void)?
     /// Answers whether the island should currently be retracted for a fullscreen app.
     var fullscreenProvider: (() -> Bool)?
@@ -733,7 +733,7 @@ final class NotchViewModel: ObservableObject {
     }
 
     func requestLibrary() { onOpenLibrary?() }
-    func requestSettings() { onOpenSettings?() }
+    func requestSettings(pane: SettingsPane? = nil) { onOpenSettings?(pane) }
     func requestQuickPaste() { onOpenQuickPaste?() }
 
     func toggleCapture() {

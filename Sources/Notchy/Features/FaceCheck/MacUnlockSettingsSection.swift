@@ -60,6 +60,7 @@ struct MacUnlockSettingsSection: View {
                 Button("Remove unavailable password…", role: .destructive) { confirmRemoval = true }
             }
         }
+        .id(FaceSettingsAnchor.password)
 
         if editing || !controller.hasPassword {
             Section(controller.hasPassword ? "Change your Mac password" : "Link your Mac password") {

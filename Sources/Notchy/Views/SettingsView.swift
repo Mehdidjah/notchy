@@ -150,9 +150,8 @@ struct SettingsView: View {
     @ObservedObject var model: NotchViewModel
     @ObservedObject var settings: UserSettings
     @ObservedObject var permissions: PermissionManager
+    @ObservedObject var navigation: SettingsNavigation
     @ObservedObject private var registry = SettingsSectionRegistry.shared
-    @State private var selection: SettingsPane? = .general
-    @State private var searchText = ""
 
     var body: some View {
         NavigationSplitView {
@@ -161,7 +160,7 @@ struct SettingsView: View {
                     .padding(.horizontal, 12)
                     .padding(.top, 12)
                 Divider()
-                List(selection: $selection) {
+                List(selection: $navigation.selection) {
                     ForEach(SettingsPane.groupOrder, id: \.self) { group in
                         let panes = visiblePanes.filter { $0.group == group }
                         if !panes.isEmpty {
@@ -178,22 +177,22 @@ struct SettingsView: View {
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 210, max: 240)
         } detail: {
-            detail(for: selection ?? .general)
+            detail(for: navigation.selection ?? .general)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .formStyle(.grouped)
-                .navigationTitle((selection ?? .general).title)
+                .navigationTitle((navigation.selection ?? .general).title)
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 700, minHeight: 600)
-        .onChange(of: searchText) { _, _ in
-            if let first = visiblePanes.first, !visiblePanes.contains(selection ?? .general) {
-                selection = first
+        .onChange(of: navigation.searchText) { _, _ in
+            if let first = visiblePanes.first, !visiblePanes.contains(navigation.selection ?? .general) {
+                navigation.selection = first
             }
         }
     }
 
     private var visiblePanes: [SettingsPane] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = navigation.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return SettingsPane.allCases }
         return SettingsPane.allCases.filter {
             "\($0.title) \($0.keywords)".localizedCaseInsensitiveContains(query)
@@ -203,9 +202,9 @@ struct SettingsView: View {
     private var searchField: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search", text: $searchText).textFieldStyle(.plain)
-            if !searchText.isEmpty {
-                Button { searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
+            TextField("Search", text: $navigation.searchText).textFieldStyle(.plain)
+            if !navigation.searchText.isEmpty {
+                Button { navigation.searchText = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
             }
@@ -243,7 +242,13 @@ struct SettingsView: View {
         case .clipboard: clipboard
         case .permissions: permissionSettings
         case .about: about
-        case .faceCheck: Form { registeredSections(.faceCheck) }.formStyle(.grouped)
+        case .faceCheck:
+            ScrollViewReader { scroll in
+                Form { registeredSections(.faceCheck) }
+                    .environment(\.openFacePasswordSettings, {
+                        withAnimation { scroll.scrollTo(FaceSettingsAnchor.password, anchor: .top) }
+                    })
+            }
         default: featurePane(pane)
         }
     }

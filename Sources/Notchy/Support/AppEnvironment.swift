@@ -109,7 +109,7 @@ final class AppEnvironment {
         .sink { [weak model] in model?.normalizeSelectedTab() }
         .store(in: &cancellables)
         model.onOpenLibrary = { [weak libraryWindowController] in libraryWindowController?.show() }
-        model.onOpenSettings = { [weak settingsWindowController] in settingsWindowController?.show() }
+        model.onOpenSettings = { [weak settingsWindowController] pane in settingsWindowController?.show(pane: pane) }
         model.onOpenQuickPaste = { [weak quickPasteWindowController] in quickPasteWindowController?.show() }
     }
 
